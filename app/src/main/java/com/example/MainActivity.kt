@@ -72,6 +72,35 @@ class MainActivity : ComponentActivity() {
     }
   }
 
+  private val notificationPermissionLauncher = registerForActivityResult(
+    ActivityResultContracts.RequestPermission()
+  ) { isGranted ->
+    if (isGranted && BusTrackingService.isRunning) {
+      try {
+        val intent = Intent(this, BusTrackingService::class.java).apply {
+          action = BusTrackingService.ACTION_UPDATE_NOTIFICATION
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+          startForegroundService(intent)
+        } else {
+          startService(intent)
+        }
+      } catch (_: Exception) {}
+    }
+  }
+
+  fun checkAndRequestNotificationPermission() {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+      if (ActivityCompat.checkSelfPermission(
+          this,
+          Manifest.permission.POST_NOTIFICATIONS
+        ) != PackageManager.PERMISSION_GRANTED
+      ) {
+        notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+      }
+    }
+  }
+
   private val locationListener = object : LocationListener {
     override fun onLocationChanged(location: Location) {
       val speedKmH = if (location.hasSpeed()) (location.speed * 3.6f) else 0f
@@ -135,6 +164,7 @@ class MainActivity : ComponentActivity() {
   }
 
   private fun initLocation() {
+    checkAndRequestNotificationPermission()
     locationManager = getSystemService(Context.LOCATION_SERVICE) as? LocationManager
     val permissionsToRequest = mutableListOf(
       Manifest.permission.ACCESS_FINE_LOCATION,
@@ -421,6 +451,7 @@ class MainActivity : ComponentActivity() {
     destInfo: String,
     langCode: String
   ) {
+    checkAndRequestNotificationPermission()
     try {
       val intent = Intent(this, BusTrackingService::class.java).apply {
         action = BusTrackingService.ACTION_START_TRACKING
@@ -447,6 +478,7 @@ class MainActivity : ComponentActivity() {
     destInfo: String,
     langCode: String
   ) {
+    checkAndRequestNotificationPermission()
     try {
       val intent = Intent(this, BusTrackingService::class.java).apply {
         action = BusTrackingService.ACTION_UPDATE_NOTIFICATION

@@ -399,6 +399,24 @@
       70% { box-shadow: 0 0 0 6px rgba(76, 175, 80, 0); }
       100% { box-shadow: 0 0 0 0 rgba(76, 175, 80, 0); }
     }
+    .map-bus-name-banner {
+      background: #ffffff;
+      border: 1.5px solid #0284c7;
+      border-radius: 12px;
+      padding: 10px 14px;
+      margin: 8px 0 10px 0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 14px;
+      font-weight: 800;
+      color: #0369a1;
+      box-shadow: 0 2px 8px rgba(2, 132, 199, 0.12);
+      white-space: normal;
+      word-break: break-word;
+      line-height: 1.4;
+      width: 100%;
+    }
 
     /* বাসের রুট ও বর্তমান অবস্থান কার্ড ডিজাইন */
     .route-tracker-card {
@@ -959,26 +977,6 @@
     </button>
   </div>
 
-  <!-- লাইভ ম্যাপ সেকশন (সকল সময় দৃশ্যমান থাকবে) -->
-  <div class="live-map-wrapper">
-    <div id="map"></div>
-    <div class="map-floating-bar">
-      <div id="mapStatusBadge" class="map-status-pill">
-        <span class="pulsing-dot"></span> <span id="mapStatusText">ম্যাপ সক্রিয়: সকল স্টপ ও অবস্থান</span>
-      </div>
-      <button id="focusViewBtn" class="btn-map-focus" onclick="focusBothUserAndVehicle()" title="ব্যবহারকারী ও যানের অবস্থান দেখুন">
-        🎯 অবস্থান দেখান
-      </button>
-    </div>
-  </div>
-
-  <button id="mapAddStopBtn" class="btn btn-map-mode" onclick="toggleMapAddMode()" style="align-items: center; justify-content: center; text-align: center; margin: 4px 0 12px 0;">
-    <svg viewBox="0 0 24 24" width="20" height="20" fill="#ffffff" style="flex-shrink: 0; margin-right: 6px;">
-      <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
-    </svg>
-    <span id="mapAddStopBtnText">ম্যাপে ক্লিক করে সরাসরি নতুন স্টপ যোগ করুন</span>
-  </button>
-
   <div id="busList"></div>
   
   <br>
@@ -1013,6 +1011,30 @@
     <div class="card"><b>📡 ব্যবহারকারীর GPS:</b> <span id="infoUserGPS">--</span></div>
     <div class="card"><b>📶 GPS সংকেত:</b> <span id="infoConfidence">--</span></div>
   </div>
+
+  <!-- লাইভ ম্যাপ সেকশন (১ নম্বর নির্দেশনা: GPS সংকেতের নিচে) -->
+  <div class="live-map-wrapper">
+    <div id="map"></div>
+    <div class="map-floating-bar" style="justify-content: flex-end;">
+      <button id="focusViewBtn" class="btn-map-focus" onclick="focusBothUserAndVehicle()" title="ব্যবহারকারী ও যানের অবস্থান দেখুন">
+        🎯 অবস্থান দেখান
+      </button>
+    </div>
+  </div>
+
+  <!-- ২ নম্বর নির্দেশনা: ম্যাপের নিচে সম্পূর্ণ বাসের নাম ও স্ট্যাটাস ব্যানার -->
+  <div id="mapBusNameBottom" class="map-bus-name-banner">
+    <span class="pulsing-dot"></span>
+    <span id="mapStatusText">ম্যাপ সক্রিয়: সকল স্টপ ও অবস্থান</span>
+  </div>
+
+  <!-- ১ নম্বর নির্দেশনা: ম্যাপে ক্লিক করে সরাসরি নতুন স্টপ যোগ করুন (অফলাইন মোড) বাটন -->
+  <button id="mapAddStopBtn" class="btn btn-map-mode" onclick="toggleMapAddMode()" style="align-items: center; justify-content: center; text-align: center; margin: 4px 0 16px 0;">
+    <svg viewBox="0 0 24 24" width="20" height="20" fill="#ffffff" style="flex-shrink: 0; margin-right: 6px;">
+      <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+    </svg>
+    <span id="mapAddStopBtnText">ম্যাপে ক্লিক করে সরাসরি নতুন স্টপ যোগ করুন (অফলাইন মোড)</span>
+  </button>
 
 <!-- কনফার্মেশন মডাল -->
 <div id="confirmModal" class="modal-overlay hidden">
@@ -1794,7 +1816,8 @@
 
     let statusText = document.getElementById("mapStatusText");
     if (statusText && trackingBus) {
-      statusText.innerText = "🚌 " + (trackingBus.name || trackingBus.number) + " লাইভ ট্র্যাকিং";
+      let fullName = (trackingBus.name && trackingBus.number) ? `${trackingBus.name} (${trackingBus.number})` : (trackingBus.name || trackingBus.number);
+      statusText.innerText = `🚌 বাসের নাম: ${fullName} • লাইভ ট্র্যাকিং চলছে`;
     }
 
     if (!orderedStops || orderedStops.length === 0) return;
@@ -2373,7 +2396,10 @@
     document.getElementById("busList").innerHTML = "";
 
     let statusText = document.getElementById("mapStatusText");
-    if (statusText) statusText.innerText = `🚌 ${b.name || b.number} লাইভ ট্র্যাকিং`;
+    if (statusText) {
+      let fullName = (b.name && b.number) ? `${b.name} (${b.number})` : (b.name || b.number);
+      statusText.innerText = `🚌 বাসের নাম: ${fullName} • লাইভ ট্র্যাকিং চলছে`;
+    }
     try { map.invalidateSize(); } catch(_) {}
 
     let stopBtnText = document.getElementById("addStopBtnText");
@@ -2441,6 +2467,12 @@
     let initialCurStop = (trackingBus && trackingBus.source) ? trackingBus.source.toUpperCase() : "সিগন্যাল খোঁজা হচ্ছে...";
     let initialNextStop = (trackingBus && trackingBus.selectedStops && trackingBus.selectedStops.length > 0) ? trackingBus.selectedStops[0] : "--";
     let initialDest = (trackingBus && trackingBus.dest) ? trackingBus.dest.toUpperCase() : "--";
+
+    let statusText = document.getElementById("mapStatusText");
+    if (statusText) {
+      let fullName = (trackingBus && trackingBus.name && trackingBus.number) ? `${trackingBus.name} (${trackingBus.number})` : bName;
+      statusText.innerText = `🚌 বাসের নাম: ${fullName} • লাইভ ট্র্যাকিং চলছে`;
+    }
 
     if (window.AndroidBridge) {
       if (window.AndroidBridge.startBackgroundTrackingWithDetails) {

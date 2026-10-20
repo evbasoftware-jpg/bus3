@@ -113,7 +113,7 @@ class BusTrackingService : Service() {
       return START_NOT_STICKY
     }
 
-    if (action == ACTION_UPDATE_NOTIFICATION) {
+    if (action == ACTION_UPDATE_NOTIFICATION || action == ACTION_START_TRACKING) {
       val busNumber = intent.getStringExtra(EXTRA_BUS_NUMBER) ?: ""
       val busName = intent.getStringExtra(EXTRA_BUS_NAME) ?: ""
       val curStop = intent.getStringExtra(EXTRA_CURRENT_STOP) ?: ""
@@ -128,30 +128,15 @@ class BusTrackingService : Service() {
       if (destInfo.isNotBlank()) destDistEtaText = destInfo
       if (lang.isNotBlank()) currentLangCode = lang
 
-      refreshNotification()
-      return START_STICKY
-    }
-
-    if (action == ACTION_START_TRACKING) {
-      val busNumber = intent.getStringExtra(EXTRA_BUS_NUMBER) ?: ""
-      val busName = intent.getStringExtra(EXTRA_BUS_NAME) ?: ""
-      val curStop = intent.getStringExtra(EXTRA_CURRENT_STOP) ?: ""
-      val nextStop = intent.getStringExtra(EXTRA_NEXT_STOP) ?: ""
-      val destInfo = intent.getStringExtra(EXTRA_DEST_DIST_ETA) ?: ""
-      val lang = intent.getStringExtra(EXTRA_LANG_CODE) ?: ""
-
-      if (busNumber.isNotBlank()) {
-        activeBusNumber = busNumber
-        activeBusName = busName
-        if (curStop.isNotBlank()) currentStopText = curStop
-        if (nextStop.isNotBlank()) nextStopText = nextStop
-        if (destInfo.isNotBlank()) destDistEtaText = destInfo
-        if (lang.isNotBlank()) currentLangCode = lang
-
+      if (!isRunning) {
         isRunning = true
         startForegroundServiceInternal()
         startLocationUpdates()
+        startBackgroundPollingLoop()
+      } else {
+        refreshNotification()
       }
+      return START_STICKY
     }
 
     return START_STICKY
@@ -244,6 +229,44 @@ class BusTrackingService : Service() {
         // Handled gracefully, will retry on next GPS tick
       }
     }
+  }
+
+  private var backgroundPollingJob: kotlinx.coroutines.Job? = null
+
+  private fun startBackgroundPollingLoop() {
+    backgroundPollingJob?.cancel()
+    backgroundPollingJob = serviceScope.launch {
+      while (isRunning) {
+        kotlinx.coroutines.delay(5000L)
+        if (!isRunning) break
+        if (activeBusNumber.isNotBlank()) {
+          fetchBusLiveDataAndUpdate(activeBusNumber)
+        }
+      }
+    }
+  }
+
+  private suspend fun fetchBusLiveDataAndUpdate(busNo: String) {
+    try {
+      val request = Request.Builder()
+        .url("$API_URL?action=getLive&busNo=$busNo")
+        .get()
+        .build()
+      okHttpClient.newCall(request).execute().use { response ->
+        if (response.isSuccessful) {
+          val body = response.body?.string() ?: return@use
+          val json = JSONObject(body)
+          if (json.optBoolean("ok", false) && json.has("live")) {
+            val liveObj = json.getJSONObject("live")
+            val speed = liveObj.optDouble("speed", 0.0).toFloat()
+            if (speed >= 0f) {
+              lastSpeedKmh = speed
+            }
+          }
+          refreshNotification()
+        }
+      }
+    } catch (_: Exception) {}
   }
 
   private fun getTranslation(lang: String, key: String): String {
@@ -458,7 +481,7 @@ class BusTrackingService : Service() {
     }
 
     return NotificationCompat.Builder(this, CHANNEL_ID)
-      .setSmallIcon(R.mipmap.ic_launcher)
+      .setSmallIcon(R.drawable.ic_bus_notification)
       .setContentTitle(title)
       .setContentText(collapsedSummary)
       .setCustomContentView(remoteViewsCollapsed)
@@ -466,7 +489,10 @@ class BusTrackingService : Service() {
       .setStyle(NotificationCompat.DecoratedCustomViewStyle())
       .setContentIntent(pendingIntent)
       .setOngoing(true)
-      .setPriority(NotificationCompat.PRIORITY_LOW)
+      .setOnlyAlertOnce(true)
+      .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+      .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
+      .setPriority(NotificationCompat.PRIORITY_DEFAULT)
       .addAction(
         android.R.drawable.ic_menu_close_clear_cancel,
         stopActionText,
@@ -479,11 +505,12 @@ class BusTrackingService : Service() {
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
       val channel = NotificationChannel(
         CHANNEL_ID,
-        "বাস লাইভ লোকেশন সেবা",
-        NotificationManager.IMPORTANCE_LOW
+        "বাস লাইভ লোকেশন ট্র্যাকিং",
+        NotificationManager.IMPORTANCE_DEFAULT
       ).apply {
         description = "স্ক্রিন বন্ধ থাকলেও চলন্ত বাসের যাত্রী ও যানের লাইভ লোকেশন আপডেট পাঠাতে ব্যবহৃত হয়"
-        setShowBadge(false)
+        setShowBadge(true)
+        lockscreenVisibility = Notification.VISIBILITY_PUBLIC
       }
       val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
       notificationManager?.createNotificationChannel(channel)
@@ -497,6 +524,11 @@ class BusTrackingService : Service() {
     currentStopText = "--"
     nextStopText = "--"
     destDistEtaText = "--"
+
+    try {
+      backgroundPollingJob?.cancel()
+      backgroundPollingJob = null
+    } catch (_: Exception) {}
 
     try {
       locationManager?.removeUpdates(locationListener)
