@@ -1,0 +1,3304 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <title>🚌 বাস লাইভ লোকেশন (Bus Live Location)</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    * { box-sizing: border-box; font-family: system-ui, -apple-system, sans-serif; text-transform: uppercase; -webkit-tap-highlight-color: transparent; }
+
+    body {
+      margin: 0;
+      background: #eef2f5;
+      padding: 0 10px 10px 10px;
+      top: 0 !important;
+      position: static !important;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+
+    input, select, textarea, button {
+      -webkit-user-select: text;
+      user-select: text;
+    }
+
+    #goog-gt-tt, .goog-te-balloon-frame, .goog-tooltip, .goog-tooltip:hover {
+      display: none !important;
+      visibility: hidden !important;
+    }
+    .goog-text-highlight {
+      background-color: transparent !important;
+      box-shadow: none !important;
+    }
+
+    .translate-top-bar{ 
+      display:flex; 
+      align-items:center; 
+      justify-content:space-between; 
+      background:#ffffff; 
+      padding:8px 12px; 
+      border-bottom:1px solid #cbd5e1; 
+      gap:8px;
+      position: sticky;
+      top: 0;
+      z-index: 10001;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+    }
+    .translate-top-bar span{ font-size:13px; font-weight:800; color:#1e293b; display: flex; align-items: center; gap: 4px; }
+
+    #google_translate_element{ display:inline-flex; align-items:center; flex: 1; justify-content: flex-end; }
+    .goog-te-gadget{ font-size:0 !important; line-height:0 !important;}
+    .goog-te-gadget span, .goog-te-gadget a, .goog-logo-link{ display:none !important;}
+
+    .goog-te-gadget .goog-te-combo, #fallbackLangSelect {
+      height:36px !important; 
+      width:220px !important; 
+      max-width:100% !important; 
+      margin:0 !important; 
+      padding:4px 8px !important; 
+      font-size:13px !important; 
+      font-weight:700 !important;
+      color:#1e293b !important; 
+      background:#ffffff !important; 
+      border:1.5px solid #0288d1 !important; 
+      border-radius:8px !important; 
+      outline:none !important; 
+      cursor:pointer !important;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08) !important;
+    }
+
+    .goog-te-menu-frame, .goog-te-menu2 {
+      max-height:75vh !important; overflow-y:auto !important; -webkit-overflow-scrolling:touch !important;}
+    .skiptranslate>iframe{display:none !important}
+
+    input, select, textarea {
+      width: 100%;
+      padding: 10px;
+      margin: 5px 0 10px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 15px;
+      scroll-margin-top: 90px;
+      scroll-margin-bottom: 120px;
+    }
+  
+    .head{background:#0d62f0;color:#ffffff;padding:14px 12px;text-align:center; border-radius: 0 0 14px 14px; margin-bottom: 8px; box-shadow: 0 4px 14px rgba(13,98,240,0.25);}
+    .head a, .force-lower { text-transform: lowercase !important; color: #ffffff !important; }
+    .container { max-width: 1000px; margin: 12px auto; background: #fff; border-radius: 12px; padding: 16px; padding-bottom: 240px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+    h2, h3 { text-align: center; color: #0d47a1; margin-top: 5px; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .hidden { display: none !important; }
+  
+    .box {
+      background: #f0f7ff;
+      border: 1px solid #bfdbfe;
+      padding: 16px;
+      border-radius: 12px;
+      margin-bottom: 14px;
+      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.06);
+    }
+    
+    /* সকল বোতামের মূল ডিজাইন - শতভাগ শার্প ও ক্রিস্টাল ক্লিয়ার */
+    .btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      width: 100%;
+      padding: 14px 22px;
+      margin: 12px 0;
+      font-size: 15px;
+      font-weight: 800;
+      letter-spacing: 0.3px;
+      color: #ffffff !important;
+      border-radius: 50px;
+      border: 1.5px solid rgba(255, 255, 255, 0.65);
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+      text-transform: none !important; /* বাংলা লেখা ও ইমোজি সম্পূর্ণ স্বাভাবিক রাখবে */
+    }
+
+    /* বোতামের ওপরের সূক্ষ্ম ও স্বচ্ছ কাঁচের রিফ্লেকশন */
+    .btn::before {
+      content: '';
+      position: absolute;
+      top: 1px;
+      left: 10%;
+      right: 10%;
+      height: 38%;
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.45) 0%, rgba(255, 255, 255, 0.02) 100%);
+      border-radius: 50px 50px 18px 18px;
+      pointer-events: none;
+    }
+
+    .btn:active {
+      transform: scale(0.98);
+    }
+
+    /* ১. "নতুন বাসের তথ্য যুক্ত করুন" (ভাইব্রেন্ট রয়াল ব্লু) */
+    #toggleBusFormBtn {
+      background: linear-gradient(180deg, #1e88e5 0%, #1565c0 60%, #0d47a1 100%) !important;
+      box-shadow: 0 6px 16px rgba(21, 101, 192, 0.45) !important;
+    }
+
+    #toggleBusFormBtn:hover {
+      background: linear-gradient(180deg, #42a5f5 0%, #1976d2 60%, #1565c0 100%) !important;
+      box-shadow: 0 8px 22px rgba(21, 101, 192, 0.55) !important;
+      transform: translateY(-2px);
+    }
+
+    /* ২. "এই জায়গাটি বাসের স্টপেজ হিসাবে যুক্ত করুন" (হট পিঙ্ক/ম্যাজেন্টা) */
+    #addStopBtn {
+      background: linear-gradient(180deg, #ff2a85 0%, #d81b60 60%, #880e4f 100%) !important;
+      box-shadow: 0 6px 16px rgba(216, 27, 96, 0.45) !important;
+      border: 1.5px solid rgba(255, 255, 255, 0.65) !important;
+    }
+
+    #addStopBtn:hover {
+      background: linear-gradient(180deg, #ff4081 0%, #e91e63 60%, #ad1457 100%) !important;
+      box-shadow: 0 8px 22px rgba(216, 27, 96, 0.55) !important;
+      transform: translateY(-2px);
+    }
+
+    /* ৩. ম্যাপের নিচের অফলাইন মোড বোতাম (উজ্জ্বল টিল ব্লু) */
+    .btn-map-mode {
+      background: linear-gradient(180deg, #0288d1 0%, #0277bd 60%, #01579b 100%) !important;
+      box-shadow: 0 6px 16px rgba(2, 119, 189, 0.45) !important;
+    }
+
+    .btn-map-mode:hover {
+      background: linear-gradient(180deg, #039be5 0%, #0288d1 60%, #026aa7 100%) !important;
+      box-shadow: 0 8px 22px rgba(2, 119, 189, 0.55) !important;
+      transform: translateY(-2px);
+    }
+
+    /* ৪. ম্যাপ ক্লিক মোড অন থাকলে উজ্জ্বল লাল স্টাইল */
+    .btn-map-mode.active {
+      background: linear-gradient(180deg, #ff3d00 0%, #d50000 60%, #9b0000 100%) !important;
+      box-shadow: 0 6px 18px rgba(213, 0, 0, 0.55) !important;
+    }
+
+    /* ৫. হালকা নীল রঙের বাতিল ও বন্ধ করার বোতাম (Cancel/Close) */
+    .btn-cancel {
+      background: linear-gradient(180deg, #60a5fa 0%, #3b82f6 60%, #1d4ed8 100%) !important;
+      box-shadow: 0 5px 14px rgba(59, 130, 246, 0.45) !important;
+    }
+
+    /* ৬. পপ-আপের OK বোতাম এবং ফর্মের সংরক্ষণ করুন বোতাম (উজ্জ্বল অ্যাম্বার/অরেঞ্জ) */
+    .modal-actions .btn:not(.btn-cancel),
+    #busFormBox button:not(.btn-cancel) {
+      background: linear-gradient(180deg, #ff9800 0%, #f57c00 60%, #e65100 100%) !important;
+      box-shadow: 0 5px 14px rgba(230, 81, 0, 0.45) !important;
+      color: #ffffff !important;
+    }
+
+    .time-picker-row { display: flex; gap: 6px; }
+    .time-picker-row input { flex: 2; margin: 5px 0 10px; }
+    .ampm-select {
+      flex: 1;
+      font-size: 18px !important;
+      font-weight: 900 !important;
+      color: #0d47a1;
+      background: #e3f2fd !important;
+      border: 2px solid #1565c0 !important;
+      text-align: center;
+      padding: 8px !important;
+    }
+
+    /* স্টপ চেকবক্স তালিকা ডিজাইন */
+    .stop-checkbox-container {
+      background: #ffffff;
+      border: 1px solid #b0bec5;
+      padding: 10px;
+      border-radius: 8px;
+      max-height: 180px;
+      overflow-y: auto;
+      margin-bottom: 12px;
+      grid-column: span 2;
+    }
+    .stop-check-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 5px 0;
+      border-bottom: 1px solid #eceff1;
+      font-size: 13px;
+      cursor: pointer;
+    }
+    .stop-check-item input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      margin: 0;
+      cursor: pointer;
+    }
+
+    .bus-item { 
+      border: 1px solid #cfd8dc; 
+      border-radius: 8px; 
+      padding: 12px; 
+      margin: 8px 0; 
+      background: #fafafa; 
+      cursor: pointer; 
+      transition: all 0.2s ease-in-out; 
+      box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+    }
+    .bus-item:hover, .bus-item:active { 
+      background: #e3f2fd; 
+      border-color: #1565c0; 
+      transform: translateY(-1px);
+    }
+
+    .bus-row-1 {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+      font-size: 14px;
+      font-weight: bold;
+      color: #b71c1c;
+    }
+    .bus-row-1 span {
+      background: #ffebee;
+      padding: 4px 8px;
+      border-radius: 4px;
+      border: 1px solid #ffcdd2;
+    }
+
+    .bus-row-2 {
+      font-size: 13px;
+      color: #1565c0;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .bus-select-hint {
+      text-align: center;
+      color: #1565c0;
+      font-weight: bold;
+      font-size: 14px;
+      margin: 10px 0 6px 0;
+      padding: 6px;
+      border-radius: 6px;
+      background: #e3f2fd;
+      border: 1px dashed #90caf9;
+    }
+
+    #currentLocationBox { text-align: center; font-size: 17px; font-weight: bold; color: #de12b2; background: #ffedfb; padding: 12px; border-radius: 8px; margin: 12px 0; }
+    .card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-top: 10px; }
+    .card { background: #f8f9fa; border: 1px solid #ddd; padding: 10px; border-radius: 8px; font-size: 13px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+    .card b { color: #1565c0; }
+
+    /* ৩টি ভিন্ন রঙের স্টপ কার্ড (১ম: কমলা, ২য়: আকাশী নীল, ৩য়: বেগুনী - কোনো সবুজ নেই) */
+    .card.card-cur-stop {
+      background: linear-gradient(135deg, #fff8f0 0%, #ffe0b2 100%);
+      border: 1.5px solid #ff9800;
+      box-shadow: 0 2px 6px rgba(255, 152, 0, 0.18);
+    }
+    .card.card-cur-stop b { color: #e65100; font-size: 13.5px; }
+    .card.card-cur-stop span { color: #bf360c; font-weight: 700; }
+
+    .card.card-next-stop {
+      background: linear-gradient(135deg, #f0f7ff 0%, #bbdefb 100%);
+      border: 1.5px solid #2196f3;
+      box-shadow: 0 2px 6px rgba(33, 150, 243, 0.18);
+    }
+    .card.card-next-stop b { color: #0d47a1; font-size: 13.5px; }
+    .card.card-next-stop span { color: #1565c0; font-weight: 700; }
+
+    .card.card-dest-stop {
+      background: linear-gradient(135deg, #fcf0ff 0%, #e1bee7 100%);
+      border: 1.5px solid #ab47bc;
+      box-shadow: 0 2px 6px rgba(171, 71, 188, 0.18);
+    }
+    .card.card-dest-stop b { color: #4a148c; font-size: 13.5px; }
+    .card.card-dest-stop span { color: #6a1b9a; font-weight: 700; }
+
+    /* দুর্গা পূজা ব্যানার স্টাইল */
+    .durga-banner-container {
+      width: 100%;
+      margin: 8px 0 16px 0;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 4px 14px rgba(216, 67, 21, 0.22);
+      border: 2px solid #ffcc80;
+      background: #fff8e1;
+    }
+    .durga-banner-img {
+      width: 100%;
+      height: auto;
+      display: block;
+      object-fit: cover;
+      border-radius: 10px;
+    }
+
+    #map {
+      height: 380px;
+      border-radius: 12px;
+      margin-top: 6px;
+      border: 2px solid #90caf9;
+      width: 100%;
+      z-index: 10;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+    }
+    .live-map-wrapper {
+      position: relative;
+      margin-top: 14px;
+      margin-bottom: 8px;
+    }
+    .map-floating-bar {
+      position: absolute;
+      top: 14px;
+      left: 10px;
+      right: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 1000;
+      pointer-events: none;
+      gap: 8px;
+    }
+    .map-floating-bar > * {
+      pointer-events: auto;
+    }
+    .map-status-pill {
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(4px);
+      color: #0d47a1;
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 700;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+      border: 1px solid #bbdefb;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 65%;
+    }
+    .pulsing-dot {
+      width: 8px;
+      height: 8px;
+      background: #4caf50;
+      border-radius: 50%;
+      box-shadow: 0 0 0 rgba(76, 175, 80, 0.7);
+      animation: pulseGreen 1.8s infinite;
+      display: inline-block;
+      flex-shrink: 0;
+    }
+    @keyframes pulseGreen {
+      0% { box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.7); }
+      70% { box-shadow: 0 0 0 6px rgba(76, 175, 80, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(76, 175, 80, 0); }
+    }
+
+    /* বাসের রুট ও বর্তমান অবস্থান কার্ড ডিজাইন */
+    .route-tracker-card {
+      background: #ffffff;
+      border: 1px solid #cfd8dc;
+      border-radius: 12px;
+      padding: 16px;
+      margin: 16px 0;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    }
+    .route-tracker-card h4 {
+      margin: 0 0 16px 0;
+      font-size: 16px;
+      color: #1a237e;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+  
+    .route-track-bar {
+      display: block;
+      position: relative;
+      min-width: 100%;
+      height: 24px;
+    }
+    .route-line-bg {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      left: 30px;
+      right: 30px;
+      height: 4px;
+      background: #cfd8dc;
+      z-index: 1;
+    }
+    .route-live-bus-indicator {
+      position: absolute;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 24px;
+      z-index: 5;
+      transition: left 0.4s ease;
+      animation: busBounce 1.5s infinite;
+      pointer-events: none;
+    }
+
+    @keyframes busBounce {
+      0%, 100% { transform: translate(-50%, -50%); }
+      50% { transform: translate(-50%, calc(-50% - 3px)); }
+    }
+  
+    .route-stop-node {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      position: absolute;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 2;
+      text-align: center;
+    }
+    .route-stop-circle {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: #fff;
+      border: 3px solid #78909c;
+      box-shadow: 0 0 0 3px #cfd8dc;
+    }
+    .route-stop-circle.passed {
+      background: #1e88e5;
+      border-color: #1565c0;
+      box-shadow: 0 0 0 3px #bbdefb;
+    }
+    .route-stop-circle.active {
+      background: #0288d1;
+      border-color: #01579b;
+      box-shadow: 0 0 0 4px #b3e5fc;
+    }
+
+    /* যে স্টপে বাস থামবে না তার স্টাইলিং */
+    .route-stop-circle.skipped {
+      background: #eceff1 !important;
+      border-color: #b0bec5 !important;
+      box-shadow: none !important;
+      border-style: dashed !important;
+    }
+
+    .route-stop-name {
+      font-size: 11px;
+      font-weight: 700;
+      color: #37474f;
+      width: 95px;
+      line-height: 1.25;
+      word-wrap: break-word;
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+      white-space: normal;
+      text-align: center;
+    }
+  
+    .route-timeline-container {
+      overflow-x: auto;
+      padding: 55px 15px 55px 15px;
+      position: relative;
+      scrollbar-width: thin;
+    }
+
+    .route-stop-name.pos-bottom {
+      top: 23px;
+    }
+
+    .route-stop-name.pos-top {
+      bottom: 25px;
+    }
+
+    .route-stop-name.pos-bottom::before {
+      content: "↑";
+      display: block;
+      font-size: 34px;
+      color: orange;
+      line-height: 0.7;
+    }
+
+    .route-stop-name.pos-top::after {
+      content: "↓";
+      display: block;
+      font-size: 34px;
+      color: orange;
+      line-height: 0.7;
+    }
+
+    .route-stop-name.skipped-name.pos-bottom::before {
+      color: #b0bec5;
+    }
+
+    .route-stop-name.skipped-name.pos-top::after {
+      color: #b0bec5;
+    }
+
+    .stop-marker-label {
+      background: rgba(255, 255, 255, 0.95);
+      border: 1px solid #1565c0;
+      border-radius: 4px;
+      padding: 2px 6px;
+      font-size: 11px;
+      font-weight: bold;
+      color: #0d47a1;
+      white-space: nowrap;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+    }
+  
+    .stop-marker-label.skipped-label {
+      border: 1.5px dashed #d32f2f;
+      color: #757575;
+      background: rgba(255, 245, 245, 0.95);
+    }
+
+    .modal-overlay {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.6); z-index: 20000;
+      display: flex; align-items: center; justify-content: center; padding: 15px;
+    }
+    .modal-card {
+      background: #fff; width: 100%; max-width: 380px;
+      border-radius: 12px; padding: 20px; text-align: center; box-shadow: 0 5px 25px rgba(0,0,0,0.3);
+    }
+    .modal-card h4 { margin: 0 0 10px 0; color: #d32f2f; font-size: 18px; }
+    .modal-card p { font-size: 14px; line-height: 1.5; color: #333; margin-bottom: 15px; }
+    .modal-actions { display: flex; gap: 8px; }
+    .modal-actions button { flex: 1; margin: 0; }
+
+    @media(max-width: 600px) {
+      .grid { grid-template-columns: 1fr; }
+      .stop-checkbox-container { grid-column: span 1; }
+      .translate-top-bar{ flex-direction: row; }
+      .goog-te-gadget .goog-te-combo, #fallbackLangSelect { width:170px !important; }
+      .bus-row-1 { flex-direction: column; align-items: flex-start; gap: 4px; }
+    }
+  
+    .search-inputs-wrapper { position: relative; }
+
+    .swap-btn {
+      position: absolute;
+      right: 15px;
+      top: 55%;
+      transform: translateY(-50%);
+      width: 42px;
+      height: 42px;
+      background: #ffffff;
+      border: 2px solid #1565c0;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 3px 8px rgba(0, 0, 0, 0.2);
+      color: #1565c0;
+      z-index: 5;
+      transition: transform 0.2s ease, background 0.2s ease;
+    }
+
+    /* ম্যাপের উপর ফোকাস করার বোতাম */
+    .btn-map-focus {
+      background: #ffffff;
+      color: #1565c0;
+      border: 2px solid #1565c0;
+      border-radius: 8px;
+      padding: 6px 12px;
+      font-size: 12.5px;
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: 0 3px 8px rgba(0,0,0,0.25);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+      white-space: nowrap;
+    }
+    .btn-map-focus:hover {
+      background: #e3f2fd;
+      transform: scale(1.03);
+    }
+    .btn-map-focus:active {
+      transform: scale(0.97);
+    }
+
+    .swap-btn:hover { background: #e3f2fd; }
+    .swap-btn:active { transform: translateY(-50%) scale(0.92); }
+    .logo-box{position: static; margin-bottom: 6px; display: flex; justify-content: center;}
+    .logo{max-height:85px; width:auto; max-width: 95%; filter: drop-shadow(0 2px 6px rgba(0,0,0,0.3)); object-fit: contain; border-radius: 8px;}
+
+    /* কম্প্যাক্ট ড্রপডাউন পরামর্শ তালিকা - কি-বোর্ড ঢাকবে না */
+    .input-suggest-container {
+      position: relative;
+    }
+    .suggestions-box {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      max-height: 140px;
+      overflow-y: auto;
+      background: #ffffff;
+      border: 1.5px solid #1565c0;
+      border-radius: 8px;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.22);
+      z-index: 1050;
+      margin-top: -6px;
+      -webkit-overflow-scrolling: touch;
+    }
+    .suggestion-item {
+      padding: 10px 12px;
+      font-size: 13px;
+      font-weight: 700;
+      color: #0d47a1;
+      border-bottom: 1px solid #e2e8f0;
+      cursor: pointer;
+      text-transform: uppercase;
+      transition: background 0.15s ease;
+      background: #ffffff;
+    }
+    .suggestion-item:last-child {
+      border-bottom: none;
+    }
+    .suggestion-item:active, .suggestion-item:hover {
+      background: #e3f2fd;
+      color: #1565c0;
+    }
+
+    /* স্টপেজে পৌঁছানোর ম্যাসেজ ব্যানার (ইন-অ্যাপ ফ্লোটিং অ্যালার্ট) */
+    .arrival-alert-banner {
+      position: fixed;
+      top: 18px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 92%;
+      max-width: 450px;
+      z-index: 99999;
+      animation: arrivalSlideDown 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    @keyframes arrivalSlideDown {
+      0% { opacity: 0; transform: translate(-50%, -30px) scale(0.95); }
+      100% { opacity: 1; transform: translate(-50%, 0) scale(1); }
+    }
+    .arrival-alert-card {
+      background: linear-gradient(135deg, #fff8f0 0%, #ffe0b2 100%);
+      border: 2px solid #e65100;
+      border-radius: 14px;
+      padding: 12px 14px;
+      box-shadow: 0 10px 25px rgba(230, 81, 0, 0.3), 0 4px 10px rgba(0, 0, 0, 0.15);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      position: relative;
+    }
+    .arrival-alert-icon {
+      font-size: 26px;
+      background: #ffffff;
+      border-radius: 50%;
+      width: 44px;
+      height: 44px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+      flex-shrink: 0;
+      animation: bellShake 1s infinite alternate;
+    }
+    @keyframes bellShake {
+      0% { transform: rotate(-12deg); }
+      100% { transform: rotate(12deg); }
+    }
+    .arrival-alert-body {
+      flex: 1;
+      text-align: left;
+    }
+    .arrival-alert-title {
+      font-size: 13px;
+      font-weight: 800;
+      color: #bf360c;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .arrival-alert-text {
+      font-size: 14px;
+      font-weight: 700;
+      color: #212121;
+      margin-top: 2px;
+      line-height: 1.35;
+    }
+    .arrival-alert-next {
+      font-size: 12px;
+      font-weight: 700;
+      color: #0d47a1;
+      margin-top: 4px;
+      background: rgba(255, 255, 255, 0.85);
+      padding: 3px 8px;
+      border-radius: 6px;
+      display: inline-block;
+      border-left: 3px solid #1976d2;
+    }
+    .arrival-alert-close {
+      background: transparent;
+      border: none;
+      font-size: 24px;
+      font-weight: bold;
+      color: #bf360c;
+      cursor: pointer;
+      padding: 0 6px;
+      line-height: 1;
+    }
+
+    /* ভয়েস ঘোষণা কন্ট্রোল বার */
+    .voice-control-bar {
+      display: flex;
+      margin: 10px 0;
+      width: 100%;
+    }
+    .btn-voice-toggle {
+      width: 100%;
+      background: #f0fdf4;
+      border: 1.5px solid #16a34a;
+      color: #15803d;
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 13.5px;
+      font-weight: bold;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.06);
+      transition: all 0.2s;
+    }
+    .btn-voice-toggle.disabled {
+      background: #fef2f2;
+      border-color: #dc2626;
+      color: #b91c1c;
+    }
+    .btn-voice-toggle:active {
+      transform: scale(0.98);
+    }
+  </style>
+</head>
+<body>
+
+<!-- প্রতিটি স্টপেজে পৌঁছানোর ম্যাসেজ ব্যানার (ইন-অ্যাপ ফ্লোটিং অ্যালার্ট) -->
+<div id="arrivalAlertBanner" class="arrival-alert-banner hidden">
+  <div class="arrival-alert-card">
+    <div class="arrival-alert-icon">🔔</div>
+    <div class="arrival-alert-body">
+      <div class="arrival-alert-title" id="arrivalAlertTitle">স্টপেজে পৌঁছে গেছেন!</div>
+      <div class="arrival-alert-text" id="arrivalAlertText">আপনি স্টপেজে পৌঁছে গেছেন।</div>
+      <div class="arrival-alert-next" id="arrivalAlertNext">⏩ পরবর্তী স্টপেজ: --</div>
+    </div>
+    <button type="button" class="arrival-alert-close" onclick="dismissArrivalAlert()">&times;</button>
+  </div>
+</div>
+
+<!-- সবার উপরে গুগলের সবগুলো ভাষা সহ ল্যাঙ্গুয়েজ সিলেকশন অপশন -->
+<div class="translate-top-bar" id="translateBar">
+  <span>🌐 ভাষা (Language):</span>
+  <div id="google_translate_element"></div>
+  <!-- Fallback selector if Google script is connecting -->
+  <select id="fallbackLangSelect" class="hidden" onchange="applyLanguageFallback(this.value)">
+    <option value="bn">বাংলা (Bengali)</option>
+    <option value="en">English</option>
+    <option value="hi">हिन्दी (Hindi)</option>
+    <option value="ta">தமிழ் (Tamil)</option>
+    <option value="te">తెలుగు (Telugu)</option>
+    <option value="mr">मराठी (Marathi)</option>
+    <option value="gu">ગુજરાતી (Gujarati)</option>
+    <option value="kn">ಕನ್ನಡ (Kannada)</option>
+    <option value="ml">മലയാളം (Malayalam)</option>
+    <option value="pa">ਪੰਜਾਬੀ (Punjabi)</option>
+    <option value="ur">اردو (Urdu)</option>
+    <option value="or">ଓଡ଼ିଆ (Odia)</option>
+    <option value="as">অসমীয়া (Assamese)</option>
+    <option value="ar">العربية (Arabic)</option>
+    <option value="es">Español (Spanish)</option>
+    <option value="fr">Français (French)</option>
+    <option value="de">Deutsch (German)</option>
+    <option value="ru">Русский (Russian)</option>
+    <option value="zh-CN">中文 (Chinese)</option>
+    <option value="ja">日本語 (Japanese)</option>
+    <option value="ko">한국어 (Korean)</option>
+    <option value="pt">Português (Portuguese)</option>
+    <option value="id">Bahasa Indonesia</option>
+    <option value="ms">Bahasa Melayu</option>
+    <option value="th">ไทย (Thai)</option>
+    <option value="vi">Tiếng Việt (Vietnamese)</option>
+    <option value="tr">Türkçe (Turkish)</option>
+    <option value="it">Italiano (Italian)</option>
+    <option value="nl">Nederlands (Dutch)</option>
+    <option value="pl">Polski (Polish)</option>
+    <option value="fa">فارسی (Persian)</option>
+    <option value="ne">नेपाली (Nepali)</option>
+    <option value="si">සිංහල (Sinhala)</option>
+    <option value="my">မြန်မာ (Burmese)</option>
+    <option value="sw">Kiswahili (Swahili)</option>
+  </select>
+</div>
+    
+<div class="head">
+  <div class="logo-box">
+    <img src="logo.png" alt="AI Online Digital Support India" class="logo">
+  </div>
+  <a href='https://aionline.in.net' class="notranslate force-lower" style='text-decoration: none; font-size: 18px; font-weight: 700; color: #ffffff;'>https://aionline.in.net</a>
+</div>
+
+<div class="container">
+      <!-- দুর্গা পূজার শুভেচ্ছা ব্যানার -->
+  <div class="durga-banner-container" style="text-align: center; padding: 4px;">
+    <img src="file:///android_asset/durga_puja_banner.jpg" 
+         alt="" 
+         class="durga-banner-img" 
+         style="width: 100%; max-height: 150px; object-fit: contain; border-radius: 8px; display: block; margin: 0 auto;">
+    <div style="font-size: 15px; font-weight: bold; color: #b71c1c; margin-top: 6px;">
+      🌸 শুভ দুর্গাপূজার আন্তরিক প্রীতি ও শুভেচ্ছা 🌸
+    </div>
+  </div>
+
+  <h2>🚌 বাস লাইভ লোকেশন (ভারত)</h2>
+
+  <button id="toggleBusFormBtn" class="btn">+ নতুন বাসের তথ্য যুক্ত করুন</button>
+
+  <div id="busFormBox" class="box hidden">
+    <h3>নতুন বাসের বিবরণ</h3>
+    <div class="grid">
+      <div><label>রাজ্য</label><input type="text" id="state" placeholder="STATE"></div>
+      <div><label>জেলা</label><input type="text" id="district" placeholder="DISTRICT"></div>
+      <div><label>বাস নম্বর</label><input type="text" id="busNoInput" placeholder="BUS NUMBER"></div>
+      <div><label>বাসের নাম</label><input type="text" id="busNameInput" placeholder="BUS NAME"></div>
+      <div>
+        <label>বাস ক্যাটাগরি</label>
+        <select id="category">
+          <option value="PUBLIC">PUBLIC</option>
+          <option value="PRIVATE">PRIVATE</option>
+          <option value="NBSTC">NBSTC</option>
+          <option value="SBSTC">SBSTC</option>
+          <option value="WBTC">WBTC</option>
+          <option value="EXPRESS">EXPRESS</option>
+          <option value="LOCAL">LOCAL</option>
+        </select>
+      </div>
+      <div><label>চলাচলের দিন</label><input type="text" id="days" placeholder="DAILY / MON-FRI"></div>
+      <div><label>বাস কোথা থেকে ছাড়বে?</label><input type="text" id="src" placeholder="FROM" onchange="renderStopsCheckboxes()"></div>
+      
+      <div>
+        <label>বাস কখন ছাড়বে?</label>
+        <div class="time-picker-row">
+          <input type="text" id="srcTimeVal" placeholder="04:10">
+          <select id="srcTimeAmpm" class="ampm-select">
+            <option value="AM">AM</option>
+            <option value="PM">PM</option>
+          </select>
+        </div>
+      </div>
+
+      <div><label>বাস কতদূর যাবে (গন্তব্য)?</label><input type="text" id="dest" placeholder="TO" onchange="renderStopsCheckboxes()"></div>
+
+      <div>
+        <label>বাস কখন পৌঁছাবে?</label>
+        <div class="time-picker-row">
+          <input type="text" id="destTimeVal" placeholder="06:00">
+          <select id="destTimeAmpm" class="ampm-select">
+            <option value="AM">AM</option>
+            <option value="PM" selected>PM</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- স্টপেজের চেকবক্স তালিকা -->
+      <div class="stop-checkbox-container" id="stopCheckboxContainer">
+        <b>🛑 এই রুটের স্টপেজগুলো নির্বাচন করুন (যেখানে বাসটি দাঁড়াবে টিক রাখুন):</b>
+        <div id="stopsCheckboxList" style="margin-top:8px;">
+          <i>সোর্স ও গন্তব্য লিখলে স্টপ লোড হবে...</i>
+        </div>
+      </div>
+
+    </div>
+    <button class="btn" onclick="saveNewBus()">সংরক্ষণ করুন</button>
+    <button class="btn btn-cancel" onclick="toggleBusForm(false)">বন্ধ করুন</button>
+  </div>
+
+  <button id="addStopBtn" class="btn" onclick="openConfirmDialog()" style="align-items: flex-start; text-align: left;">
+    <svg viewBox="0 0 24 24" width="20" height="20" fill="#ffffff" style="flex-shrink: 0; margin-top: 2px; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.4));">
+      <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+    </svg>
+    <span id="addStopBtnText" style="line-height: 1.35;">এই জায়গাটি বাসের স্টপেজ হিসাবে যুক্ত করুন</span>
+  </button>
+  
+  <hr>
+
+  <div class="search-inputs-wrapper">
+    <div class="grid">
+      <div class="input-suggest-container">
+        <label>আপনি কোথা থেকে বাসে উঠবেন?</label>
+        <input type="text" id="searchFrom" placeholder="শুরু বা মাঝের যেকোনো স্থান..." autocomplete="off">
+        <div id="fromSuggestions" class="suggestions-box hidden"></div>
+      </div>
+      <div class="input-suggest-container">
+        <label>কোথায় যাবেন?</label>
+        <input type="text" id="searchTo" placeholder="গন্তব্য বা মাঝের যেকোনো স্থান..." autocomplete="off">
+        <div id="toSuggestions" class="suggestions-box hidden"></div>
+      </div>
+    </div>
+    <button type="button" class="swap-btn" onclick="swapLocations()" title="অদলবদল করুন">
+      <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M7 20V4"></path>
+        <path d="m3 8 4-4 4 4"></path>
+        <path d="M17 4v16"></path>
+        <path d="m21 16-4 4-4-4"></path>
+      </svg>
+    </button>
+  </div>
+
+  <!-- লাইভ ম্যাপ সেকশন (সকল সময় দৃশ্যমান থাকবে) -->
+  <div class="live-map-wrapper">
+    <div id="map"></div>
+    <div class="map-floating-bar">
+      <div id="mapStatusBadge" class="map-status-pill">
+        <span class="pulsing-dot"></span> <span id="mapStatusText">ম্যাপ সক্রিয়: সকল স্টপ ও অবস্থান</span>
+      </div>
+      <button id="focusViewBtn" class="btn-map-focus" onclick="focusBothUserAndVehicle()" title="ব্যবহারকারী ও যানের অবস্থান দেখুন">
+        🎯 অবস্থান দেখান
+      </button>
+    </div>
+  </div>
+
+  <button id="mapAddStopBtn" class="btn btn-map-mode" onclick="toggleMapAddMode()" style="align-items: center; justify-content: center; text-align: center; margin: 4px 0 12px 0;">
+    <svg viewBox="0 0 24 24" width="20" height="20" fill="#ffffff" style="flex-shrink: 0; margin-right: 6px;">
+      <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
+    </svg>
+    <span id="mapAddStopBtnText">ম্যাপে ক্লিক করে সরাসরি নতুন স্টপ যোগ করুন</span>
+  </button>
+
+  <div id="busList"></div>
+  
+  <br>
+  <label>বাস নম্বর / নাম</label>
+  <input type="text" id="busTrackInput" placeholder="বাস নম্বর বা নাম লিখুন">
+
+  <!-- বাসের রুট ও বর্তমান অবস্থান সেকশন (শুধুমাত্র বাস সিলেক্ট হলে রুট টাইমলাইন বার দেখাবে) -->
+  <div id="routeTrackerCard" class="route-tracker-card hidden">
+    <h4>🛣️ বাসের রুট ও বর্তমান অবস্থান</h4>
+    <div class="route-timeline-container">
+      <div class="route-track-bar" id="routeTrackBar">
+        <div class="route-line-bg"></div>
+        <div class="route-live-bus-indicator" id="routeBusIndicator"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ভয়েস ঘোষণা কন্ট্রোল বার -->
+  <div class="voice-control-bar">
+    <button id="toggleVoiceBtn" class="btn-voice-toggle" onclick="toggleVoiceAnnouncements()">
+      🔊 <span id="voiceToggleText">ঘোষণা: চালু</span>
+    </button>
+  </div>
+
+  <div id="currentLocationBox">বাসের বর্তমান অবস্থান: কোনো বাস নির্বাচিত হয়নি</div>
+
+  <div class="card-grid">
+    <div class="card card-cur-stop"><b>📍 বর্তমান স্টপেজ:</b> <span id="infoCurStop">--</span></div>
+    <div class="card card-next-stop"><b>⏩ পরবর্তী স্টপেজ:</b> <span id="infoNextStop">--</span></div>
+    <div class="card card-dest-stop"><b>🎯 গন্তব্য:</b> <span id="infoDestStop">--</span></div>
+    <div class="card"><b>⚡ বাসের গতিবেগ:</b> <span id="infoSpeed">--</span></div>
+    <div class="card"><b>📡 ব্যবহারকারীর GPS:</b> <span id="infoUserGPS">--</span></div>
+    <div class="card"><b>📶 GPS সংকেত:</b> <span id="infoConfidence">--</span></div>
+  </div>
+
+<!-- কনফার্মেশন মডাল -->
+<div id="confirmModal" class="modal-overlay hidden">
+  <div class="modal-card">
+    <h4>⚠️ সতর্কবার্তা</h4>
+    <p id="confirmModalText">চলন্ত বাস কোনো জায়গায় থামলে তবেই এটি যুক্ত করুন。<br><br>আপনি কি বর্তমান অবস্থানকে এই বাসের স্টপেজ হিসেবে যুক্ত করতে চান?</p>
+    <div class="modal-actions">
+      <button class="btn btn-cancel" onclick="closeModals()">Cancel</button>
+      <button class="btn" onclick="proceedToNamePrompt()">OK</button>
+    </div>
+  </div>
+</div>
+
+<!-- স্মার্ট স্টপ প্রোম্পট মডাল -->
+<div id="smartStopModal" class="modal-overlay hidden">
+  <div class="modal-card">
+    <h4>📍 নতুন স্টপ শনাক্ত হয়েছে!</h4>
+    <p id="smartStopPromptText">আপনি কি এই স্থানটি বাসের স্টপেজ হিসেবে যুক্ত করতে চান?</p>
+    <div class="modal-actions">
+      <button class="btn btn-cancel" onclick="closeSmartStopPrompt(true)">Cancel</button>
+      <button class="btn" id="smartStopConfirmBtn">OK</button>
+    </div>
+  </div>
+</div>
+
+<!-- নাম ইনপুট মডাল -->
+<div id="nameModal" class="modal-overlay hidden">
+  <div class="modal-card">
+    <h4>📍 স্টপেজের নাম</h4>
+    <p>বাস স্টপের নাম লিখুন (ইংরেজিতে):</p>
+    <input type="text" id="manualStopName" placeholder="যেমন: CHOWHATTA">
+    <div class="modal-actions">
+      <button class="btn btn-cancel" onclick="closeModals()">Cancel</button>
+      <button class="btn" onclick="saveCurrentStopAction()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- কাস্টম অ্যালার্ট মডাল -->
+<div id="customAlertModal" class="modal-overlay hidden">
+  <div class="modal-card">
+    <h4 id="customAlertTitle">বিজ্ঞপ্তি</h4>
+    <p id="customAlertMsg"></p>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeAlertModal()">OK</button>
+    </div>
+  </div>
+</div>
+
+<script type="text/javascript">
+  function googleTranslateElementInit() {
+    try {
+      new google.translate.TranslateElement({
+        pageLanguage: 'bn',
+        autoDisplay: false
+      }, 'google_translate_element');
+    } catch(e) {
+      console.log("Google translate init error:", e);
+    }
+  }
+
+  // যদি কোনো কারণে গুগল ট্র্যান্সলেট লোড হতে দেরি হয়, ফলব্যাক সিলেক্টর দেখাবে
+  setTimeout(() => {
+    let combo = document.querySelector('.goog-te-combo');
+    if (!combo) {
+      let fb = document.getElementById('fallbackLangSelect');
+      if (fb) fb.classList.remove('hidden');
+    }
+  }, 2500);
+
+  function getCurrentAppLanguage() {
+    try {
+      var match = document.cookie.match(/googtrans=\/[^/]+\/([a-z]{2,3})/i);
+      if (match && match[1]) {
+        return match[1].toLowerCase();
+      }
+      var combo = document.querySelector('.goog-te-combo');
+      if (combo && combo.value) {
+        return combo.value.toLowerCase();
+      }
+      var fb = document.getElementById('fallbackLangSelect');
+      if (fb && fb.value) {
+        return fb.value.toLowerCase();
+      }
+    } catch (_) {}
+    return "bn";
+  }
+
+  function notifyLanguageChanged(lang) {
+    if (window.AndroidBridge && window.AndroidBridge.setNotificationLanguage) {
+      window.AndroidBridge.setNotificationLanguage(lang);
+    }
+    let vText = document.getElementById("voiceToggleText");
+    if (vText) {
+      if (typeof voiceAnnouncementEnabled !== "undefined" && voiceAnnouncementEnabled) {
+        vText.innerText = (lang === "hi" ? "घोषणा: चालू" : (lang === "en" ? "Announcements: ON" : "ঘোষণা: চালু"));
+      } else {
+        vText.innerText = (lang === "hi" ? "घोषणा: बंद" : (lang === "en" ? "Announcements: OFF" : "ঘোষণা: বন্ধ"));
+      }
+    }
+    if (typeof updateDistanceAndTracking === "function") {
+      updateDistanceAndTracking();
+    }
+  }
+
+  function applyLanguageFallback(lang) {
+    let combo = document.querySelector('.goog-te-combo');
+    if (combo) {
+      combo.value = lang;
+      combo.dispatchEvent(new Event('change'));
+    } else {
+      document.cookie = "googtrans=/bn/" + lang + "; path=/;";
+      document.cookie = "googtrans=/bn/" + lang + "; path=/; domain=" + location.hostname;
+      location.reload();
+    }
+    notifyLanguageChanged(lang);
+  }
+
+  setInterval(() => {
+    let combo = document.querySelector('.goog-te-combo');
+    if (combo && !combo.dataset.monitored) {
+      combo.dataset.monitored = "true";
+      combo.addEventListener('change', () => {
+        notifyLanguageChanged(combo.value);
+      });
+    }
+  }, 1000);
+
+  const observer = new MutationObserver(() => {
+    const iframe = document.querySelector('.goog-te-menu-frame');
+    if (iframe && iframe.contentDocument) {
+      const doc = iframe.contentDocument;
+      if (doc.body) {
+        doc.body.style.overflowY = 'auto';
+        doc.body.style.maxHeight = '75vh';
+        doc.body.style.webkitOverflowScrolling = 'touch';
+      }
+    }
+    const tooltip = document.querySelector('.goog-tooltip');
+    if (tooltip) tooltip.style.display = 'none';
+
+    // যদি গুগল কম্বো পাওয়া যায়, ফলব্যাক ড্রপডাউন লুকানো হবে
+    let combo = document.querySelector('.goog-te-combo');
+    if (combo) {
+      let fb = document.getElementById('fallbackLangSelect');
+      if (fb) fb.classList.add('hidden');
+    }
+  });
+  observer.observe(document.body, { childList: true, subtree: true });
+</script>
+  
+<script type="text/javascript" src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+  const API_URL = "https://script.google.com/macros/s/AKfycbxBgPQeiK8LQryKhtlBOfw_2V-pStqQa3KVR-gSuUg4kPkuXwbb1sEE5Pc7EeYw1LU9bA/exec";
+
+  const stopsCache = {};
+  let masterStopsList = []; // সমস্ত সংরক্ষিত গ্লোবাল স্টপ
+
+  let map = L.map('map', {
+    zoomControl: true,
+    tap: false
+  }).setView([23.82, 87.75], 11);
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { 
+    maxZoom: 19,
+    attribution: '© OpenStreetMap'
+  }).addTo(map);
+
+  setTimeout(() => { try { map.invalidateSize(); } catch(_) {} }, 100);
+  setTimeout(() => { try { map.invalidateSize(); } catch(_) {} }, 300);
+  setTimeout(() => { try { map.invalidateSize(); } catch(_) {} }, 800);
+  setTimeout(() => { try { map.invalidateSize(); } catch(_) {} }, 1500);
+  window.addEventListener('resize', () => {
+    try { map.invalidateSize(); } catch(_) {}
+  });
+  window.addEventListener('load', () => {
+    try { map.invalidateSize(); } catch(_) {}
+  });
+
+  let busMarker = null, userMarker = null, routeLine = null;
+  let allMasterStopMarkersLayer = L.layerGroup().addTo(map);
+  let stopMarkersLayer = L.layerGroup().addTo(map);
+  let stopRoutePolyline = null;
+
+  let userPos = null, busPos = null, trackingBus = null, trackingInterval = null;
+  let debounceTimer = null;
+  let hasCenteredUser = false;
+  let currentBusStopsList = [];
+  let activeApproachingStop = null;      // বর্তমানে কোন স্টপ ৫০ মিটারের মধ্যে রয়েছে
+  let promptDismissedStops = new Set(); // যে স্টপগুলো একবার বাতিল বা যুক্ত করা হয়েছে
+
+  let voiceAnnouncementEnabled = true;
+  let lastAnnouncedArrivalStop = null;
+  let lastAnnouncedNextStop = null;
+  let arrivalAlertTimeout = null;
+
+  // ==========================================
+  // পরিষ্কার ঘোষণা এবং স্টপ এলার্ট ফাংশনসমূহ (পরিষ্কার পুরুষ কণ্ঠ)
+  // ==========================================
+  function playVoiceAnnouncement(text, lang) {
+    if (!voiceAnnouncementEnabled || !text) return;
+    let curLang = lang || getCurrentAppLanguage() || "bn";
+
+    // ১. অ্যান্ড্রয়েড নেটিভ Text-To-Speech (খুবই পরিষ্কার পুরুষ কণ্ঠ)
+    if (window.AndroidBridge && window.AndroidBridge.speakAnnouncement) {
+      window.AndroidBridge.speakAnnouncement(text, curLang);
+      return;
+    }
+
+    // ২. ওয়েব স্পিচ সিন্থেসিস ফলব্যাক (ব্রাউজার প্রিভিউয়ের জন্য)
+    if ('speechSynthesis' in window) {
+      try {
+        window.speechSynthesis.cancel();
+        let utter = new SpeechSynthesisUtterance(text);
+        let localeMap = {
+          "bn": "bn-IN", "hi": "hi-IN", "en": "en-IN",
+          "ta": "ta-IN", "te": "te-IN", "mr": "mr-IN",
+          "gu": "gu-IN", "kn": "kn-IN", "ml": "ml-IN",
+          "pa": "pa-IN", "or": "or-IN"
+        };
+        utter.lang = localeMap[curLang] || "bn-IN";
+        
+        let voices = window.speechSynthesis.getVoices();
+        let matchingVoices = voices.filter(v => v.lang && v.lang.replace('_', '-').toLowerCase().startsWith(curLang));
+        if (matchingVoices.length === 0) {
+          matchingVoices = voices;
+        }
+
+        // সুস্পষ্ট পরিষ্কার পুরুষ কণ্ঠ সনাক্তকরণ
+        let maleVoice = matchingVoices.find(v => {
+          let n = (v.name || "").toLowerCase();
+          return (
+            (n.includes("male") && !n.includes("female")) ||
+            n.includes("man") || n.includes("david") || n.includes("george") ||
+            n.includes("mark") || n.includes("ravi") || n.includes("ajay") ||
+            n.includes("hemant") || n.includes("amit") || n.includes("deepak")
+          );
+        });
+
+        if (!maleVoice) {
+          maleVoice = matchingVoices.find(v => {
+            let n = (v.name || "").toLowerCase();
+            return !n.includes("female") && !n.includes("woman") && !n.includes("girl") && !n.includes("zira") && !n.includes("kavya");
+          }) || matchingVoices[0];
+        }
+
+        if (maleVoice) {
+          utter.voice = maleVoice;
+        }
+
+        // খুবই পরিষ্কার, বলিষ্ঠ ও গম্ভীর পুরুষের কণ্ঠের জন্য আদর্শ পিচ ও গতি
+        utter.pitch = 0.96; // পরিষ্কার বলিষ্ঠ পুরুষ কণ্ঠ
+        utter.rate = 0.93;  // স্পষ্ট উচ্চারণের জন্য আদর্শ গতি
+        window.speechSynthesis.speak(utter);
+      } catch (_) {}
+    }
+  }
+
+  function getArrivalAnnouncement(curStop, nextStop, isDest, lang) {
+    let cleanCur = curStop.replace(/\(.*?\)/g, "").trim();
+    let cleanNext = (nextStop && nextStop !== "--") ? nextStop.replace(/\(.*?\)/g, "").split("|")[0].trim() : "";
+
+    switch (lang) {
+      case "hi":
+        return isDest 
+          ? `हम गंतव्य ${cleanCur} पहुँच चुके हैं। यात्रा के लिए धन्यवाद!`
+          : (cleanNext ? `हम अभी ${cleanCur} स्टॉप पर पहुँच चुके हैं। अगला स्टॉप ${cleanNext} है।` : `हम अभी ${cleanCur} स्टॉप पर पहुँच चुके हैं।`);
+      case "en":
+        return isDest
+          ? `We have arrived at destination ${cleanCur}. Thank you for traveling with us!`
+          : (cleanNext ? `We have arrived at ${cleanCur}. Next stop is ${cleanNext}.` : `We have arrived at ${cleanCur}.`);
+      case "ta":
+        return isDest
+          ? `நாம் இலக்கு ${cleanCur} வந்துவிட்டோம்!`
+          : (cleanNext ? `நாம் இப்போது ${cleanCur} நிறுத்தத்திற்கு வந்துவிட்டோம். அடுத்த நிறுத்தம் ${cleanNext}.` : `நாம் இப்போது ${cleanCur} வந்துவிட்டோம்.`);
+      case "te":
+        return isDest
+          ? `మనం గమ్యస్థానం ${cleanCur} చేరుకున్నాము!`
+          : (cleanNext ? `మనం ఇప్పుడు ${cleanCur} స్టాప్‌కు చేరుకున్నాము. తదుపరి స్టాప్ ${cleanNext}.` : `మనం ఇప్పుడు ${cleanCur} చేరుకున్నాము.`);
+      case "mr":
+        return isDest
+          ? `आपण गंतव्य ${cleanCur} येथे पोहोचलो आहोत!`
+          : (cleanNext ? `आपण आता ${cleanCur} थांब्यावर पोहोचलो आहोत. पुढील थांबा ${cleanNext}.` : `आपण आता ${cleanCur} थांब्यावर पोहोचलो आहोत.`);
+      case "gu":
+        return isDest
+          ? `આપણે ગંતવ્ય ${cleanCur} પહોંચી ગયા છીએ!`
+          : (cleanNext ? `આપણે હવે ${cleanCur} સ્ટોપ પર પહોંચી ગયા છીએ. આગળનું સ્ટોપ ${cleanNext}.` : `આપણે હવે ${cleanCur} સ્ટોપ પર પહોંચી ગયા છીએ.`);
+      case "kn":
+        return isDest
+          ? `ನಾವು ಗಮ್ಯಸ್ಥಾನ ${cleanCur} ತಲುಪಿದ್ದೇವೆ!`
+          : (cleanNext ? `ನಾವು ಈಗ ${cleanCur} ನಿಲ್ದಾಣಕ್ಕೆ ತಲುಪಿದ್ದೇವೆ. ಮುಂದಿನ ನಿಲ್ದಾಣ ${cleanNext}.` : `ನಾವು ಈಗ ${cleanCur} ನಿಲ್ದಾಣಕ್ಕೆ ತಲುಪಿದ್ದೇವೆ.`);
+      case "ml":
+        return isDest
+          ? `നമ്മൾ ലക്ഷ്യസ്ഥാനം ${cleanCur} എത്തിയിരിക്കുന്നു!`
+          : (cleanNext ? `നമ്മൾ ഇപ്പോൾ ${cleanCur} സ്റ്റോപ്പിൽ എത്തിയിരിക്കുന്നു. അടുത്ത സ്റ്റോപ്പ് ${cleanNext}.` : `നമ്മൾ ഇപ്പോൾ ${cleanCur} സ്റ്റോപ്പിൽ എത്തിയിരിക്കുന്നു.`);
+      case "pa":
+        return isDest
+          ? `ਅਸੀਂ ਮੰਜ਼ਿਲ ${cleanCur} ਪਹੁੰਚ ਗਏ ਹਾਂ!`
+          : (cleanNext ? `ਅਸੀਂ ਹੁਣ ${cleanCur} ਸਟਾਪ 'ਤੇ ਪਹੁੰਚ ਗਏ ਹਾਂ। ਅਗਲਾ ਸਟਾਪ ${cleanNext}।` : `ਅਸੀਂ ਹੁਣ ${cleanCur} ਸਟਾਪ 'ਤੇ ਪਹੁੰਚ ਗਏ ਹਾਂ।`);
+      case "or":
+        return isDest
+          ? `ଆମେ ଗନ୍ତବ୍ୟସ୍ଥଳ ${cleanCur}ରେ ପହଞ୍ଚିଛୁ!`
+          : (cleanNext ? `ଆମେ ଏବେ ${cleanCur} ଷ୍ଟପ୍‌ରେ ପହଞ୍ଚିଛୁ। ପରବର୍ତ୍ତୀ ଷ୍ଟପ୍ ${cleanNext}।` : `ଆମେ ଏବେ ${cleanCur} ଷ୍ଟପ୍‌ରେ ପହଞ୍ଚିଛୁ।`);
+      default: // Bengali ("bn")
+        return isDest
+          ? `আমরা গন্তব্য ${cleanCur}-এ পৌঁছে গেছি। আমাদের সাথে ভ্রমণের জন্য ধন্যবাদ!`
+          : (cleanNext ? `আমরা এখন ${cleanCur} স্টপেজে পৌঁছে গেছি। পরবর্তী স্টপেজ ${cleanNext}।` : `আমরা এখন ${cleanCur} স্টপেজে পৌঁছে গেছি।`);
+    }
+  }
+
+  function getNextStopAnnouncement(nextStop, lang) {
+    let cleanNext = (nextStop && nextStop !== "--") ? nextStop.replace(/\(.*?\)/g, "").split("|")[0].trim() : "";
+    if (!cleanNext) return "";
+
+    switch (lang) {
+      case "hi":
+        return `अगला स्टॉप ${cleanNext} है।`;
+      case "en":
+        return `Next stop is ${cleanNext}.`;
+      case "ta":
+        return `அடுத்த நிறுத்தம் ${cleanNext}.`;
+      case "te":
+        return `తదుపరి స్టాప్ ${cleanNext}.`;
+      case "mr":
+        return `पुढील थांबा ${cleanNext}.`;
+      case "gu":
+        return `આગળનું સ્ટોપ ${cleanNext}.`;
+      case "kn":
+        return `ಮುಂದಿನ ನಿಲ್ದಾಣ ${cleanNext}.`;
+      case "ml":
+        return `അടുത്ത സ്റ്റോപ്പ് ${cleanNext}.`;
+      case "pa":
+        return `ਅਗਲਾ ਸਟਾਪ ${cleanNext}।`;
+      case "or":
+        return `ପରବର୍ତ୍ତୀ ଷ୍ଟପ୍ ${cleanNext}।`;
+      default: // Bengali ("bn")
+        return `পরবর্তী স্টপেজ ${cleanNext}।`;
+    }
+  }
+
+  function showArrivalAlertBanner(curStop, nextStop, isDest) {
+    let banner = document.getElementById("arrivalAlertBanner");
+    let titleElem = document.getElementById("arrivalAlertTitle");
+    let textElem = document.getElementById("arrivalAlertText");
+    let nextElem = document.getElementById("arrivalAlertNext");
+    if (!banner) return;
+
+    let lang = getCurrentAppLanguage();
+    let cleanCur = curStop.replace(/\(.*?\)/g, "").trim();
+    let cleanNext = (nextStop && nextStop !== "--") ? nextStop.replace(/\(.*?\)/g, "").split("|")[0].trim() : "";
+
+    if (isDest) {
+      if (titleElem) titleElem.innerText = (lang === "hi" ? "🎉 गंतव्य आगमन" : (lang === "en" ? "🎉 Destination Arrived" : "🎉 গন্তব্যে পৌঁছে গেছেন!"));
+      if (textElem) textElem.innerHTML = `আপনি গন্তব্য <b>${cleanCur}</b>-এ পৌঁছে গেছেন!`;
+      if (nextElem) {
+        nextElem.innerText = (lang === "hi" ? "यात्रा पूरी हुई" : (lang === "en" ? "Trip completed" : "যাত্রা সমাপ্ত"));
+        nextElem.style.display = "inline-block";
+      }
+    } else {
+      if (titleElem) titleElem.innerText = (lang === "hi" ? "🔔 স্টপ আগমন" : (lang === "en" ? "🔔 Stop Arrival" : "🔔 স্টপেজে পৌঁছানোর বার্তা"));
+      if (textElem) textElem.innerHTML = `আপনি এখন <b>${cleanCur}</b> স্টপেজে পৌঁছে গেছেন।`;
+      if (nextElem) {
+        if (cleanNext) {
+          nextElem.innerText = `⏩ ${(lang === "hi" ? "अगला स्टॉप" : (lang === "en" ? "Next Stop" : "পরবর্তী স্টপেজ"))}: ${cleanNext}`;
+          nextElem.style.display = "inline-block";
+        } else {
+          nextElem.style.display = "none";
+        }
+      }
+    }
+
+    banner.classList.remove("hidden");
+    try {
+      if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+    } catch (_) {}
+
+    if (arrivalAlertTimeout) clearTimeout(arrivalAlertTimeout);
+    arrivalAlertTimeout = setTimeout(() => {
+      dismissArrivalAlert();
+    }, 8000);
+  }
+
+  function dismissArrivalAlert() {
+    let banner = document.getElementById("arrivalAlertBanner");
+    if (banner) banner.classList.add("hidden");
+  }
+
+  function toggleVoiceAnnouncements() {
+    voiceAnnouncementEnabled = !voiceAnnouncementEnabled;
+    let btn = document.getElementById("toggleVoiceBtn");
+    let text = document.getElementById("voiceToggleText");
+    let lang = getCurrentAppLanguage();
+    if (voiceAnnouncementEnabled) {
+      if (btn) btn.classList.remove("disabled");
+      if (text) text.innerText = (lang === "hi" ? "घोषणा: चालू" : (lang === "en" ? "Announcements: ON" : "ঘোষণা: চালু"));
+      playVoiceAnnouncement(lang === "hi" ? "घोषणा चालू कर दी गई है।" : (lang === "en" ? "Voice announcements enabled." : "ঘোষণা চালু করা হয়েছে।"), lang);
+    } else {
+      if (btn) btn.classList.add("disabled");
+      if (text) text.innerText = (lang === "hi" ? "ঘोषणा: बंद" : (lang === "en" ? "Announcements: OFF" : "ঘোষণা: বন্ধ"));
+      if ('speechSynthesis' in window) {
+        try { window.speechSynthesis.cancel(); } catch(_) {}
+      }
+    }
+  }
+
+  let isMapAddMode = false; // ম্যাপ ক্লিক মোড ফ্ল্যাগ
+  let pendingMapClickCoords = null; // ম্যাপ ক্লিকের কো-অর্ডিনেট
+
+  const doubleBusSvg = `<svg viewBox="0 0 76 34" width="46" height="24" style="vertical-align: middle; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.35));" xmlns="http://www.w3.org/2000/svg">
+  <rect x="3" y="4" width="70" height="23" rx="6" fill="#1e88e5" stroke="#0d47a1" stroke-width="1.5"/>
+  <path d="M 4 21 Q 4 26 9 26 L 67 26 Q 72 26 72 21 Z" fill="#ffd54f"/>
+  <path d="M 6 8 Q 8 6 12 6 L 16 6 L 16 17 L 6 17 Z" fill="#e1f5fe"/>
+  <path d="M 70 8 Q 68 6 64 6 L 60 6 L 60 17 L 70 17 Z" fill="#e1f5fe"/>
+  <rect x="19" y="6" width="10" height="11" rx="2" fill="#e1f5fe"/>
+  <rect x="32" y="6" width="12" height="11" rx="2" fill="#e1f5fe"/>
+  <rect x="47" y="6" width="10" height="11" rx="2" fill="#e1f5fe"/>
+  <circle cx="5" cy="22" r="2.2" fill="#fff59d" stroke="#fbc02d" stroke-width="0.8"/>
+  <circle cx="71" cy="22" r="2.2" fill="#fff59d" stroke="#fbc02d" stroke-width="0.8"/>
+  <circle cx="16" cy="27" r="5" fill="#263238"/>
+  <circle cx="16" cy="27" r="2.2" fill="#cfd8dc"/>
+  <circle cx="60" cy="27" r="5" fill="#263238"/>
+  <circle cx="60" cy="27" r="2.2" fill="#cfd8dc"/>
+</svg>`;
+
+  const busIcon = L.divIcon({ 
+    html: `<div style="display:flex; align-items:center; justify-content:center;">${doubleBusSvg}</div>`, 
+    className: '', 
+    iconSize: [46, 24], 
+    iconAnchor: [23, 12] 
+  });
+  const userIcon = L.divIcon({ 
+    html: '<div style="font-size:30px; line-height:1; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4));">📍</div>', 
+    className: '', 
+    iconSize: [32, 32], 
+    iconAnchor: [16, 30] 
+  });
+
+  function showAppAlert(msg, title = "বিজ্ঞপ্তি") {
+    document.getElementById("customAlertTitle").innerText = title;
+    document.getElementById("customAlertMsg").innerText = msg;
+    document.getElementById("customAlertModal").classList.remove("hidden");
+  }
+
+  function closeAlertModal() {
+    document.getElementById("customAlertModal").classList.add("hidden");
+  }
+
+  function formatCleanTime(timeStr) {
+    if (!timeStr) return "--:--";
+    let str = String(timeStr).trim();
+
+    let matchFullDate = str.match(/(\d{1,2}):(\d{2})(?::\d{2})?\s*(AM|PM)?/i);
+    if (matchFullDate) {
+      let h = parseInt(matchFullDate[1], 10);
+      let m = matchFullDate[2];
+      let ampm = matchFullDate[3] ? matchFullDate[3].toUpperCase() : '';
+
+      if (!ampm) {
+        ampm = h >= 12 ? 'PM' : 'AM';
+        h = h % 12 || 12;
+      }
+      return `${String(h).padStart(2, '0')}:${m} ${ampm}`;
+    }
+
+    let dotMatch = str.match(/^(\d{1,2})[.:](\d{2})\s*(AM|PM)?$/i);
+    if (dotMatch) {
+      let h = parseInt(dotMatch[1], 10);
+      let m = dotMatch[2];
+      let ampm = dotMatch[3] ? dotMatch[3].toUpperCase() : (h >= 12 ? 'PM' : 'AM');
+      h = h % 12 || 12;
+      return `${String(h).padStart(2, '0')}:${m} ${ampm}`;
+    }
+
+    return str.toUpperCase();
+  }
+
+  function timeToMinutes(tStr) {
+    if (!tStr) return null;
+    let str = String(tStr).trim().toUpperCase();
+    let m = str.match(/(\d{1,2})[.:](\d{2})\s*(AM|PM)?/);
+    if (!m) return null;
+    let h = parseInt(m[1], 10);
+    let min = parseInt(m[2], 10);
+    let ampm = m[3];
+
+    if (ampm === 'PM' && h < 12) h += 12;
+    if (ampm === 'AM' && h === 12) h = 0;
+    return h * 60 + min;
+  }
+
+  function cleanStopName(name) {
+    if (!name) return "";
+    return name.replace(/^[^a-zA-Z0-9]+/, '').replace(/^[iI|]\s+/, '').trim().toUpperCase();
+  }
+
+  // ম্যাপে ক্লিক করে স্টপ যুক্ত করার মোড টগল
+  function toggleMapAddMode() {
+    isMapAddMode = !isMapAddMode;
+    let btn = document.getElementById("mapAddStopBtn");
+    let btnText = document.getElementById("mapAddStopBtnText");
+
+    if (isMapAddMode) {
+      btn.classList.add("active");
+      btnText.innerText = "ম্যাপে ক্লিক মোড অন আছে (যেখানে স্টপ যুক্ত করতে চান সেখানে ক্লিক করুন)";
+      showAppAlert("ম্যাপের ওপর যেখানে স্টপেজ যুক্ত করতে চান সেখানে আলতো চাপুন।", "স্টপ যোগ মোড");
+    } else {
+      btn.classList.remove("active");
+      btnText.innerText = "ম্যাপে ক্লিক করে সরাসরি নতুন স্টপ যোগ করুন (অফলাইন মোড)";
+    }
+  }
+
+  map.on('click', async function(e) {
+    if (!isMapAddMode) return;
+    pendingMapClickCoords = { lat: e.latlng.lat, lon: e.latlng.lng };
+
+    // নাম ইনপুট মডাল প্রদর্শন
+    document.getElementById("manualStopName").value = "";
+    document.getElementById("nameModal").classList.remove("hidden");
+  });
+
+  // নেটিভ অ্যান্ড্রয়েড GPS ব্রিজ
+  window.updateNativeGPS = function(lat, lon, acc, speedKmh) {
+    userPos = {
+      lat: Number(lat),
+      lon: Number(lon),
+      acc: Number(acc || 10),
+      speed: Number(speedKmh || 0)
+    };
+
+    let userGpsElem = document.getElementById("infoUserGPS");
+    if (userGpsElem) {
+      userGpsElem.innerText = `${userPos.lat.toFixed(4)}, ${userPos.lon.toFixed(4)} (±${Math.round(userPos.acc)}m)`;
+    }
+    let confElem = document.getElementById("infoConfidence");
+    if (confElem) {
+      confElem.innerText = userPos.acc < 20 ? "HIGH (99%)" : userPos.acc < 50 ? "MEDIUM (85%)" : "LOW (50%)";
+    }
+
+    if (!userMarker) {
+      userMarker = L.marker([userPos.lat, userPos.lon], { icon: userIcon }).addTo(map).bindPopup("<b>আপনার অবস্থান</b>");
+    } else {
+      userMarker.setLatLng([userPos.lat, userPos.lon]);
+    }
+
+    if (!hasCenteredUser) {
+      map.setView([userPos.lat, userPos.lon], 14);
+      hasCenteredUser = true;
+    }
+
+    checkPassengerRideAndSync();
+    updateDistanceAndTracking();
+  };
+
+  // ব্রাউজার জিপিএস হ্যান্ডলিং
+  let isWatchingGeolocation = false;
+  function startBrowserGeolocation() {
+    if (isWatchingGeolocation) return;
+    if (navigator.geolocation) {
+      try {
+        isWatchingGeolocation = true;
+        navigator.geolocation.watchPosition(pos => {
+          window.updateNativeGPS(
+            pos.coords.latitude, 
+            pos.coords.longitude, 
+            pos.coords.accuracy, 
+            pos.coords.speed ? Number((pos.coords.speed * 3.6).toFixed(1)) : 0
+          );
+        }, err => {
+          if (!hasCenteredUser) {
+            map.setView([23.82, 87.75], 11);
+            hasCenteredUser = true;
+          }
+        }, { enableHighAccuracy: true, maximumAge: 5000, timeout: 15000 });
+      } catch (e) {
+        console.log("Geolocation start caught:", e);
+      }
+    } else {
+      if (!hasCenteredUser) {
+        map.setView([23.82, 87.75], 11);
+        hasCenteredUser = true;
+      }
+    }
+  }
+
+  window.onLocationPermissionGranted = function() {
+    startBrowserGeolocation();
+  };
+
+  setTimeout(() => {
+    if (!hasCenteredUser) {
+      map.setView([23.82, 87.75], 11);
+    }
+    startBrowserGeolocation();
+  }, 1000);
+
+  // এই বোতামে ক্লিক করলে ম্যাপ ব্যবহারকারী এবং যানের অবস্থান স্ক্রিনে কেন্দ্রীভূত করবে
+  function focusBothUserAndVehicle() {
+    try { map.invalidateSize(); } catch(_) {}
+    if (userPos && busPos) {
+      let bounds = L.latLngBounds([
+        [userPos.lat, userPos.lon],
+        [busPos.lat, busPos.lon]
+      ]);
+      map.fitBounds(bounds.pad(0.3), { animate: true });
+    } else if (busPos) {
+      map.setView([busPos.lat, busPos.lon], 15, { animate: true });
+    } else if (userPos) {
+      map.setView([userPos.lat, userPos.lon], 15, { animate: true });
+    } else if (masterStopsList && masterStopsList.length > 0) {
+      let validStops = masterStopsList.filter(s => !isNaN(s.latitude || s.lat) && Number(s.latitude || s.lat) !== 0);
+      if (validStops.length > 0) {
+        let bounds = L.latLngBounds(validStops.map(s => [Number(s.latitude || s.lat), Number(s.longitude || s.lon)]));
+        map.fitBounds(bounds.pad(0.2), { animate: true });
+      } else {
+        map.setView([23.82, 87.75], 11, { animate: true });
+      }
+    } else {
+      map.setView([23.82, 87.75], 11, { animate: true });
+    }
+  }
+  
+  function checkPassengerRideAndSync() {
+    if (!userPos || !trackingBus) return;
+
+    let isNearBus = false;
+    if (busPos) {
+      let distToBus = getDistanceMeters(userPos.lat, userPos.lon, busPos.lat, busPos.lon);
+      if (distToBus <= 200) isNearBus = true;
+    }
+
+    if (!isNearBus && currentBusStopsList && currentBusStopsList.length > 0) {
+      for (let s of currentBusStopsList) {
+        let sLat = Number(s.latitude || s.lat);
+        let sLon = Number(s.longitude || s.lon);
+        if (sLat && sLon && getDistanceMeters(userPos.lat, userPos.lon, sLat, sLon) <= 300) {
+          isNearBus = true;
+          break;
+        }
+      }
+    }
+
+    if (isNearBus || !busPos || userPos.speed > 8) {
+      busPos = { lat: userPos.lat, lon: userPos.lon, speed: userPos.speed };
+      
+      if (busMarker) {
+        busMarker.setLatLng([busPos.lat, busPos.lon]);
+      } else {
+        busMarker = L.marker([busPos.lat, busPos.lon], { icon: busIcon }).addTo(map);
+      }
+
+      if (userPos.speed > 5) {
+        syncUserGPSAsBus(trackingBus.number, userPos.lat, userPos.lon, userPos.speed, userPos.acc);
+      }
+    }
+  }
+
+  function updateDistanceAndTracking() {
+    if (!trackingBus) return;
+
+    let effectiveBusLat = busPos ? busPos.lat : (userPos ? userPos.lat : null);
+    let effectiveBusLon = busPos ? busPos.lon : (userPos ? userPos.lon : null);
+
+    if (!effectiveBusLat || !effectiveBusLon) return;
+
+    let distKm = 0;
+    if (userPos && busPos) {
+      let distM = getDistanceMeters(userPos.lat, userPos.lon, busPos.lat, busPos.lon);
+      distKm = (distM / 1000).toFixed(2);
+
+      if (distM > 100) {
+        if (!routeLine) {
+          routeLine = L.polyline([[userPos.lat, userPos.lon], [busPos.lat, busPos.lon]], {
+            color: '#1565c0', weight: 4, opacity: 0.7, dashArray: '5, 10'
+          }).addTo(map);
+        } else {
+          routeLine.setLatLngs([[userPos.lat, userPos.lon], [busPos.lat, busPos.lon]]);
+        }
+      } else if (routeLine) {
+        map.removeLayer(routeLine);
+        routeLine = null;
+      }
+    }
+
+    let currentEffectiveSpeed = (busPos && busPos.speed) ? busPos.speed : (userPos && userPos.speed > 5 ? userPos.speed : 0);
+    
+    let speedElem = document.getElementById("infoSpeed");
+    if (speedElem) {
+      speedElem.innerText = `${currentEffectiveSpeed} KM/H`;
+    }
+
+    evaluateStoppagesAndEta(distKm, currentEffectiveSpeed, effectiveBusLat, effectiveBusLon);
+    checkNearbyMasterStops(effectiveBusLat, effectiveBusLon);
+  }
+  
+  // সমস্ত সংরক্ষিত মাস্টার স্টপ ম্যাপে সব সময় প্রদর্শন
+  function renderAllMasterStopsOnMap(stops) {
+    if (!stops || stops.length === 0) return;
+    if (trackingBus && currentBusStopsList && currentBusStopsList.length > 0) return;
+
+    allMasterStopMarkersLayer.clearLayers();
+    let boundsCoords = [];
+
+    stops.forEach((s) => {
+      let sLat = Number(s.latitude || s.lat);
+      let sLon = Number(s.longitude || s.lon);
+      let sName = s.name || s.stopName;
+      if (!isNaN(sLat) && !isNaN(sLon) && sLat !== 0) {
+        boundsCoords.push([sLat, sLon]);
+
+        let marker = L.circleMarker([sLat, sLon], {
+          radius: 6,
+          fillColor: "#1e88e5",
+          color: "#ffffff",
+          weight: 2,
+          opacity: 1,
+          fillOpacity: 0.85
+        });
+
+        marker.bindTooltip(`<b>📍 ${sName}</b>`, {
+          direction: 'top',
+          offset: [0, -6]
+        });
+
+        marker.on('click', () => {
+          let safeName = (sName || "").replace(/'/g, "\\'");
+          let div = document.createElement("div");
+          div.style.minWidth = "150px";
+          div.style.textAlign = "center";
+          div.innerHTML = `
+            <div style="font-weight:bold;color:#0d47a1;margin-bottom:6px;font-size:13px;">🚏 ${sName}</div>
+            <div style="display:flex;gap:4px;flex-direction:column;">
+              <button style="padding:5px 8px;font-size:11px;background:#1565c0;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:bold;" onclick="setQuickSearchFrom('${safeName}')">কোথা থেকে: সেট করুন</button>
+              <button style="padding:5px 8px;font-size:11px;background:#2e7d32;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:bold;" onclick="setQuickSearchTo('${safeName}')">কোথায় যাবেন: সেট করুন</button>
+            </div>
+          `;
+          marker.bindPopup(div).openPopup();
+        });
+
+        allMasterStopMarkersLayer.addLayer(marker);
+      }
+    });
+
+    let statusText = document.getElementById("mapStatusText");
+    if (statusText) statusText.innerText = "ম্যাপ সক্রিয়: সকল স্টপ ও অবস্থান";
+
+    if (!userPos && boundsCoords.length > 0 && !hasCenteredUser) {
+      try {
+        let bounds = L.latLngBounds(boundsCoords);
+        map.fitBounds(bounds.pad(0.2));
+      } catch(_) {}
+    }
+    setTimeout(() => { try { map.invalidateSize(); } catch(_) {} }, 100);
+  }
+
+  window.setQuickSearchFrom = function(name) {
+    let inp = document.getElementById("searchFrom");
+    if (inp) inp.value = name;
+    map.closePopup();
+    handleAutoSearch();
+  };
+
+  window.setQuickSearchTo = function(name) {
+    let inp = document.getElementById("searchTo");
+    if (inp) inp.value = name;
+    map.closePopup();
+    handleAutoSearch();
+  };
+
+  // টাইমলাইন ও ম্যাপে স্টপ প্রদর্শন
+  function renderStopsOnMapAndTimeline(orderedStops, nearestStopIndex, busLat, busLon) {
+    allMasterStopMarkersLayer.clearLayers();
+    stopMarkersLayer.clearLayers();
+    if (stopRoutePolyline) {
+      map.removeLayer(stopRoutePolyline);
+      stopRoutePolyline = null;
+    }
+
+    let statusText = document.getElementById("mapStatusText");
+    if (statusText && trackingBus) {
+      statusText.innerText = "🚌 " + (trackingBus.name || trackingBus.number) + " লাইভ ট্র্যাকিং";
+    }
+
+    if (!orderedStops || orderedStops.length === 0) return;
+
+    let latLngs = [];
+
+    // বাসের অনুমোদিত স্টপ তালিকা নেওয়া
+    let allowedStops = [];
+    if (trackingBus && trackingBus.selectedStops) {
+      if (typeof trackingBus.selectedStops === "string") {
+        allowedStops = trackingBus.selectedStops.split(",").map(s => cleanStopName(s));
+      } else if (Array.isArray(trackingBus.selectedStops)) {
+        allowedStops = trackingBus.selectedStops.map(s => cleanStopName(s));
+      }
+    }
+
+    // ১. ম্যাপে স্টপেজের মার্কার রেন্ডার করা
+    orderedStops.forEach((s, i) => {
+      let sLat = Number(s.latitude || s.lat);
+      let sLon = Number(s.longitude || s.lon);
+      let sName = s.name || s.stopName || `STOP ${i+1}`;
+      let cName = cleanStopName(sName);
+
+      let isSkipped = allowedStops.length > 0 && !allowedStops.includes(cName);
+
+      if (!isNaN(sLat) && !isNaN(sLon) && sLat !== 0) {
+        latLngs.push([sLat, sLon]);
+
+        let circleMarker = L.circleMarker([sLat, sLon], {
+          radius: isSkipped ? 6 : 7,
+          fillColor: isSkipped ? "#ffcdd2" : (i <= nearestStopIndex ? "#1565c0" : "#ffffff"),
+          color: isSkipped ? "#d32f2f" : "#0d47a1",
+          weight: isSkipped ? 2 : 3,
+          dashArray: isSkipped ? "3, 3" : null,
+          opacity: 1,
+          fillOpacity: 0.9
+        });
+
+        let tooltipContent = isSkipped
+          ? `<div style="text-align:center; text-decoration:none !important;">
+               <b style="color:#c62828; text-decoration:line-through; font-size:12px;">${sName}</b><br>
+               <span style="color:#d32f2f; font-size:11px; font-weight:bold; text-decoration:none !important; display:inline-block;">(এখানে থামবে না)</span>
+             </div>`
+          : `<b>${sName}</b>`;
+
+        circleMarker.bindTooltip(tooltipContent, {
+          permanent: true,
+          direction: 'top',
+          className: isSkipped ? 'stop-marker-label skipped-label' : 'stop-marker-label',
+          offset: [0, -8]
+        });
+
+        stopMarkersLayer.addLayer(circleMarker);
+      }
+    });
+
+    let card = document.getElementById("routeTrackerCard");
+    let trackBar = document.getElementById("routeTrackBar");
+    let timelineContainer = document.querySelector(".route-timeline-container");
+    card.classList.remove("hidden");
+
+    let displayStops = orderedStops;
+    let activeRelativeIndex = nearestStopIndex;
+
+    // ২. হাইব্রিড দূরত্বের ভিত্তিতে প্রতিটি স্টপের জন্য পিক্সেল পজিশন হিসাব করা
+    let stopPixelPositions = [40];
+    const MIN_GAP_PX = 120;
+    const PX_PER_KM = 35;
+
+    for (let i = 1; i < displayStops.length; i++) {
+      let prevLat = Number(displayStops[i - 1].latitude || displayStops[i - 1].lat);
+      let prevLon = Number(displayStops[i - 1].longitude || displayStops[i - 1].lon);
+      let curLat = Number(displayStops[i].latitude || displayStops[i].lat);
+      let curLon = Number(displayStops[i].longitude || displayStops[i].lon);
+
+      let distMeters = 0;
+      if (!isNaN(prevLat) && !isNaN(prevLon) && !isNaN(curLat) && !isNaN(curLon)) {
+        distMeters = getDistanceMeters(prevLat, prevLon, curLat, curLon);
+      }
+      let distKm = distMeters / 1000;
+
+      let gap = MIN_GAP_PX + (distKm * PX_PER_KM);
+      let nextPos = stopPixelPositions[i - 1] + gap;
+      stopPixelPositions.push(nextPos);
+    }
+
+    let totalTrackWidth = stopPixelPositions[stopPixelPositions.length - 1] + 60;
+    trackBar.style.minWidth = `${totalTrackWidth}px`;
+
+    trackBar.innerHTML = `
+      <div class="route-line-bg" style="left: 40px; right: 40px;"></div>
+      <div class="route-live-bus-indicator" id="routeBusIndicator">${doubleBusSvg}</div>
+    `;
+
+    // ৩. প্রতিটি স্টপ নোডকে নির্ধারিত পিক্সেল পজিশনে বসানো
+    displayStops.forEach((s, idx) => {
+      let node = document.createElement("div");
+      node.className = "route-stop-node";
+      node.style.left = `${stopPixelPositions[idx]}px`;
+
+      let circle = document.createElement("div");
+      circle.className = "route-stop-circle";
+
+      let cName = cleanStopName(s.name || s.stopName);
+      let isSkipped = allowedStops.length > 0 && !allowedStops.includes(cName);
+
+      if (isSkipped) {
+        circle.classList.add("skipped");
+      } else if (idx < activeRelativeIndex) {
+        circle.classList.add("passed");
+      } else if (idx === activeRelativeIndex) {
+        circle.classList.add("active");
+        node.id = "currentActiveTimelineNode";
+      }
+
+      let label = document.createElement("div");
+      label.className = `route-stop-name ${idx % 2 === 0 ? 'pos-bottom' : 'pos-top'} ${isSkipped ? 'skipped-name' : ''}`;
+      
+      if (isSkipped) {
+        label.innerHTML = `<span style="color:#c62828; text-decoration:line-through;">${s.name || s.stopName}</span><br><span style="color:#b71c1c; font-size:9px;">থামবে না</span>`;
+      } else {
+        label.innerText = s.name || s.stopName || "STOP";
+      }
+
+      node.appendChild(circle);
+      node.appendChild(label);
+      trackBar.appendChild(node);
+    });
+
+    // ৪. লাইভ বাসের আইকনকে নিখুঁতভাবে স্টপের ওপর বা মধ্যবর্তী স্থানে নিয়ে যাওয়া
+    let indicator = document.getElementById("routeBusIndicator");
+    let count = displayStops.length;
+
+    if (count > 0 && activeRelativeIndex >= 0) {
+      let busPxPos = stopPixelPositions[activeRelativeIndex];
+
+      if (activeRelativeIndex < count - 1 && busLat && busLon) {
+        let curStop = displayStops[activeRelativeIndex];
+        let nextStop = displayStops[activeRelativeIndex + 1];
+
+        let cLat = Number(curStop.latitude || curStop.lat);
+        let cLon = Number(curStop.longitude || curStop.lon);
+        let nLat = Number(nextStop.latitude || nextStop.lat);
+        let nLon = Number(nextStop.longitude || nextStop.lon);
+
+        if (!isNaN(cLat) && !isNaN(cLon) && !isNaN(nLat) && !isNaN(nLon)) {
+          let segDist = getDistanceMeters(cLat, cLon, nLat, nLon);
+          let distToNext = getDistanceMeters(busLat, busLon, nLat, nLon);
+
+          if (segDist > 0) {
+            let progress = (segDist - distToNext) / segDist;
+            progress = Math.min(Math.max(progress, 0), 1);
+
+            let segWidth = stopPixelPositions[activeRelativeIndex + 1] - stopPixelPositions[activeRelativeIndex];
+            busPxPos += progress * segWidth;
+          }
+        }
+      }
+
+      indicator.style.left = `${busPxPos}px`;
+    } else {
+      indicator.style.left = "40px";
+    }
+
+    setTimeout(() => {
+      let activeElem = document.getElementById("currentActiveTimelineNode");
+      if (activeElem && timelineContainer) {
+        let containerWidth = timelineContainer.clientWidth;
+        let nodeLeft = activeElem.offsetLeft;
+        let nodeWidth = activeElem.clientWidth;
+
+        let scrollTarget = nodeLeft - (containerWidth / 2) + (nodeWidth / 2);
+        timelineContainer.scrollTo({
+          left: scrollTarget,
+          behavior: 'smooth'
+        });
+      }
+    }, 500);
+  }
+
+  function calculateETAString(distKm, speed) {
+    let distMeters = Math.round(Number(distKm) * 1000);
+    // ১০ মিটারের কম হলে কেবল "পৌঁছে গেছে" লেখা দেখাবে
+    if (distMeters < 10) {
+      let lang = typeof getCurrentAppLanguage === "function" ? getCurrentAppLanguage() : "bn";
+      if (lang === "en") return "Arrived";
+      if (lang === "hi") return "पहुँच गया";
+      return "পৌঁছে গেছে";
+    }
+
+    let effectiveSpeed = Number(speed) > 5 ? Number(speed) : 28;
+    let hours = distKm / effectiveSpeed;
+    let totalMins = Math.round(hours * 60);
+
+    if (totalMins < 1) return "< 1 MIN";
+    if (totalMins < 60) return `${totalMins} MINS`;
+    let h = Math.floor(totalMins / 60);
+    let m = totalMins % 60;
+    return `${h} HR ${m} MINS`;
+  }
+
+  function formatDistanceWithMeters(distKm) {
+    let meters = Math.round(distKm * 1000);
+    if (distKm < 1) {
+      return `${meters} M`;
+    }
+    return `${distKm.toFixed(1)} KM (${meters} M)`;
+  }     
+
+  window.addEventListener("DOMContentLoaded", async () => {
+    loadDatalistSuggestions();
+  });
+
+  let globalBusesCatalog = [];
+
+  async function loadDatalistSuggestions() {
+    try {
+      let res = await fetch(`${API_URL}?action=getStopsList`);
+      let data = await res.json();
+      if (data.stops) {
+        masterStopsList = data.stops;
+
+        let rawNames = data.stops.map(s => typeof s === 'string' ? s : (s.name || s.stopName));
+        let uniqueNames = [];
+        let seen = new Set();
+
+        rawNames.forEach(name => {
+          let clean = cleanStopName(name);
+          if (clean && !seen.has(clean)) {
+            seen.add(clean);
+            uniqueNames.push(name.trim().toUpperCase());
+          }
+        });
+
+        allStopNames = uniqueNames;
+        renderAllMasterStopsOnMap(masterStopsList);
+      }
+    } catch (e) {
+      console.log("Error loading suggestions:", e);
+    }
+
+    // ব্যাকগ্রাউন্ডে সমস্ত বাসের তথ্যও ক্যাশ করে রাখা যাতে সরাসরি বাস নম্বর দিয়ে খুঁজলেও নাম, গন্তব্য ও স্টপ পাওয়া যায়
+    try {
+      let bRes = await fetch(`${API_URL}?action=getBuses`);
+      let bData = await bRes.json();
+      if (bData && bData.buses && bData.buses.length > 0) {
+        globalBusesCatalog = bData.buses;
+      }
+    } catch (_) {}
+  }
+
+  let allStopNames = [];
+
+  function setupAutocomplete(inputId, boxId) {
+    let input = document.getElementById(inputId);
+    let box = document.getElementById(boxId);
+    if (!input || !box) return;
+
+    function renderList() {
+      let query = input.value.trim().toUpperCase();
+      if (!query || query.length < 1) {
+        box.innerHTML = "";
+        box.classList.add("hidden");
+        return;
+      }
+
+      let matches = allStopNames.filter(name => name.includes(query)).slice(0, 15);
+      if (matches.length === 0) {
+        box.innerHTML = "";
+        box.classList.add("hidden");
+        return;
+      }
+
+      box.innerHTML = "";
+      matches.forEach(name => {
+        let item = document.createElement("div");
+        item.className = "suggestion-item";
+        item.textContent = name;
+        item.addEventListener("mousedown", (e) => {
+          e.preventDefault();
+          input.value = name;
+          box.classList.add("hidden");
+          handleAutoSearch();
+        });
+        item.addEventListener("touchstart", (e) => {
+          input.value = name;
+          box.classList.add("hidden");
+          handleAutoSearch();
+        });
+        box.appendChild(item);
+      });
+      box.classList.remove("hidden");
+    }
+
+    input.addEventListener("input", renderList);
+    input.addEventListener("focus", () => {
+      if (input.value.trim().length >= 1) {
+        renderList();
+      }
+    });
+    input.addEventListener("blur", () => {
+      setTimeout(() => box.classList.add("hidden"), 250);
+    });
+  }
+
+  setupAutocomplete("searchFrom", "fromSuggestions");
+  setupAutocomplete("searchTo", "toSuggestions");
+
+  document.addEventListener("click", (e) => {
+    if (!e.target.closest(".input-suggest-container")) {
+      let fBox = document.getElementById("fromSuggestions");
+      let tBox = document.getElementById("toSuggestions");
+      if (fBox) fBox.classList.add("hidden");
+      if (tBox) tBox.classList.add("hidden");
+    }
+  });
+
+  const handleAutoSearch = () => {
+    clearTimeout(debounceTimer);
+    let from = document.getElementById("searchFrom").value.trim();
+    let to = document.getElementById("searchTo").value.trim();
+
+    if (from.length < 3 || to.length < 3) {
+      document.getElementById("busList").innerHTML = "";
+      return;
+    }
+    debounceTimer = setTimeout(autoSearchBuses, 500);
+  };
+
+  document.getElementById("searchFrom").addEventListener("input", handleAutoSearch);
+  document.getElementById("searchTo").addEventListener("input", handleAutoSearch);
+
+  async function autoSearchBuses() {
+    let from = document.getElementById("searchFrom").value.trim();
+    let to = document.getElementById("searchTo").value.trim();
+    let listDiv = document.getElementById("busList");
+
+    if (!from || !to) {
+      listDiv.innerHTML = (!from && !to) ? "" : `<div style="padding:10px;text-align:center;color:#607d8b;font-size:13px;">উভয় স্টপেজের নাম লিখুন (From এবং To)...</div>`;
+      return;
+    }
+
+    listDiv.innerHTML = `<div style="padding:12px;text-align:center;color:#1565c0;font-weight:bold;">বাসের তথ্য খোঁজা হচ্ছে...</div>`;
+
+    try {
+      let res = await fetch(`${API_URL}?action=getBuses`);
+      let data = await res.json();
+
+      if (!data.buses || data.buses.length === 0) {
+        listDiv.innerHTML = `<div style="padding:12px;color:#c62828;text-align:center;font-weight:bold;">কোনো বাস পাওয়া যায়নি।</div>`;
+        return;
+      }
+
+      let uniqueTrips = [];
+      let seenTrips = new Set();
+      data.buses.forEach(b => {
+        let tripKey = `${b.id || ''}_${b.number}_${b.source}_${b.depTime}_${b.dest}_${b.arrTime}`;
+        if (!seenTrips.has(tripKey)) {
+          seenTrips.add(tripKey);
+          uniqueTrips.push(b);
+        }
+      });
+
+      let results = await Promise.all(
+        uniqueTrips.map(b => processBusDirectionAndTime(b, from, to))
+      );
+
+      let validatedBuses = results.filter(item => item !== null);
+
+      if (validatedBuses.length === 0) {
+        listDiv.innerHTML = `<div style="padding:12px;color:#c62828;text-align:center;font-weight:bold;">"${from.toUpperCase()}" থেকে "${to.toUpperCase()}" অভিমুখে কোনো বাস পাওয়া যায়নি।</div>`;
+        return;
+      }
+
+      let finalBuses = [];
+      let seenResultKeys = new Set();
+      validatedBuses.forEach(item => {
+        let b = item.bus;
+        let uniqueCardKey = `${(b.number || '').trim()}_${(b.name || '').trim()}_${(item.fromDisplayName || '').trim()}_${(item.fromTimeStr || '').trim()}_${(item.toDisplayName || '').trim()}_${(item.toTimeStr || '').trim()}`.toUpperCase();
+        
+        if (!seenResultKeys.has(uniqueCardKey)) {
+          seenResultKeys.add(uniqueCardKey);
+          finalBuses.push(item);
+        }
+      });
+
+      finalBuses.sort((a, b) => a.sortMinutes - b.sortMinutes);
+      listDiv.innerHTML = "";
+
+      finalBuses.forEach(item => {
+        let b = item.bus;
+        let div = document.createElement("div");
+        div.className = "bus-item";
+
+        div.innerHTML = `
+          <div class="bus-row-1">
+            <span>📍 ${item.fromDisplayName}: ${item.fromTimeStr}</span>
+            <span>➔ 📍 ${item.toDisplayName}: ${item.toTimeStr}</span>
+          </div>
+          <div class="bus-row-2">
+            🚌 <b>${b.name || 'বাস'}</b> - ${b.number} (${b.category || 'PUBLIC'})
+          </div>
+        `;
+        div.onclick = () => selectBus(b);
+        listDiv.appendChild(div);
+      });
+
+      let hintDiv = document.createElement("div");
+      hintDiv.id = "busListHint";
+      hintDiv.className = "bus-select-hint";
+      hintDiv.innerText = "👆 লাইভ ট্র্যাকিংয়ের জন্য উপরের লিস্ট থেকে যেকোনো বাস বেছে নিন";
+      listDiv.appendChild(hintDiv);
+
+    } catch (e) {
+      listDiv.innerHTML = `<div style="padding:12px;color:#c62828;text-align:center;font-weight:bold;">বাসের তালিকা লোড করা সম্ভব হয়নি। নেটওয়ার্ক চেক করুন।</div>`;
+    }
+  }
+
+  function estimateStopTime(targetStop, srcCoords, destCoords, depTimeStr, arrTimeStr) {
+    let depMins = timeToMinutes(depTimeStr);
+    let arrMins = timeToMinutes(arrTimeStr);
+
+    if (depMins === null || arrMins === null || !srcCoords || !destCoords) return null;
+    let sLat = Number(targetStop.lat || targetStop.latitude);
+    let sLon = Number(targetStop.lon || targetStop.longitude);
+    if (!sLat || !sLon) return null;
+
+    if (arrMins < depMins) arrMins += 24 * 60;
+    let totalTripMinutes = arrMins - depMins;
+
+    let totalTripDistance = getDistanceMeters(srcCoords.lat, srcCoords.lon, destCoords.lat, destCoords.lon);
+    if (totalTripDistance <= 0) return null;
+
+    let stopDistance = getDistanceMeters(srcCoords.lat, srcCoords.lon, sLat, sLon);
+
+    let ratio = Math.min(Math.max(stopDistance / totalTripDistance, 0), 1);
+    let estimatedMins = Math.round(depMins + (ratio * totalTripMinutes));
+
+    let estHour = Math.floor(estimatedMins / 60) % 24;
+    let estMinute = estimatedMins % 60;
+    let ampm = estHour >= 12 ? 'PM' : 'AM';
+    estHour = estHour % 12 || 12;
+
+    let hStr = String(estHour).padStart(2, '0');
+    let mStr = String(estMinute).padStart(2, '0');
+
+    return `${hStr}:${mStr} ${ampm}`;
+  }
+
+  async function processBusDirectionAndTime(bus, fromInput, toInput) {
+    let busNo = bus.number;
+    let stops = stopsCache[busNo];
+
+    if (!stops) {
+      try {
+        let res = await fetch(`${API_URL}?action=getLive&busNo=${encodeURIComponent(busNo)}`);
+        let data = await res.json();
+        if (data && data.stops) {
+          stopsCache[busNo] = data.stops;
+          stops = data.stops;
+        }
+      } catch (e) {}
+    }
+
+    if (!stops) stops = [];
+
+    let normFrom = cleanStopName(fromInput);
+    let normTo = cleanStopName(toInput);
+
+    if (!normFrom || !normTo) return null;
+
+    let allKnownStops = [...stops];
+    if (masterStopsList && masterStopsList.length > 0) {
+      allKnownStops.push(...masterStopsList);
+    }
+
+    let busSrcCoords = resolvePlaceCoords(bus.source, allKnownStops);
+    let busDestCoords = resolvePlaceCoords(bus.dest, allKnownStops);
+    let userFromCoords = resolvePlaceCoords(normFrom, allKnownStops);
+    let userToCoords = resolvePlaceCoords(normTo, allKnownStops);
+
+    if (!busSrcCoords || !busDestCoords || !userFromCoords || !userToCoords) {
+      return null;
+    }
+
+    function getPerpendicularDistanceKm(p, a, b) {
+      let dAB = getDistanceMeters(a.lat, a.lon, b.lat, b.lon);
+      if (dAB === 0) return getDistanceMeters(p.lat, p.lon, a.lat, a.lon) / 1000;
+      let dAP = getDistanceMeters(a.lat, a.lon, p.lat, p.lon);
+      let dBP = getDistanceMeters(b.lat, b.lon, p.lat, p.lon);
+      let s = (dAB + dAP + dBP) / 2;
+      let area = Math.sqrt(Math.max(0, s * (s - dAB) * (s - dAP) * (s - dBP)));
+      return ((2 * area) / dAB) / 1000;
+    }
+
+    let distFromLine = getPerpendicularDistanceKm(userFromCoords, busSrcCoords, busDestCoords);
+    let distToLine = getPerpendicularDistanceKm(userToCoords, busSrcCoords, busDestCoords);
+
+    if (distFromLine > 15 || distToLine > 15) {
+      return null;
+    }
+
+    let rawAllowed = bus.selectedStops || bus.Selected_Stops || bus["SELECTED STOPS"] || [];
+    let allowed = [];
+    if (typeof rawAllowed === "string") {
+      allowed = rawAllowed.split(",").map(s => cleanStopName(s));
+    } else if (Array.isArray(rawAllowed)) {
+      allowed = rawAllowed.map(s => cleanStopName(s));
+    }
+
+    let validBusStops = [...allowed, cleanStopName(bus.source), cleanStopName(bus.dest)];
+
+    if (stops && stops.length > 0) {
+      stops.forEach(s => validBusStops.push(cleanStopName(s.stopName || s.name)));
+    }
+
+    let hasFrom = validBusStops.some(a => a && (a.includes(normFrom) || normFrom.includes(a)));
+    let hasTo = validBusStops.some(a => a && (a.includes(normTo) || normTo.includes(a)));
+
+    if (!hasFrom || !hasTo) {
+      return null;
+    }
+
+    let dLat = busDestCoords.lat - busSrcCoords.lat;
+    let dLon = busDestCoords.lon - busSrcCoords.lon;
+    let tripDistSq = (dLat * dLat) + (dLon * dLon);
+
+    let progFrom = (((userFromCoords.lat - busSrcCoords.lat) * dLat + (userFromCoords.lon - busSrcCoords.lon) * dLon) / tripDistSq);
+    let progTo = (((userToCoords.lat - busSrcCoords.lat) * dLat + (userToCoords.lon - busSrcCoords.lon) * dLon) / tripDistSq);
+
+    if (progFrom >= progTo || progFrom < -0.05 || progTo > 1.05) {
+      return null;
+    }
+
+    let fTime = estimateStopTime(userFromCoords, busSrcCoords, busDestCoords, bus.depTime, bus.arrTime);
+    let tTime = estimateStopTime(userToCoords, busSrcCoords, busDestCoords, bus.depTime, bus.arrTime);
+
+    let fMins = timeToMinutes(fTime);
+    let tMins = timeToMinutes(tTime);
+
+    if (!fTime || !tTime || fMins === null || tMins === null) return null;
+
+    if (tMins <= fMins) {
+      if (!(bus.arrTime && timeToMinutes(bus.arrTime) < timeToMinutes(bus.depTime))) {
+        return null;
+      }
+    }
+        
+    return {
+      bus: bus,
+      fromDisplayName: normFrom,
+      fromTimeStr: formatCleanTime(fTime),
+      toDisplayName: normTo,
+      toTimeStr: formatCleanTime(tTime),
+      sortMinutes: fMins
+    };
+  }
+
+  function selectBus(b) {
+    promptDismissedStops.clear();
+    activeApproachingStop = null;
+    lastAnnouncedArrivalStop = null;
+    lastAnnouncedNextStop = null;
+    trackingBus = b;
+    
+    let stopsRaw = b.selectedStops || b.Selected_Stops || b["SELECTED STOPS"] || [];
+    if (typeof stopsRaw === "string") {
+      trackingBus.selectedStops = stopsRaw.split(",").map(s => cleanStopName(s));
+    } else if (Array.isArray(stopsRaw)) {
+      trackingBus.selectedStops = stopsRaw.map(s => cleanStopName(s));
+    } else {
+      trackingBus.selectedStops = [];
+    }
+
+    document.getElementById("busTrackInput").value = `${b.number} - ${b.name}`;
+    document.getElementById("busList").innerHTML = "";
+
+    let statusText = document.getElementById("mapStatusText");
+    if (statusText) statusText.innerText = `🚌 ${b.name || b.number} লাইভ ট্র্যাকিং`;
+    try { map.invalidateSize(); } catch(_) {}
+
+    let stopBtnText = document.getElementById("addStopBtnText");
+    stopBtnText.innerText = `এই জায়গাটি ${b.name} - ${b.number} বাসের স্টপেজ হিসাবে যুক্ত করুন`;
+
+    let lang = getCurrentAppLanguage();
+    let initialCurStop = b.source ? b.source.toUpperCase() : "সিগন্যাল খোঁজা হচ্ছে...";
+    let initialNextStop = (trackingBus.selectedStops && trackingBus.selectedStops.length > 0) ? trackingBus.selectedStops[0] : "--";
+    let initialDest = b.dest ? b.dest.toUpperCase() : "--";
+
+    // ব্যাকগ্রাউন্ড সার্ভিস চালু এবং তাৎক্ষণিক বিবরণী প্রেরণ
+    if (window.AndroidBridge && window.AndroidBridge.startBackgroundTrackingWithDetails) {
+      window.AndroidBridge.startBackgroundTrackingWithDetails(
+        b.number,
+        b.name || "",
+        initialCurStop,
+        initialNextStop,
+        initialDest,
+        lang
+      );
+    } else if (window.AndroidBridge && window.AndroidBridge.onBusSelected) {
+      window.AndroidBridge.onBusSelected(b.number, b.name || "");
+    }
+
+    trackBus(b.number);
+  }
+  
+  document.getElementById("busTrackInput").addEventListener("input", e => {
+    let val = e.target.value.trim();
+    if (val.length >= 3) {
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => trackBus(val), 500);
+    } else if (val.length === 0) {
+      clearTimeout(debounceTimer);
+      if (trackingInterval) clearInterval(trackingInterval);
+      trackingBus = null;
+      if (busMarker) { map.removeLayer(busMarker); busMarker = null; }
+      if (stopRoutePolyline) { map.removeLayer(stopRoutePolyline); stopRoutePolyline = null; }
+      stopMarkersLayer.clearLayers();
+      let routeCard = document.getElementById("routeTrackerCard");
+      if (routeCard) routeCard.classList.add("hidden");
+      renderAllMasterStopsOnMap(masterStopsList);
+    }
+  });
+
+  function trackBus(busNo) {
+    if (trackingInterval) clearInterval(trackingInterval);
+
+    // যদি সরাসরি বাস নম্বর দিয়ে ট্র্যাকিং শুরু হয়, গ্লোবাল ক্যাটালগ থেকে তথ্য পূরণ করুন
+    if ((!trackingBus || trackingBus.number != busNo) && globalBusesCatalog.length > 0) {
+      let matched = globalBusesCatalog.find(b => b.number == busNo || b.number === busNo);
+      if (matched) {
+        trackingBus = Object.assign({}, matched);
+        let stopsRaw = matched.selectedStops || matched.Selected_Stops || matched["SELECTED STOPS"] || [];
+        if (typeof stopsRaw === "string") {
+          trackingBus.selectedStops = stopsRaw.split(",").map(s => cleanStopName(s));
+        } else if (Array.isArray(stopsRaw)) {
+          trackingBus.selectedStops = stopsRaw.map(s => cleanStopName(s));
+        }
+      }
+    }
+
+    let bName = (trackingBus && trackingBus.name) ? trackingBus.name : busNo;
+    let lang = getCurrentAppLanguage();
+    let initialCurStop = (trackingBus && trackingBus.source) ? trackingBus.source.toUpperCase() : "সিগন্যাল খোঁজা হচ্ছে...";
+    let initialNextStop = (trackingBus && trackingBus.selectedStops && trackingBus.selectedStops.length > 0) ? trackingBus.selectedStops[0] : "--";
+    let initialDest = (trackingBus && trackingBus.dest) ? trackingBus.dest.toUpperCase() : "--";
+
+    if (window.AndroidBridge) {
+      if (window.AndroidBridge.startBackgroundTrackingWithDetails) {
+        window.AndroidBridge.startBackgroundTrackingWithDetails(busNo, bName, initialCurStop, initialNextStop, initialDest, lang);
+      } else if (window.AndroidBridge.onBusSelected) {
+        window.AndroidBridge.onBusSelected(busNo, bName);
+      }
+    }
+
+    fetchBusLive(busNo);
+    trackingInterval = setInterval(() => fetchBusLive(busNo), 5000);
+  }
+
+  async function fetchBusLive(busNo) {
+    let locBox = document.getElementById("currentLocationBox");
+    try {
+      let res = await fetch(`${API_URL}?action=getLive&busNo=${encodeURIComponent(busNo)}`);
+      let data = await res.json();
+
+      if (data.stops && data.stops.length > 0) {
+        currentBusStopsList = data.stops;
+      }
+
+      if (data.selectedStops && data.selectedStops.length > 0) {
+        if (!trackingBus) {
+          trackingBus = { number: busNo, selectedStops: data.selectedStops };
+        } else if (!trackingBus.selectedStops || trackingBus.selectedStops.length === 0) {
+          trackingBus.selectedStops = data.selectedStops;
+        }
+      }
+
+      if (trackingBus && (!trackingBus.name || !trackingBus.dest) && globalBusesCatalog.length > 0) {
+        let matched = globalBusesCatalog.find(b => b.number == busNo || b.number === busNo);
+        if (matched) {
+          if (!trackingBus.name) trackingBus.name = matched.name;
+          if (!trackingBus.source) trackingBus.source = matched.source;
+          if (!trackingBus.dest) trackingBus.dest = matched.dest;
+          if (!trackingBus.selectedStops || trackingBus.selectedStops.length === 0) {
+            trackingBus.selectedStops = matched.selectedStops || [];
+          }
+        }
+      }
+
+      if (!data.ok || !data.live) {
+        locBox.innerText = `বাসের লাইভ জিপিএস সিগন্যাল সক্রিয় নেই (${busNo})`;
+        if (window.AndroidBridge && window.AndroidBridge.updateNotificationDetails) {
+          let bNum = trackingBus ? (trackingBus.number || busNo) : busNo;
+          let bName = trackingBus ? (trackingBus.name || "") : "";
+          let dest = (trackingBus && trackingBus.dest) ? trackingBus.dest.toUpperCase() : "--";
+          window.AndroidBridge.updateNotificationDetails(
+            bNum,
+            bName,
+            "লাইভ জিপিএস সক্রিয় নেই",
+            "--",
+            dest,
+            getCurrentAppLanguage()
+          );
+        }
+        if (userPos) {
+          checkPassengerRideAndSync();
+          updateDistanceAndTracking();
+        }
+        return;
+      }
+
+      let b = data.live;
+      busPos = { lat: Number(b.lat), lon: Number(b.lon), speed: b.speed || 0 };
+
+      locBox.innerText = `বাসের বর্তমান অবস্থান: LAT ${busPos.lat.toFixed(4)}, LON ${busPos.lon.toFixed(4)} (গতি: ${busPos.speed} KM/H)`;
+
+      if (!busMarker) {
+        busMarker = L.marker([busPos.lat, busPos.lon], { icon: busIcon }).addTo(map);
+      } else {
+        busMarker.setLatLng([busPos.lat, busPos.lon]);
+      }
+
+      checkPassengerRideAndSync();
+      updateDistanceAndTracking();
+    } catch (e) {
+      console.error("Error in fetchBusLive:", e);
+      if (locBox) locBox.innerText = `তথ্য লোড করা যাচ্ছে না (${busNo})`;
+    }
+  }
+
+  document.getElementById("toggleBusFormBtn").onclick = () => toggleBusForm(true);
+  function toggleBusForm(show) {
+    document.getElementById("busFormBox").classList.toggle("hidden", !show);
+    document.getElementById("toggleBusFormBtn").classList.toggle("hidden", show);
+    if (show) renderStopsCheckboxes();
+  }
+
+  async function saveNewBus() {
+    let srcTime = `${document.getElementById("srcTimeVal").value.trim()} ${document.getElementById("srcTimeAmpm").value}`;
+    let destTime = `${document.getElementById("destTimeVal").value.trim()} ${document.getElementById("destTimeAmpm").value}`;
+
+    let checkedBoxes = document.querySelectorAll("input[name='busSelectedStops']:checked");
+    let selectedStops = Array.from(checkedBoxes).map(cb => cb.value);
+
+    let payload = {
+      action: "addBus",
+      state: document.getElementById("state").value,
+      district: document.getElementById("district").value,
+      busNumber: document.getElementById("busNoInput").value,
+      busName: document.getElementById("busNameInput").value,
+      category: document.getElementById("category").value,
+      days: document.getElementById("days").value,
+      source: document.getElementById("src").value,
+      depTime: srcTime,
+      dest: document.getElementById("dest").value,
+      arrTime: destTime,
+      selectedStops: selectedStops
+    };
+
+    if (!payload.busNumber || !payload.source) return showAppAlert("প্রয়োজনীয় তথ্য পূরণ করুন!");
+
+    try {
+      await fetch(API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify(payload)
+      });
+      showAppAlert("বাস তথ্য সফলভাবে সংরক্ষণ হয়েছে!");
+      toggleBusForm(false);
+      loadDatalistSuggestions();
+    } catch (e) {
+      showAppAlert("সংরক্ষণ ব্যর্থ হয়েছে!");
+    }
+  }
+
+  function openConfirmDialog() {
+    if (!userPos) {
+      return showAppAlert("আপনার জিপিএস (GPS) লোকেশন পাওয়া যায়নি! দয়া করে ফোনের লোকেশন অন করুন।");
+    }
+
+    let confirmText = document.getElementById("confirmModalText");
+    if (trackingBus) {
+      confirmText.innerHTML = `চলন্ত বাস কোনো জায়গায় থামলে তবেই এটি যুক্ত করুন।<br><br>আপনি কি বর্তমান অবস্থানকে <b>(${trackingBus.name})</b> বাসের স্টপেজ হিসেবে যুক্ত করতে চান?`;
+    } else {
+      confirmText.innerHTML = `আপনি কি আপনার বর্তমান অবস্থানকে একটি <b>নতুন বাস স্টপেজ</b> হিসেবে ম্যাপে যুক্ত করতে চান?`;
+    }
+
+    document.getElementById("confirmModal").classList.remove("hidden");
+  }
+
+  function closeModals() {
+    document.getElementById("confirmModal").classList.add("hidden");
+    document.getElementById("nameModal").classList.add("hidden");
+    document.getElementById("manualStopName").value = "";
+    pendingMapClickCoords = null;
+  }
+
+  function proceedToNamePrompt() {
+    document.getElementById("confirmModal").classList.add("hidden");
+    document.getElementById("nameModal").classList.remove("hidden");
+  }
+
+  async function saveCurrentStopAction() {
+    let stopName = document.getElementById("manualStopName").value;
+    if (!stopName || !stopName.trim()) return showAppAlert("বাস স্টপের নাম লিখুন!");
+
+    stopName = stopName.trim().toUpperCase();
+
+    // ম্যাপ ক্লিক অবস্থান অথবা ব্যবহারকারীর অবস্থান
+    let targetLat = pendingMapClickCoords ? pendingMapClickCoords.lat : (userPos ? userPos.lat : null);
+    let targetLon = pendingMapClickCoords ? pendingMapClickCoords.lon : (userPos ? userPos.lon : null);
+
+    if (!targetLat || !targetLon) {
+      return showAppAlert("লোকেশন স্থানাঙ্ক পাওয়া যায়নি!");
+    }
+
+    if (trackingBus && !pendingMapClickCoords) {
+      let now = new Date();
+      let hours = now.getHours();
+      let minutes = String(now.getMinutes()).padStart(2, '0');
+      let ampm = hours >= 12 ? 'PM' : 'AM';
+      hours = hours % 12 || 12;
+      let timeStr = `${String(hours).padStart(2, '0')}:${minutes} ${ampm}`;
+
+      let payload = {
+        action: "addStop",
+        busNumber: trackingBus.number,
+        busName: trackingBus.name,
+        stopName: stopName,
+        time: timeStr,
+        lat: targetLat,
+        lon: targetLon,
+        accuracy: userPos ? userPos.acc : 10
+      };
+
+      try {
+        await fetch(API_URL, {
+          method: "POST",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify(payload)
+        });
+
+        delete stopsCache[trackingBus.number];
+
+        if (!trackingBus.selectedStops) trackingBus.selectedStops = [];
+        let cStop = cleanStopName(stopName);
+        if (!trackingBus.selectedStops.includes(cStop)) {
+          trackingBus.selectedStops.push(cStop);
+        }
+
+        currentBusStopsList.push({
+          stopName: stopName,
+          name: stopName,
+          lat: targetLat,
+          lon: targetLon,
+          latitude: targetLat,
+          longitude: targetLon
+        });
+
+        showAppAlert(`✅ "${stopName}" স্টপেজটি ${trackingBus.name} বাসে সফলভাবে যুক্ত হয়েছে!`);
+        closeModals();
+        loadDatalistSuggestions();
+        updateDistanceAndTracking();
+      } catch (e) {
+        showAppAlert("স্টপ যুক্ত করা সম্ভব হয়নি!");
+      }
+    } else {
+      let payload = {
+        action: "addMasterStop",
+        stopName: stopName,
+        lat: targetLat,
+        lon: targetLon
+      };
+
+      try {
+        await fetch(API_URL, {
+          method: "POST",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify(payload)
+        });
+
+        showAppAlert(`✅ নতুন স্টপ "${stopName}" সফলভাবে সংরক্ষিত হয়েছে!`);
+        closeModals();
+        loadDatalistSuggestions();
+      } catch (e) {
+        showAppAlert("স্টপ সংরক্ষণ ব্যর্থ হয়েছে!");
+      }
+    }
+  }
+
+  async function syncUserGPSAsBus(busNo, lat, lon, speed, acc) {
+    let payload = { action: "updateGPS", busNumber: busNo, lat: lat, lon: lon, speed: speed, accuracy: acc };
+    fetch(API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify(payload)
+    });
+  }
+
+  function getDistanceMeters(lat1, lon1, lat2, lon2) {
+    let R = 6371e3, p = Math.PI / 180;
+    let a = 0.5 - Math.cos((lat2 - lat1) * p) / 2 + Math.cos(lat1 * p) * Math.cos(lat2 * p) * (1 - Math.cos((lon2 - lon1) * p)) / 2;
+    return 2 * R * Math.asin(Math.sqrt(a));
+  }
+  
+  function swapLocations() {
+    const fromInput = document.getElementById("searchFrom");
+    const toInput = document.getElementById("searchTo");
+
+    const temp = fromInput.value;
+    fromInput.value = toInput.value;
+    toInput.value = temp;
+
+    handleAutoSearch();
+  }
+
+  function checkNearbyMasterStops(busLat, busLon) {
+    if (!trackingBus || !masterStopsList || masterStopsList.length === 0) return;
+
+    let allowedStops = [];
+    if (trackingBus.selectedStops) {
+      if (typeof trackingBus.selectedStops === "string") {
+        allowedStops = trackingBus.selectedStops.split(",").map(s => cleanStopName(s));
+      } else if (Array.isArray(trackingBus.selectedStops)) {
+        allowedStops = trackingBus.selectedStops.map(s => cleanStopName(s));
+      }
+    }
+
+    let foundNearby = null;
+
+    for (let s of masterStopsList) {
+      let sLat = Number(s.latitude || s.lat);
+      let sLon = Number(s.longitude || s.lon);
+      let sName = s.name || s.stopName;
+      let cleanName = cleanStopName(sName);
+
+      if (isNaN(sLat) || isNaN(sLon) || sLat === 0) continue;
+
+      if (allowedStops.includes(cleanName) || promptDismissedStops.has(cleanName)) {
+        continue;
+      }
+
+      let dist = getDistanceMeters(busLat, busLon, sLat, sLon);
+
+      if (dist <= 50) {
+        foundNearby = { stop: s, name: sName, cleanName: cleanName, lat: sLat, lon: sLon };
+        break;
+      }
+    }
+
+    if (foundNearby) {
+      if (!activeApproachingStop || activeApproachingStop.cleanName !== foundNearby.cleanName) {
+        activeApproachingStop = foundNearby;
+        showSmartStopPrompt(foundNearby);
+      }
+    } else {
+      if (activeApproachingStop) {
+        let currentDist = getDistanceMeters(busLat, busLon, activeApproachingStop.lat, activeApproachingStop.lon);
+        if (currentDist > 50) {
+          closeSmartStopPrompt(false);
+        }
+      }
+    }
+  }
+
+  function showSmartStopPrompt(stopObj) {
+    let modal = document.getElementById("smartStopModal");
+    let promptText = document.getElementById("smartStopPromptText");
+    let confirmBtn = document.getElementById("smartStopConfirmBtn");
+
+    promptText.innerHTML = `কাছাকাছি স্টপ: <b>${stopObj.name}</b><br><br>আপনি কি এই স্থানটি <b>${trackingBus.name}</b> বাসের স্টপেজ হিসেবে যুক্ত করতে চান?`;
+
+    confirmBtn.onclick = function() {
+      confirmSmartAddStop(stopObj);
+    };
+
+    modal.classList.remove("hidden");
+  }
+
+  function closeSmartStopPrompt(userIgnored = false) {
+    let modal = document.getElementById("smartStopModal");
+    if (modal) modal.classList.add("hidden");
+
+    if (userIgnored && activeApproachingStop) {
+      promptDismissedStops.add(activeApproachingStop.cleanName);
+    }
+    activeApproachingStop = null;
+  }
+
+  async function confirmSmartAddStop(stopObj) {
+    closeSmartStopPrompt(false);
+    promptDismissedStops.add(stopObj.cleanName);
+
+    let now = new Date();
+    let hours = now.getHours();
+    let minutes = String(now.getMinutes()).padStart(2, '0');
+    let ampm = hours >= 12 ? 'PM' : 'AM';
+    hours = hours % 12 || 12;
+    let timeStr = `${String(hours).padStart(2, '0')}:${minutes} ${ampm}`;
+
+    let payload = {
+      action: "addStop",
+      busNumber: trackingBus.number,
+      busName: trackingBus.name,
+      stopName: stopObj.name,
+      time: timeStr,
+      lat: stopObj.lat,
+      lon: stopObj.lon,
+      accuracy: (userPos && userPos.acc) ? userPos.acc : 10
+    };
+
+    try {
+      await fetch(API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify(payload)
+      });
+
+      delete stopsCache[trackingBus.number];
+
+      if (!trackingBus.selectedStops) trackingBus.selectedStops = [];
+      if (!trackingBus.selectedStops.includes(stopObj.cleanName)) {
+        trackingBus.selectedStops.push(stopObj.cleanName);
+      }
+
+      currentBusStopsList.push({
+        stopName: stopObj.name,
+        name: stopObj.name,
+        lat: stopObj.lat,
+        lon: stopObj.lon,
+        latitude: stopObj.lat,
+        longitude: stopObj.lon
+      });
+
+      showAppAlert(`✅ "${stopObj.name}" বাসের স্টপেজে যুক্ত করা হয়েছে!`);
+      updateDistanceAndTracking();
+    } catch (e) {
+      showAppAlert("স্টপ যুক্ত করা সম্ভব হয়নি!");
+    }
+  }
+
+  async function renderStopsCheckboxes() {
+    let container = document.getElementById("stopsCheckboxList");
+    let srcInput = cleanStopName(document.getElementById("src").value);
+    let destInput = cleanStopName(document.getElementById("dest").value);
+
+    if (!srcInput || !destInput) {
+      container.innerHTML = "<i>বাস কোথা থেকে ছাড়বে এবং গন্তব্য লিখলে স্টপ লোড হবে...</i>";
+      return;
+    }
+
+    container.innerHTML = "<i>এই রুটের সংরক্ষিত স্টপ খোঁজা হচ্ছে...</i>";
+
+    try {
+      let res = await fetch(`${API_URL}?action=getBuses`);
+      let data = await res.json();
+      let routeStops = new Set();
+
+      if (data.buses && data.buses.length > 0) {
+        data.buses.forEach(b => {
+          let bSrc = cleanStopName(b.source);
+          let bDest = cleanStopName(b.dest);
+
+          if ((bSrc === srcInput && bDest === destInput) || (bSrc === destInput && bDest === srcInput)) {
+            let stopsRaw = b.selectedStops || b.Selected_Stops || b["SELECTED STOPS"] || [];
+            let sList = typeof stopsRaw === "string" ? stopsRaw.split(",") : (Array.isArray(stopsRaw) ? stopsRaw : []);
+            sList.forEach(s => {
+              let clean = cleanStopName(s);
+              if (clean && clean !== srcInput && clean !== destInput) routeStops.add(clean);
+            });
+          }
+        });
+      }
+
+      if (routeStops.size === 0) {
+        container.innerHTML = `<span style="color:#2e7d32; font-weight:600;">✨ এটি সম্পূর্ণ নতুন রুট! এখন কোনো স্টপ সিলেক্ট করতে হবে না। বাসটি রুটে চলার সময় লাইভ স্টপ যুক্ত করে নেবেন।</span>`;
+        return;
+      }
+
+      container.innerHTML = "";
+      routeStops.forEach(stopName => {
+        let div = document.createElement("label");
+        div.className = "stop-check-item";
+        div.innerHTML = `
+          <input type="checkbox" name="busSelectedStops" value="${stopName}" checked>
+          <span>${stopName}</span>
+        `;
+        container.appendChild(div);
+      });
+
+    } catch(e) {
+      container.innerHTML = "<i>স্টপ তালিকা লোড করা যায়নি</i>";
+    }
+  }
+
+  function resolvePlaceCoords(placeName, stopsList) {
+    let target = cleanStopName(placeName);
+    if (!target || !stopsList || stopsList.length === 0) return null;
+
+    let exactFound = stopsList.find(s => {
+      let n = cleanStopName(s.name || s.stopName);
+      return n === target;
+    });
+
+    if (exactFound) {
+      let lat = Number(exactFound.latitude || exactFound.lat);
+      let lon = Number(exactFound.longitude || exactFound.lon);
+      if (!isNaN(lat) && !isNaN(lon) && lat !== 0) return { lat, lon };
+    }
+
+    let partialFound = stopsList.find(s => {
+      let n = cleanStopName(s.name || s.stopName);
+      return n.includes(target) || target.includes(n);
+    });
+
+    if (partialFound) {
+      let lat = Number(partialFound.latitude || partialFound.lat);
+      let lon = Number(partialFound.longitude || partialFound.lon);
+      if (!isNaN(lat) && !isNaN(lon) && lat !== 0) return { lat, lon };
+    }
+
+    return null;
+  }
+
+  function sortStopsAlongTrip(stops, bus) {
+    if (!stops || stops.length === 0) return [];
+
+    let valid = stops.filter(s => {
+      let lat = Number(s.latitude || s.lat);
+      let lon = Number(s.longitude || s.lon);
+      return !isNaN(lat) && !isNaN(lon) && lat !== 0;
+    });
+
+    let uniqueStops = [];
+    let seenNames = new Set();
+    valid.forEach(s => {
+      let name = cleanStopName(s.name || s.stopName);
+      if (!seenNames.has(name)) {
+        seenNames.add(name);
+        uniqueStops.push(s);
+      }
+    });
+    valid = uniqueStops;
+
+    if (valid.length <= 1) return valid;
+
+    let srcName = cleanStopName(document.getElementById("searchFrom").value.trim() || (bus && bus.source));
+    let destName = cleanStopName(document.getElementById("searchTo").value.trim() || (bus && bus.dest));
+
+    let allAvailable = [...valid, ...(masterStopsList || [])];
+    let srcCoords = resolvePlaceCoords(srcName, allAvailable) || { lat: Number(valid[0].latitude || valid[0].lat), lon: Number(valid[0].longitude || valid[0].lon) };
+    let destCoords = resolvePlaceCoords(destName, allAvailable);
+
+    let sorted = [];
+    let remaining = [...valid];
+    let currentPoint = { lat: srcCoords.lat, lon: srcCoords.lon };
+
+    let srcIdx = remaining.findIndex(s => cleanStopName(s.name || s.stopName) === srcName);
+    if (srcIdx !== -1) {
+      sorted.push(remaining.splice(srcIdx, 1)[0]);
+      currentPoint = { lat: Number(sorted[0].latitude || sorted[0].lat), lon: Number(sorted[0].longitude || sorted[0].lon) };
+    }
+
+    while (remaining.length > 0) {
+      let nearestIdx = 0;
+      let minScore = Infinity;
+
+      for (let i = 0; i < remaining.length; i++) {
+        let sLat = Number(remaining[i].latitude || remaining[i].lat);
+        let sLon = Number(remaining[i].longitude || remaining[i].lon);
+        let distFromCurrent = getDistanceMeters(currentPoint.lat, currentPoint.lon, sLat, sLon);
+        
+        let score = distFromCurrent;
+        if (destCoords) {
+          let distToDest = getDistanceMeters(sLat, sLon, destCoords.lat, destCoords.lon);
+          score += (distToDest * 0.15);
+        }
+
+        if (score < minScore) {
+          minScore = score;
+          nearestIdx = i;
+        }
+      }
+
+      let nextStop = remaining.splice(nearestIdx, 1)[0];
+      sorted.push(nextStop);
+      currentPoint = { lat: Number(nextStop.latitude || nextStop.lat), lon: Number(nextStop.longitude || nextStop.lon) };
+    }
+
+    return sorted;
+  }
+
+  function evaluateStoppagesAndEta(distKmBusUser, speed, refLat, refLon) {
+    if (!trackingBus) return;
+
+    let srcName = cleanStopName(document.getElementById("searchFrom").value.trim() || trackingBus.source);
+    let destName = cleanStopName(document.getElementById("searchTo").value.trim() || trackingBus.dest);
+
+    let rawSelected = trackingBus.selectedStops || trackingBus.Selected_Stops || trackingBus["SELECTED STOPS"] || [];
+    let allowedStops = [];
+    if (typeof rawSelected === "string") {
+      allowedStops = rawSelected.split(",").map(s => cleanStopName(s)).filter(Boolean);
+    } else if (Array.isArray(rawSelected)) {
+      allowedStops = rawSelected.map(s => cleanStopName(s)).filter(Boolean);
+    }
+
+    if (srcName && !allowedStops.includes(srcName)) allowedStops.unshift(srcName);
+    if (destName && !allowedStops.includes(destName)) allowedStops.push(destName);
+
+    let stopCandidates = [];
+    if (currentBusStopsList) stopCandidates.push(...currentBusStopsList);
+    if (masterStopsList) stopCandidates.push(...masterStopsList);
+
+    let srcCoords = resolvePlaceCoords(srcName, stopCandidates);
+    let destCoords = resolvePlaceCoords(destName, stopCandidates);
+
+    let fullStops = [];
+    let seenStopNames = new Set();
+
+    allowedStops.forEach(reqName => {
+      let matched = stopCandidates.find(ms => {
+        let clean = cleanStopName(ms.name || ms.stopName);
+        return clean === reqName;
+      });
+
+      if (!matched) {
+        matched = stopCandidates.find(ms => {
+          let clean = cleanStopName(ms.name || ms.stopName);
+          return clean.includes(reqName) || reqName.includes(clean);
+        });
+      }
+
+      if (matched) {
+        let cleanMatchedName = cleanStopName(matched.name || matched.stopName);
+        if (!seenStopNames.has(cleanMatchedName)) {
+          seenStopNames.add(cleanMatchedName);
+          fullStops.push(matched);
+        }
+      }
+    });
+
+    if (fullStops.length === 0) return;
+
+    let validStops = sortStopsAlongTrip(fullStops, { source: srcName, dest: destName });
+    if (validStops.length === 0) return;
+
+    if (srcName) {
+      let sIdx = validStops.findIndex(s => {
+        let n = cleanStopName(s.name || s.stopName);
+        return n === srcName || (n.startsWith(srcName) && !n.includes("STATION"));
+      });
+      if (sIdx !== -1 && sIdx > 0) {
+        validStops = validStops.slice(sIdx);
+      }
+    }
+
+    if (destName) {
+      let dIdx = validStops.findIndex(s => {
+        let n = cleanStopName(s.name || s.stopName);
+        return n === destName || (n.startsWith(destName) && !n.includes("STATION"));
+      });
+      if (dIdx !== -1) {
+        validStops = validStops.slice(0, dIdx + 1);
+      }
+    }
+
+    let currentStopIndex = 0;
+
+    for (let i = 0; i < validStops.length; i++) {
+      let sLat = Number(validStops[i].latitude || validStops[i].lat);
+      let sLon = Number(validStops[i].longitude || validStops[i].lon);
+      let d = getDistanceMeters(refLat, refLon, sLat, sLon);
+
+      if (d <= 50) {
+        currentStopIndex = i;
+        break;
+      }
+      
+      if (i < validStops.length - 1) {
+        let nextLat = Number(validStops[i+1].latitude || validStops[i+1].lat);
+        let nextLon = Number(validStops[i+1].longitude || validStops[i+1].lon);
+        let distToNext = getDistanceMeters(refLat, refLon, nextLat, nextLon);
+        
+        if (distToNext > 50) {
+          currentStopIndex = i;
+        } else {
+          currentStopIndex = i + 1;
+          break;
+        }
+      }
+    }
+
+    let nearest = { stop: validStops[currentStopIndex], index: currentStopIndex };
+      
+    let baseStopName = nearest.stop.name || nearest.stop.stopName || "--";
+    let curStopDisplay = baseStopName;
+
+    let curStopLat = Number(nearest.stop.latitude || nearest.stop.lat);
+    let curStopLon = Number(nearest.stop.longitude || nearest.stop.lon);
+
+    if (!isNaN(curStopLat) && !isNaN(curStopLon) && curStopLat !== 0) {
+      let distPastMeters = Math.round(getDistanceMeters(refLat, refLon, curStopLat, curStopLon));
+      
+      if (distPastMeters > 50 && currentStopIndex < validStops.length - 1) {
+        curStopDisplay = `${baseStopName} (${distPastMeters} মিটার পেরিয়ে গেছে)`;
+      }
+    }
+
+    document.getElementById("infoCurStop").innerText = curStopDisplay;
+
+    renderStopsOnMapAndTimeline(validStops, nearest.index, refLat, refLon);
+
+    let nextValidStop = null;
+    for (let j = nearest.index + 1; j < validStops.length; j++) {
+      let candidate = validStops[j];
+      let candName = cleanStopName(candidate.name || candidate.stopName);
+      let isAllowed = allowedStops.length === 0 || allowedStops.some(a => a.includes(candName) || candName.includes(a));
+      if (isAllowed) {
+        nextValidStop = candidate;
+        break;
+      }
+    }
+
+    let nextStopName = "--";
+    let distNextFormatted = "";
+    let nextEta = "";
+
+    if (nextValidStop) {
+      nextStopName = nextValidStop.name || nextValidStop.stopName || "--";
+      let nLat = Number(nextValidStop.latitude || nextValidStop.lat);
+      let nLon = Number(nextValidStop.longitude || nextValidStop.lon);
+      let distNextKm = (getDistanceMeters(refLat, refLon, nLat, nLon) / 1000);
+      distNextFormatted = formatDistanceWithMeters(distNextKm);
+      nextEta = calculateETAString(distNextKm, speed);
+      
+      document.getElementById("infoNextStop").innerText = `${nextStopName} | ${distNextFormatted} | ETA: ${nextEta}`;
+    } else {
+      document.getElementById("infoNextStop").innerText = `গন্তব্যের কাছাকাছি`;
+    }
+
+    let destStopElem = document.getElementById("infoDestStop");
+    let distDestFormatted = "";
+    let destEta = "";
+
+    if (destStopElem && destName) {
+      let targetDestIndex = validStops.length - 1;
+      let totalDistanceMeters = 0;
+
+      if (targetDestIndex > nearest.index) {
+        let prevLat = refLat;
+        let prevLon = refLon;
+        for (let k = nearest.index + 1; k <= targetDestIndex; k++) {
+          let stopLat = Number(validStops[k].latitude || validStops[k].lat);
+          let stopLon = Number(validStops[k].longitude || validStops[k].lon);
+          if (!isNaN(stopLat) && !isNaN(stopLon) && stopLat !== 0) {
+            totalDistanceMeters += getDistanceMeters(prevLat, prevLon, stopLat, stopLon);
+            prevLat = stopLat;
+            prevLon = stopLon;
+          }
+        }
+      } else if (destCoords) {
+        totalDistanceMeters = getDistanceMeters(refLat, refLon, destCoords.lat, destCoords.lon);
+      }
+
+      let distDestKm = (totalDistanceMeters / 1000) * 1.08; 
+      distDestFormatted = formatDistanceWithMeters(distDestKm);
+      destEta = calculateETAString(distDestKm, speed);
+      
+      destStopElem.innerText = `${destName.toUpperCase()} | ${distDestFormatted} | ETA: ${destEta}`;
+    } else if (destStopElem) {
+      destStopElem.innerText = "--";
+    }
+
+    // নোটিফিকেশনে রিয়েলটাইম বাস বিবরণী পাঠানো (নাম, নম্বর, বর্তমান স্টপ, পরবর্তী স্টপ, গন্তব্য দূরত্ব ও সময়, ভাষা)
+    if (window.AndroidBridge && window.AndroidBridge.updateNotificationDetails) {
+      let bNum = trackingBus ? (trackingBus.number || trackingBus.busNumber || "") : "";
+      let bName = trackingBus ? (trackingBus.name || trackingBus.busName || "") : "";
+      let nextStr = nextValidStop ? `${nextStopName} (${distNextFormatted} • ETA: ${nextEta})` : (curStopDisplay ? "গন্তব্যের কাছাকাছি" : "--");
+      let destStr = destName ? (distDestFormatted ? `${destName.toUpperCase()} (${distDestFormatted} • ETA: ${destEta})` : destName.toUpperCase()) : "--";
+      let lang = getCurrentAppLanguage();
+
+      window.AndroidBridge.updateNotificationDetails(
+        bNum,
+        bName,
+        curStopDisplay || "--",
+        nextStr,
+        destStr,
+        lang
+      );
+    }
+
+    // ==========================================
+    // ১) প্রতিটি স্টপেজে পৌঁছানোর ম্যাসেজ ও পরিষ্কার কণ্ঠে ঘোষণা
+    // ২) পরবর্তী স্টপেজের নাম ঘোষণা
+    // ==========================================
+    try {
+      let cleanCurStop = cleanStopName(baseStopName);
+      let isDestination = (nearest.index >= validStops.length - 1) || (destName && cleanCurStop === destName);
+
+      // স্টপে পৌঁছানোর মুহূর্ত শনাক্তকরণ (দূরত্ব ৬০ মিটারের কম হলে বা স্টপে পৌঁছালে)
+      if (distPastMeters <= 60 && cleanCurStop && lastAnnouncedArrivalStop !== cleanCurStop) {
+        lastAnnouncedArrivalStop = cleanCurStop;
+        
+        // স্ক্রিনে স্টপে পৌঁছানোর ম্যাসেজ (অ্যালার্ট ব্যানার)
+        showArrivalAlertBanner(baseStopName, nextStopName, isDestination);
+        
+        // নির্বাচিত অ্যাপের ভাষায় স্পষ্ট স্টপ আগমন ঘোষণা
+        let curLang = getCurrentAppLanguage();
+        let arrivalSpeech = getArrivalAnnouncement(baseStopName, nextStopName, isDestination, curLang);
+        playVoiceAnnouncement(arrivalSpeech, curLang);
+      }
+
+      // পরবর্তী স্টপেজের নাম ঘোষণা (স্টপ ছেড়ে এগিয়ে চলার সময়)
+      let cleanNext = cleanStopName(nextStopName);
+      if (cleanNext && cleanNext !== "--" && distPastMeters > 70 && lastAnnouncedNextStop !== cleanNext) {
+        lastAnnouncedNextStop = cleanNext;
+        let curLang = getCurrentAppLanguage();
+        let nextSpeech = getNextStopAnnouncement(nextStopName, curLang);
+        setTimeout(() => {
+          playVoiceAnnouncement(nextSpeech, curLang);
+        }, 2200);
+      }
+    } catch (_) {}
+  }
+
+  // ==========================================
+  // কী-বোর্ড এবং নেক্সট/গো/এন্টার বাটন হ্যান্ডলিং - অটো স্ক্রোল
+  // ==========================================
+  function scrollElementIntoViewAboveKeypad(element) {
+    if (!element) return;
+    try {
+      element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    } catch (_) {
+      element.scrollIntoView(true);
+    }
+  }
+
+  // যেকোনো ইনপুট বা সিলেক্টে ফোকাস হলে তা কি-বোর্ডের ওপরে মাঝে স্ক্রল করে আনুন
+  document.addEventListener('focusin', function(e) {
+    var el = e.target;
+    if (el && (el.tagName === 'INPUT' || el.tagName === 'SELECT' || el.tagName === 'TEXTAREA')) {
+      setTimeout(function() {
+        scrollElementIntoViewAboveKeypad(el);
+      }, 220);
+      setTimeout(function() {
+        scrollElementIntoViewAboveKeypad(el);
+      }, 420);
+    }
+  });
+
+  // কী-বোর্ড খুললে (visualViewport রিসাইজ হলে) দৃশ্যমান এলাকা অনুযায়ী স্ক্রল করুন
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', function() {
+      var active = document.activeElement;
+      if (active && (active.tagName === 'INPUT' || active.tagName === 'SELECT' || active.tagName === 'TEXTAREA')) {
+        setTimeout(function() {
+          scrollElementIntoViewAboveKeypad(active);
+        }, 150);
+      }
+    });
+  }
+
+  // কী-বোর্ডের 'Next' / 'Go' / 'Enter' প্রেস করলে পরবর্তী ফিল্ডে যাওয়া এবং স্ক্রিন স্ক্রল করা
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' || e.keyCode === 13) {
+      var current = e.target;
+      if (!current || (current.tagName !== 'INPUT' && current.tagName !== 'SELECT')) return;
+
+      // ১. সার্চ বক্সে থাকলে:
+      if (current.id === 'searchFrom') {
+        e.preventDefault();
+        var toInput = document.getElementById('searchTo');
+        if (toInput) {
+          toInput.focus();
+          setTimeout(function() { scrollElementIntoViewAboveKeypad(toInput); }, 150);
+        }
+        return;
+      }
+      if (current.id === 'searchTo') {
+        e.preventDefault();
+        autoSearchBuses();
+        current.blur();
+        return;
+      }
+
+      // ২. নতুন বাসের ফর্ম বা অন্য যেকোনো ইনপুট ফিল্ডে থাকলে ক্রমানুসারে পরের ফিল্ডে যাওয়া
+      var formScope = current.closest('.box') || current.closest('form') || document.querySelector('.container');
+      if (formScope) {
+        var focusables = Array.from(formScope.querySelectorAll('input:not([type="hidden"]), select, textarea'));
+        var currentIndex = focusables.indexOf(current);
+        if (currentIndex !== -1 && currentIndex < focusables.length - 1) {
+          e.preventDefault();
+          var nextField = focusables[currentIndex + 1];
+          nextField.focus();
+          setTimeout(function() {
+            scrollElementIntoViewAboveKeypad(nextField);
+          }, 150);
+          setTimeout(function() {
+            scrollElementIntoViewAboveKeypad(nextField);
+          }, 350);
+        }
+      }
+    }
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,6 @@
+{
+  "name": "Bus Live Location",
+  "description": "Live bus tracker with real-time GPS tracking, stoppage updates, bus search, and multi-language voice announcements.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
