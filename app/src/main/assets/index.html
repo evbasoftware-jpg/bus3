@@ -1253,6 +1253,17 @@
   <label>বাস নম্বর / নাম</label>
   <input type="text" id="busTrackInput" placeholder="বাস নম্বর বা নাম লিখুন">
 
+  <!-- বাসের চালক / কন্ডাক্টর স্টাফ মোড বাটন ও সক্রিয় ব্যানার -->
+  <div id="staffModeContainer" style="margin: 6px 0 12px 0;">
+    <div id="staffActiveBanner" class="hidden" style="background:#ecfdf5;border:1.5px solid #10b981;border-radius:10px;padding:10px 12px;color:#065f46;font-size:13px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 6px rgba(16,185,129,0.15);">
+      <div><b>🟢 বাস চালক মোড সক্রিয়:</b> এই ফোনের GPS বাসের লোকেশন হিসেবে সার্ভারে সম্প্রচার হচ্ছে</div>
+      <button type="button" onclick="stopStaffMode()" style="background:#ef4444;color:#fff;border:none;border-radius:6px;padding:6px 10px;font-size:11px;font-weight:bold;cursor:pointer;">বন্ধ করুন</button>
+    </div>
+    <button type="button" id="btnOpenStaffModal" class="btn" onclick="openStaffModal()" style="background:#f8fafc;color:#1e293b;border:1.5px solid #94a3b8;font-size:12.5px;padding:9px 12px;display:flex;align-items:center;justify-content:center;gap:6px;width:100%;border-radius:8px;font-weight:700;">
+      <span>👨‍✈️ আপনি কি এই বাসের চালক বা কন্ডাক্টর? (স্টাফ পিন কোড)</span>
+    </button>
+  </div>
+
   <!-- বাসের রুট ও বর্তমান অবস্থান সেকশন (শুধুমাত্র বাস সিলেক্ট হলে রুট টাইমলাইন বার দেখাবে) -->
   <div id="routeTrackerCard" class="route-tracker-card hidden">
     <h4>🛣️ বাসের রুট ও বর্তমান অবস্থান</h4>
@@ -1569,25 +1580,55 @@
 
     <div style="background:#f8fafc;border:1.5px solid #cbd5e1;border-radius:10px;padding:12px;margin-bottom:12px;">
       <div style="font-size:12.5px;color:#64748b;font-weight:bold;">বর্তমান বাসের ভিড়ের মাত্রা:</div>
-      <div style="font-size:17px;font-weight:800;color:#0f172a;margin-top:4px;" id="currentBusCrowdStatusText">
-        🟢 কম ভিড় (খালি আসন আছে)
+      <div style="font-size:16px;font-weight:800;color:#0f172a;margin-top:4px;" id="currentBusCrowdStatusText">
+        🟢 কম ভিড়<br><span style="font-size:12.5px;font-weight:600;color:#475569;">(খালি আসন আছে)</span>
       </div>
     </div>
 
-    <div style="font-weight:800;color:#1e293b;font-size:13.5px;">আপনি কি বাসে আছেন? বর্তমান ভিড়ের মাত্রা জানান:</div>
+    <div style="font-weight:800;color:#1e293b;font-size:13.5px;margin-bottom:8px;">আপনি কি বাসে আছেন? বর্তমান ভিড়ের মাত্রা জানান:</div>
     <div class="crowd-options-grid">
       <button type="button" class="crowd-vote-btn crowd-vote-low" onclick="updateCrowdLevel('low')">
-        <span>🟢 কম ভিড় (খালি আসন আছে)</span>
-        <span>ভোট দিন ➔</span>
+        <div style="display:flex; flex-direction:column; align-items:flex-start; text-align:left; flex:1;">
+          <span style="font-size:14px; font-weight:800;">🟢 কম ভিড়</span>
+          <span style="font-size:12px; font-weight:600; opacity:0.85; margin-top:2px;">(খালি আসন আছে)</span>
+        </div>
+        <span style="font-weight:700; white-space:nowrap; margin-left:8px; font-size:13px;">ভোট দিন ➔</span>
       </button>
       <button type="button" class="crowd-vote-btn crowd-vote-med" onclick="updateCrowdLevel('medium')">
-        <span>🟡 মাঝারি ভিড় (বসার জায়গা সীমিত)</span>
-        <span>ভোট দিন ➔</span>
+        <div style="display:flex; flex-direction:column; align-items:flex-start; text-align:left; flex:1;">
+          <span style="font-size:14px; font-weight:800;">🟡 মাঝারি ভিড়</span>
+          <span style="font-size:12px; font-weight:600; opacity:0.85; margin-top:2px;">(বসার জায়গা সীমিত)</span>
+        </div>
+        <span style="font-weight:700; white-space:nowrap; margin-left:8px; font-size:13px;">ভোট দিন ➔</span>
       </button>
       <button type="button" class="crowd-vote-btn crowd-vote-high" onclick="updateCrowdLevel('high')">
-        <span>🔴 প্রচণ্ড ভিড় (দাঁড়ানোর জায়গা কম)</span>
-        <span>ভোট দিন ➔</span>
+        <div style="display:flex; flex-direction:column; align-items:flex-start; text-align:left; flex:1;">
+          <span style="font-size:14px; font-weight:800;">🔴 প্রচণ্ড ভিড়</span>
+          <span style="font-size:12px; font-weight:600; opacity:0.85; margin-top:2px;">(দাঁড়ানোর জায়গা কম)</span>
+        </div>
+        <span style="font-weight:700; white-space:nowrap; margin-left:8px; font-size:13px;">ভোট দিন ➔</span>
       </button>
+    </div>
+  </div>
+</div>
+
+<!-- বাসের কর্মী / কন্ডাক্টর সিকিউরিটি কোড ও মোড মডাল -->
+<div id="staffModal" class="app-feature-modal hidden">
+  <div class="feature-modal-content">
+    <div class="feature-modal-header">
+      <div class="feature-modal-title">👨‍✈️ বাস চালক ও কন্ডাক্টর মোড</div>
+      <button type="button" class="modal-close-x" onclick="closeStaffModal()">&times;</button>
+    </div>
+    <p style="font-size:13px;color:#334155;line-height:1.5;margin-top:0;">
+      সাধারণ যাত্রীদের জন্য শুধু <b>"👤 আপনি"</b> আইকন থাকবে। আপনি যদি এই বাসের অনুমোদিত চালক বা কন্ডাক্টর হন, তবে ৪ ডিজিটের সিকিউরিটি পিন দিন যাতে আপনার ফোন থেকে বাসের লাইভ লোকেশন সার্ভারে সম্প্রচারিত হয়:
+    </p>
+    <div style="margin:14px 0;">
+      <label style="font-size:12px;font-weight:bold;color:#475569;">স্টাফ সিকিউরিটি পিন (ডিফল্ট: 1234)</label>
+      <input type="password" id="staffPinInput" placeholder="৪ ডিজিট পিন কোড লিখুন" style="font-size:18px;letter-spacing:4px;text-align:center;padding:10px;margin-top:6px;border:2px solid #0284c7;border-radius:8px;outline:none;" maxlength="6" inputmode="numeric" />
+    </div>
+    <div style="display:flex;gap:8px;margin-top:12px;">
+      <button type="button" class="btn btn-cancel" style="flex:1;" onclick="closeStaffModal()">বাতিল</button>
+      <button type="button" class="btn" style="flex:1;background:#15803d;color:#fff;" onclick="verifyAndStartStaffMode()">সক্রিয় করুন</button>
     </div>
   </div>
 </div>
@@ -2023,15 +2064,18 @@
     iconSize: [46, 24], 
     iconAnchor: [23, 12] 
   });
-  // ৭ নম্বর ত্রুটি সংশোধন: ব্যবহারকারীর অবস্থানকে কখনোই বাসের আইকন দেখানো হবে না, সর্বদা পরিষ্কার যাত্রী ব্যাজ থাকবে
+  // ১ নম্বর নির্দেশনা সমাধান: ব্যাকগ্রাউন্ড হালকা রঙ (সাদা ও নীল বর্ডার), গাঢ় স্পষ্ট "আপনি" টেক্সট ও স্পষ্ট নীল মানুষের আইকন
   const userIcon = L.divIcon({ 
-    html: `<div style="display:flex; flex-direction:column; align-items:center; filter: drop-shadow(0 3px 6px rgba(0,0,0,0.35));">
-      <div style="background:#1565c0; color:#fff; font-size:10px; font-weight:800; padding:2px 7px; border-radius:12px; border:1.5px solid #ffffff; white-space:nowrap; margin-bottom:2px;">👤 আপনি</div>
-      <div style="width:18px; height:18px; background:#1976d2; border:3px solid #ffffff; border-radius:50%; box-shadow:0 0 10px rgba(25,118,210,0.8);"></div>
+    html: `<div style="display:flex; flex-direction:column; align-items:center; filter: drop-shadow(0 3px 6px rgba(0,0,0,0.22)); pointer-events:none;">
+      <div style="background:#ffffff; color:#0f172a; font-size:11px; font-weight:800; padding:3px 9px; border-radius:14px; border:2px solid #0284c7; box-shadow:0 2px 6px rgba(0,0,0,0.16); display:flex; align-items:center; gap:4px; white-space:nowrap; margin-bottom:2px;">
+        <svg viewBox="0 0 24 24" width="13" height="13" fill="#0284c7" style="flex-shrink:0;"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+        <span style="color:#0f172a;font-weight:800;">আপনি</span>
+      </div>
+      <div style="width:16px; height:16px; background:#0284c7; border:3px solid #ffffff; border-radius:50%; box-shadow:0 0 8px rgba(2,132,199,0.85);"></div>
     </div>`, 
     className: '', 
-    iconSize: [60, 42], 
-    iconAnchor: [30, 36] 
+    iconSize: [64, 44], 
+    iconAnchor: [32, 38] 
   });
 
   function showAppAlert(msg, title = "বিজ্ঞপ্তি") {
@@ -2218,21 +2262,16 @@
     }
   }
   
-  // ৭ নম্বর ত্রুটি সমাধান: অ্যাপ খোলার পর ব্যবহারকারীর লোকেশনে বাসের আইকন যেন কখনোই না বসে
+  // ২ ও ৩ নম্বর নির্দেশনা সমাধান: যাত্রী মোডে ফোনের জিপিএস কখনোই বাসের অবস্থান হিসেবে সার্ভারে পাঠানো হবে না।
+  // শুধুমাত্র অনুমোদিত কর্মী (চালক বা কন্ডাক্টর) পিন দিয়ে স্টাফ মোড চালু করলেই GPS সম্প্রচারিত হবে।
   function checkPassengerRideAndSync() {
-    if (!userPos || !trackingBus || !busPos) return;
+    if (!isStaffModeActive || !trackingBus || !userPos) return;
 
-    let distToBus = getDistanceMeters(userPos.lat, userPos.lon, busPos.lat, busPos.lon);
-    let isNearBus = (distToBus <= 100);
-
-    // ব্যবহারকারী যদি বাসে উঠে উচ্চগতিতে ভ্রমণ করেন (১৬ কিমি/ঘণ্টার বেশি) তবেই কেবল লাইভ জিপিএস সিঙ্ক হবে
-    if (isNearBus && userPos.speed > 16) {
-      busPos = { lat: userPos.lat, lon: userPos.lon, speed: userPos.speed };
-      if (busMarker) {
-        busMarker.setLatLng([busPos.lat, busPos.lon]);
-      }
-      syncUserGPSAsBus(trackingBus.number, userPos.lat, userPos.lon, userPos.speed, userPos.acc);
+    busPos = { lat: userPos.lat, lon: userPos.lon, speed: userPos.speed };
+    if (busMarker) {
+      busMarker.setLatLng([busPos.lat, busPos.lon]);
     }
+    syncUserGPSAsBus(trackingBus.number, userPos.lat, userPos.lon, userPos.speed, userPos.acc);
   }
 
   function updateDistanceAndTracking() {
@@ -3083,7 +3122,16 @@
       }
 
       if (!data.ok || !data.live) {
-        locBox.innerText = `বাসের লাইভ জিপিএস সিগন্যাল সক্রিয় নেই (${busNo})`;
+        locBox.innerText = `বাসের লাইভ জিপিএস সিগন্যালে ড্রাইভার এখনও যুক্ত হননি (${busNo})`;
+        if (busMarker) {
+          map.removeLayer(busMarker);
+          busMarker = null;
+        }
+        busPos = null;
+        if (routeLine) {
+          map.removeLayer(routeLine);
+          routeLine = null;
+        }
         if (window.AndroidBridge && window.AndroidBridge.updateNotificationDetails) {
           let bNum = trackingBus ? (trackingBus.number || busNo) : busNo;
           let bName = trackingBus ? (trackingBus.name || "") : "";
@@ -3097,16 +3145,43 @@
             getCurrentAppLanguage()
           );
         }
-        if (userPos) {
-          checkPassengerRideAndSync();
-          updateDistanceAndTracking();
-        }
+        updateDistanceAndTracking();
         return;
       }
 
       let b = data.live;
-      busPos = { lat: Number(b.lat), lon: Number(b.lon), speed: b.speed || 0 };
+      let bLat = Number(b.lat);
+      let bLon = Number(b.lon);
 
+      if (isNaN(bLat) || isNaN(bLon) || bLat === 0) {
+        locBox.innerText = `বাসের লাইভ জিপিএস সিগন্যালে ড্রাইভার এখনও যুক্ত হননি (${busNo})`;
+        if (busMarker) {
+          map.removeLayer(busMarker);
+          busMarker = null;
+        }
+        busPos = null;
+        updateDistanceAndTracking();
+        return;
+      }
+
+      // ২ ও ৩ নম্বর ত্রুটি স্থায়ী সমাধান:
+      // যাত্রী মোডে (সাধারণ যাত্রী) থাকাকালীন যদি সার্ভার থেকে আগের পুরনো ভুল কো-অর্ডিনেট আসে যা যাত্রীর বর্তমান অবস্থানের সমান:
+      if (!isStaffModeActive && userPos) {
+        let distToUser = getDistanceMeters(userPos.lat, userPos.lon, bLat, bLon);
+        // যদি বাসের অবস্থান যাত্রীর ৩০ মিটারের মধ্যে থাকে এবং বাসের গতি ৪ কিমির কম হয় (যাত্রী বাসের জন্য অপেক্ষা করছেন বা পুরনো ডাটা):
+        if (distToUser < 30 && (b.speed || 0) < 4) {
+          locBox.innerText = `বাসের লাইভ জিপিএস সিগন্যালে ড্রাইভার এখনও যুক্ত হননি (${busNo})`;
+          if (busMarker) {
+            map.removeLayer(busMarker);
+            busMarker = null;
+          }
+          busPos = null;
+          updateDistanceAndTracking();
+          return;
+        }
+      }
+
+      busPos = { lat: bLat, lon: bLon, speed: b.speed || 0 };
       locBox.innerText = `বাসের বর্তমান অবস্থান: LAT ${busPos.lat.toFixed(4)}, LON ${busPos.lon.toFixed(4)} (গতি: ${busPos.speed} KM/H)`;
 
       if (!busMarker) {
@@ -3283,13 +3358,66 @@
     }
   }
 
+  let isStaffModeActive = false;
+  const STAFF_PIN_CODE = "1234"; // ডিফল্ট বাসের কর্মী সিকিউরিটি পিন
+
+  function openStaffModal() {
+    let pinInput = document.getElementById("staffPinInput");
+    if (pinInput) pinInput.value = "";
+    document.getElementById("staffModal").classList.remove("hidden");
+  }
+
+  function closeStaffModal() {
+    document.getElementById("staffModal").classList.add("hidden");
+  }
+
+  function verifyAndStartStaffMode() {
+    let pin = document.getElementById("staffPinInput").value.trim();
+    if (pin !== STAFF_PIN_CODE) {
+      showAppAlert("ভুল পিন কোড! অনুমোদিত কর্মী পিন কোড দিন (ডিফল্ট: 1234)।", "ভুল পিন");
+      return;
+    }
+
+    if (!trackingBus) {
+      showAppAlert("প্রথমে যেকোনো একটি বাস সিলেক্ট করুন যার চালক বা কন্ডাক্টর আপনি।", "বাস সিলেক্ট করুন");
+      closeStaffModal();
+      return;
+    }
+
+    isStaffModeActive = true;
+    if (window.AndroidBridge && window.AndroidBridge.setStaffMode) {
+      window.AndroidBridge.setStaffMode(true);
+    }
+
+    document.getElementById("staffActiveBanner").classList.remove("hidden");
+    document.getElementById("btnOpenStaffModal").classList.add("hidden");
+    closeStaffModal();
+
+    showAppAlert(`বাস কর্মী মোড সফলভাবে সক্রিয় হয়েছে! এখন ${trackingBus.name} (${trackingBus.number}) বাসের লাইভ লোকেশন এই ফোন থেকে সম্প্রচার করা হবে।`, "কর্মী মোড সক্রিয়");
+
+    if (userPos) {
+      syncUserGPSAsBus(trackingBus.number, userPos.lat, userPos.lon, userPos.speed, userPos.acc);
+    }
+  }
+
+  function stopStaffMode() {
+    isStaffModeActive = false;
+    if (window.AndroidBridge && window.AndroidBridge.setStaffMode) {
+      window.AndroidBridge.setStaffMode(false);
+    }
+    document.getElementById("staffActiveBanner").classList.add("hidden");
+    document.getElementById("btnOpenStaffModal").classList.remove("hidden");
+    showAppAlert("বাস কর্মী মোড বন্ধ করা হয়েছে। আপনার ফোন আর বাসের লাইভ লোকেশন সম্প্রচার করবে না।", "কর্মী মোড বন্ধ");
+  }
+
   async function syncUserGPSAsBus(busNo, lat, lon, speed, acc) {
+    if (!isStaffModeActive) return;
     let payload = { action: "updateGPS", busNumber: busNo, lat: lat, lon: lon, speed: speed, accuracy: acc };
     fetch(API_URL, {
       method: "POST",
       headers: { "Content-Type": "text/plain;charset=utf-8" },
       body: JSON.stringify(payload)
-    });
+    }).catch(() => {});
   }
 
   function getDistanceMeters(lat1, lon1, lat2, lon2) {
@@ -4339,30 +4467,34 @@ https://aionline.in.net`;
 
   function updateCrowdLevel(level) {
     currentCrowdLevel = level;
-    let label = "🟢 কম ভিড় (খালি আসন আছে)";
+    let mainLabel = "🟢 কম ভিড়";
+    let subLabel = "(খালি আসন আছে)";
     let badgeText = "🟢 কম ভিড়";
-    let badgeClass = "badge-crowd-status";
 
     if (level === "medium") {
-      label = "🟡 মাঝারি ভিড় (বসার জায়গা সীমিত)";
+      mainLabel = "🟡 মাঝারি ভিড়";
+      subLabel = "(বসার জায়গা সীমিত)";
       badgeText = "🟡 মাঝারি ভিড়";
-      badgeClass = "badge-crowd-status";
     } else if (level === "high") {
-      label = "🔴 প্রচণ্ড ভিড় (দাঁড়ানোর জায়গা কম)";
+      mainLabel = "🔴 প্রচণ্ড ভিড়";
+      subLabel = "(দাঁড়ানোর জায়গা কম)";
       badgeText = "🔴 প্রচণ্ড ভিড়";
     }
 
     let cardElem = document.getElementById("infoCrowdLevel");
-    if (cardElem) cardElem.innerText = label;
+    if (cardElem) cardElem.innerText = `${mainLabel} ${subLabel}`;
 
     let quickBadge = document.getElementById("quickCrowdBadge");
     if (quickBadge) quickBadge.innerText = badgeText;
 
+    let quickSub = document.getElementById("quickCrowdSub");
+    if (quickSub) quickSub.innerText = subLabel.replace(/[()]/g, '');
+
     let statusText = document.getElementById("currentBusCrowdStatusText");
-    if (statusText) statusText.innerText = label;
+    if (statusText) statusText.innerHTML = `${mainLabel}<br><span style="font-size:12.5px;font-weight:600;color:#475569;">${subLabel}</span>`;
 
     closeCrowdModal();
-    showAppAlert(`ধন্যবাদ! বাসের ভিড়ের মাত্রা "${label}" হিসেবে আপডেট হয়েছে।`, "ভিড়ের তথ্য আপডেট");
+    showAppAlert(`ধন্যবাদ! বাসের ভিড়ের মাত্রা "${mainLabel} ${subLabel}" হিসেবে আপডেট হয়েছে।`, "ভিড়ের তথ্য আপডেট");
   }
 
   // ==========================================

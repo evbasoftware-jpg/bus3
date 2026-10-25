@@ -596,6 +596,16 @@ class WebAppInterface(private val activity: MainActivity) {
   }
 
   @JavascriptInterface
+  fun setStaffMode(enabled: Boolean) {
+    BusTrackingService.isStaffMode = enabled
+  }
+
+  @JavascriptInterface
+  fun isStaffMode(): Boolean {
+    return BusTrackingService.isStaffMode
+  }
+
+  @JavascriptInterface
   fun shareWhatsApp(text: String) {
     activity.runOnUiThread {
       try {

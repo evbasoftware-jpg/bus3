@@ -61,6 +61,9 @@ class BusTrackingService : Service() {
 
     // Callback to update active UI if app is in foreground
     var onLocationReceived: ((Location, Float) -> Unit)? = null
+
+    // বাসের চালক বা কন্ডাক্টরের সিকিউরিটি মোড (শুধুমাত্র অনুমোদিত স্টাফ সক্রিয় করলেই সার্ভারে বাস লোকেশন আপলোড হবে)
+    var isStaffMode: Boolean = false
   }
 
   private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -189,9 +192,9 @@ class BusTrackingService : Service() {
     // Notify in-app UI if open
     onLocationReceived?.invoke(location, speedKmh)
 
-    // Rate-limit server upload to once every 4-5 seconds
+    // Rate-limit server upload to once every 4-5 seconds (কেবলমাত্র চালক/কন্ডাক্টর মোড চালু থাকলে)
     val now = System.currentTimeMillis()
-    if (now - lastServerSyncTimestamp >= 4000L && activeBusNumber.isNotBlank()) {
+    if (isStaffMode && now - lastServerSyncTimestamp >= 4000L && activeBusNumber.isNotBlank()) {
       lastServerSyncTimestamp = now
       uploadLocationToServer(location, speedKmh)
     }
