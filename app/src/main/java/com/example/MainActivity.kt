@@ -21,6 +21,8 @@ import android.webkit.JsPromptResult
 import android.webkit.JsResult
 import android.webkit.WebChromeClient
 import android.webkit.WebSettings
+import android.net.Uri
+import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.EditText
@@ -310,6 +312,28 @@ class MainActivity : ComponentActivity() {
     }
 
     wv.webViewClient = object : WebViewClient() {
+      override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
+        val url = request?.url?.toString() ?: return false
+        return handleCustomUri(url)
+      }
+
+      @Deprecated("Deprecated in Java")
+      override fun shouldOverrideUrlLoading(view: WebView?, url: String?): Boolean {
+        if (url == null) return false
+        return handleCustomUri(url)
+      }
+
+      private fun handleCustomUri(url: String): Boolean {
+        if (url.startsWith("whatsapp:") || url.startsWith("intent:") || url.startsWith("tel:") || url.startsWith("mailto:") || url.startsWith("https://api.whatsapp.com/")) {
+          try {
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+            startActivity(intent)
+          } catch (_: Exception) {}
+          return true
+        }
+        return false
+      }
+
       override fun onPageFinished(view: WebView?, url: String?) {
         super.onPageFinished(view, url)
         if (hasLocationPermission()) {
@@ -569,5 +593,35 @@ class WebAppInterface(private val activity: MainActivity) {
   @JavascriptInterface
   fun isTrackingRunning(): Boolean {
     return BusTrackingService.isRunning
+  }
+
+  @JavascriptInterface
+  fun shareWhatsApp(text: String) {
+    activity.runOnUiThread {
+      try {
+        val intent = Intent(Intent.ACTION_SEND).apply {
+          type = "text/plain"
+          setPackage("com.whatsapp")
+          putExtra(Intent.EXTRA_TEXT, text)
+        }
+        activity.startActivity(intent)
+      } catch (_: Exception) {
+        shareText(text)
+      }
+    }
+  }
+
+  @JavascriptInterface
+  fun shareText(text: String) {
+    activity.runOnUiThread {
+      try {
+        val intent = Intent(Intent.ACTION_SEND).apply {
+          type = "text/plain"
+          putExtra(Intent.EXTRA_TEXT, text)
+        }
+        val chooser = Intent.createChooser(intent, "বাস লাইভ ট্র্যাকিং শেয়ার করুন")
+        activity.startActivity(chooser)
+      } catch (_: Exception) {}
+    }
   }
 }

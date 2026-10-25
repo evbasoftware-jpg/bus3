@@ -1271,46 +1271,6 @@
     </button>
   </div>
 
-  <!-- নতুন ৬টি ফিচারের কুইক অ্যাকশন টুলবার -->
-  <div class="features-quick-grid">
-    <button type="button" class="feature-action-btn btn-wake-alarm" onclick="openWakeAlarmModal()" title="গন্তব্যের ৫০০ মিটার পূর্বে ওয়েক-আপ অ্যালার্ট">
-      <span class="feat-icon">⏰</span>
-      <span class="feat-label">ওয়েক-আপ অ্যালার্ট</span>
-      <span class="feat-sub">৫০০ মিটার পূর্বে অ্যালার্ম</span>
-      <span class="feat-badge" id="wakeAlarmBadge">🔔 ৫০০মি. সক্রিয়</span>
-    </button>
-    <button type="button" class="feature-action-btn btn-fare" onclick="openFareModal()" title="বাসের ভাড়া তালিকা ও স্টেজ হিসাব">
-      <span class="feat-icon">💰</span>
-      <span class="feat-label">ভাড়া তালিকা</span>
-      <span class="feat-sub">স্টপ ও দূরত্ব ভিত্তিক ভাড়া</span>
-      <span class="feat-badge" style="background:#d1fae5;color:#065f46;">₹ তালিকা দেখুন</span>
-    </button>
-    <button type="button" class="feature-action-btn btn-timetable" onclick="openTimeTableModal()" title="বাস ছাড়ার সময়সূচি ও স্টপেজ সূচি">
-      <span class="feat-icon">🕒</span>
-      <span class="feat-label">বাসের সময়সূচি</span>
-      <span class="feat-sub">ছাড়ার সময় ও রুট শিডিউল</span>
-      <span class="feat-badge" style="background:#dbeafe;color:#1e40af;">📅 সময় দেখুন</span>
-    </button>
-    <button type="button" class="feature-action-btn btn-share" onclick="shareLiveTrip()" title="লাইভ ট্র্যাকিং শেয়ারিং">
-      <span class="feat-icon">📲</span>
-      <span class="feat-label">লাইভ শেয়ার</span>
-      <span class="feat-sub">হোয়াটসঅ্যাপ / লিঙ্ক</span>
-      <span class="feat-badge" style="background:#dcfce7;color:#15803d;">🚀 শেয়ার করুন</span>
-    </button>
-    <button type="button" class="feature-action-btn btn-helpline" onclick="openHelplineModal()" title="কন্ডাক্টর ও জরুরি হেল্পলাইন নম্বর">
-      <span class="feat-icon">📞</span>
-      <span class="feat-label">হেল্পলাইন নম্বর</span>
-      <span class="feat-sub">কন্ডাক্টর ও পুলিশ / অ্যাম্বুলেন্স</span>
-      <span class="feat-badge" style="background:#fee2e2;color:#991b1b;">🚨 জরুরি কল</span>
-    </button>
-    <button type="button" class="feature-action-btn btn-crowd" onclick="openCrowdModal()" title="বাসে ভিড়ের মাত্রা নির্দেশক">
-      <span class="feat-icon">👥</span>
-      <span class="feat-label">ভিড়ের মাত্রা</span>
-      <span class="feat-sub" id="quickCrowdSub">স্বাভাবিক</span>
-      <span class="feat-badge badge-crowd-status" id="quickCrowdBadge">🟢 কম ভিড়</span>
-    </button>
-  </div>
-
   <div id="currentLocationBox">বাসের বর্তমান অবস্থান: কোনো বাস নির্বাচিত হয়নি</div>
 
   <div class="card-grid">
@@ -1347,6 +1307,46 @@
     </svg>
     <span id="mapAddStopBtnText">ম্যাপে ক্লিক করে সরাসরি নতুন স্টপ যোগ করুন (অফলাইন মোড)</span>
   </button>
+
+  <!-- ব্যবহারকারীর নির্দেশনা: ৬টি ফিচার ম্যাপের নিচে একদম লাস্টে যুক্ত করা হলো -->
+  <div class="features-quick-grid">
+    <button type="button" class="feature-action-btn btn-wake-alarm" onclick="openWakeAlarmModal()" title="গন্তব্যের ৫০০ মিটার পূর্বে ওয়েক-আপ অ্যালার্ট">
+      <span class="feat-icon">⏰</span>
+      <span class="feat-label">১) ওয়েক-আপ অ্যালার্ট</span>
+      <span class="feat-sub">৫০০ মিটার পূর্বে অ্যালার্ম</span>
+      <span class="feat-badge" id="wakeAlarmBadge">🔔 ৫০০মি. সক্রিয়</span>
+    </button>
+    <button type="button" class="feature-action-btn btn-fare" onclick="openFareModal()" title="বাসের ভাড়া তালিকা ও স্টেজ হিসাব">
+      <span class="feat-icon">💰</span>
+      <span class="feat-label">২) ভাড়া তালিকা</span>
+      <span class="feat-sub">স্টপ ও দূরত্ব ভিত্তিক ভাড়া</span>
+      <span class="feat-badge" style="background:#d1fae5;color:#065f46;">₹ তালিকা দেখুন</span>
+    </button>
+    <button type="button" class="feature-action-btn btn-timetable" onclick="openTimeTableModal()" title="বাস ছাড়ার সময়সূচি ও স্টপেজ সূচি">
+      <span class="feat-icon">🕒</span>
+      <span class="feat-label">৩) বাসের সময়সূচি</span>
+      <span class="feat-sub">পরপর স্টপ ও সঠিক সময়</span>
+      <span class="feat-badge" style="background:#dbeafe;color:#1e40af;">📅 সময় দেখুন</span>
+    </button>
+    <button type="button" class="feature-action-btn btn-share" onclick="shareLiveTrip()" title="লাইভ ট্র্যাকিং শেয়ারিং">
+      <span class="feat-icon">📲</span>
+      <span class="feat-label">৪) লাইভ শেয়ার</span>
+      <span class="feat-sub">হোয়াটসঅ্যাপ / লিঙ্ক</span>
+      <span class="feat-badge" style="background:#dcfce7;color:#15803d;">🚀 শেয়ার করুন</span>
+    </button>
+    <button type="button" class="feature-action-btn btn-helpline" onclick="openHelplineModal()" title="কন্ডাক্টর ও জরুরি হেল্পলাইন নম্বর">
+      <span class="feat-icon">📞</span>
+      <span class="feat-label">৫) হেল্পলাইন নম্বর</span>
+      <span class="feat-sub">কন্ডাক্টর ও পুলিশ / অ্যাম্বুলেন্স</span>
+      <span class="feat-badge" style="background:#fee2e2;color:#991b1b;">🚨 জরুরি কল</span>
+    </button>
+    <button type="button" class="feature-action-btn btn-crowd" onclick="openCrowdModal()" title="বাসে ভিড়ের মাত্রা নির্দেশক">
+      <span class="feat-icon">👥</span>
+      <span class="feat-label">৬) ভিড়ের মাত্রা</span>
+      <span class="feat-sub" id="quickCrowdSub">স্বাভাবিক</span>
+      <span class="feat-badge badge-crowd-status" id="quickCrowdBadge">🟢 কম ভিড়</span>
+    </button>
+  </div>
 
 <!-- ১) ওয়েক-আপ অ্যালার্ট সক্রিয়করণ ও সেটিংস মডাল -->
 <div id="wakeAlarmModal" class="app-feature-modal hidden">
@@ -2769,7 +2769,7 @@
             🚌 <b>${b.name || 'বাস'}</b> - ${b.number} (${b.category || 'PUBLIC'})
           </div>
         `;
-        div.onclick = () => selectBus(b);
+        div.onclick = () => selectBus(b, item);
         listDiv.appendChild(div);
       });
 
@@ -2924,12 +2924,24 @@
     };
   }
 
-  function selectBus(b) {
+  function selectBus(b, searchResultItem) {
     promptDismissedStops.clear();
     activeApproachingStop = null;
     lastAnnouncedArrivalStop = null;
     lastAnnouncedNextStop = null;
     trackingBus = b;
+
+    if (searchResultItem) {
+      trackingBus.depTime = searchResultItem.fromTimeStr || b.depTime || b.srcTime || b.sourceTime;
+      trackingBus.arrTime = searchResultItem.toTimeStr || b.arrTime || b.destTime;
+      trackingBus.searchFrom = searchResultItem.fromDisplayName || b.source;
+      trackingBus.searchTo = searchResultItem.toDisplayName || b.dest;
+    } else {
+      let sFrom = document.getElementById("searchFrom") ? document.getElementById("searchFrom").value.trim() : "";
+      let sTo = document.getElementById("searchTo") ? document.getElementById("searchTo").value.trim() : "";
+      if (sFrom) trackingBus.searchFrom = sFrom;
+      if (sTo) trackingBus.searchTo = sTo;
+    }
     
     let stopsRaw = b.selectedStops || b.Selected_Stops || b["SELECTED STOPS"] || [];
     if (typeof stopsRaw === "string") {
@@ -4020,6 +4032,93 @@
     document.getElementById("timeTableModal").classList.add("hidden");
   }
 
+  function getOrderedRouteStopsForBus(bus) {
+    if (!bus) return [];
+
+    let srcName = cleanStopName(bus.searchFrom || document.getElementById("searchFrom")?.value?.trim() || bus.source);
+    let destName = cleanStopName(bus.searchTo || document.getElementById("searchTo")?.value?.trim() || bus.dest);
+
+    let rawSelected = bus.selectedStops || bus.Selected_Stops || bus["SELECTED STOPS"] || [];
+    let allowedStops = [];
+    if (typeof rawSelected === "string") {
+      allowedStops = rawSelected.split(",").map(s => cleanStopName(s)).filter(Boolean);
+    } else if (Array.isArray(rawSelected)) {
+      allowedStops = rawSelected.map(s => cleanStopName(s)).filter(Boolean);
+    }
+
+    if (srcName && !allowedStops.includes(srcName)) allowedStops.unshift(srcName);
+    if (destName && !allowedStops.includes(destName)) allowedStops.push(destName);
+
+    let stopCandidates = [];
+    if (currentBusStopsList && currentBusStopsList.length > 0) stopCandidates.push(...currentBusStopsList);
+    if (masterStopsList && masterStopsList.length > 0) stopCandidates.push(...masterStopsList);
+
+    let fullStops = [];
+    let seenStopNames = new Set();
+
+    allowedStops.forEach(reqName => {
+      let matched = stopCandidates.find(ms => {
+        let clean = cleanStopName(ms.name || ms.stopName);
+        return clean === reqName;
+      });
+
+      if (!matched) {
+        matched = stopCandidates.find(ms => {
+          let clean = cleanStopName(ms.name || ms.stopName);
+          return clean.includes(reqName) || reqName.includes(clean);
+        });
+      }
+
+      if (matched) {
+        let cleanMatchedName = cleanStopName(matched.name || matched.stopName);
+        if (!seenStopNames.has(cleanMatchedName)) {
+          seenStopNames.add(cleanMatchedName);
+          fullStops.push(matched);
+        }
+      } else {
+        if (!seenStopNames.has(reqName)) {
+          seenStopNames.add(reqName);
+          fullStops.push({ name: reqName });
+        }
+      }
+    });
+
+    if (fullStops.length === 0) {
+      if (allowedStops.length > 0) return allowedStops.map(s => ({ name: s }));
+      return [];
+    }
+
+    let stopsWithCoords = fullStops.filter(s => {
+      let lat = Number(s.latitude || s.lat);
+      let lon = Number(s.longitude || s.lon);
+      return !isNaN(lat) && !isNaN(lon) && lat !== 0;
+    });
+
+    let validStops = stopsWithCoords.length > 1 ? sortStopsAlongTrip(stopsWithCoords, { source: srcName, dest: destName }) : fullStops;
+
+    if (srcName) {
+      let sIdx = validStops.findIndex(s => {
+        let n = cleanStopName(s.name || s.stopName);
+        return n === srcName || (n.startsWith(srcName) && !n.includes("STATION"));
+      });
+      if (sIdx !== -1 && sIdx > 0) {
+        validStops = validStops.slice(sIdx);
+      }
+    }
+
+    if (destName) {
+      let dIdx = validStops.findIndex(s => {
+        let n = cleanStopName(s.name || s.stopName);
+        return n === destName || (n.startsWith(destName) && !n.includes("STATION"));
+      });
+      if (dIdx !== -1) {
+        validStops = validStops.slice(0, dIdx + 1);
+      }
+    }
+
+    return validStops;
+  }
+
   function renderBusTimeTable() {
     let header = document.getElementById("ttBusHeader");
     let routeDetails = document.getElementById("ttBusRouteDetails");
@@ -4035,15 +4134,15 @@
 
     let bName = trackingBus.name || "বাস";
     let bNum = trackingBus.number || "";
-    let bSrc = trackingBus.source || "প্রারম্ভিক স্টপ";
-    let bDest = trackingBus.dest || "গন্তব্য স্টপ";
+    let bSrc = trackingBus.searchFrom || trackingBus.source || "প্রারম্ভিক স্টপ";
+    let bDest = trackingBus.searchTo || trackingBus.dest || "গন্তব্য স্টপ";
     let bCat = trackingBus.category || "PUBLIC";
     let bDays = trackingBus.days || "প্রত্যহ (প্রতিদিন)";
 
     if (header) header.innerText = `🚌 ${bName} (${bNum}) - [${bCat}]`;
     if (routeDetails) routeDetails.innerHTML = `🛣️ রুট: <b>${bSrc}</b> ➔ <b>${bDest}</b><br>📅 চলাচলের দিন: <b>${bDays}</b>`;
 
-    let stops = (currentBusStopsList && currentBusStopsList.length > 0) ? currentBusStopsList : (trackingBus.selectedStops || []);
+    let stops = getOrderedRouteStopsForBus(trackingBus);
     
     if (!stops || stops.length === 0) {
       tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;padding:16px;color:#64748b;">এই বাসের স্টপেজ তালিকা প্রস্তুত হচ্ছে...</td></tr>`;
@@ -4051,24 +4150,79 @@
     }
 
     tbody.innerHTML = "";
-    let srcTime = trackingBus.sourceTime || "06:00 AM";
-    let srcMins = timeToMinutes(srcTime) || 360; // 06:00 AM
+
+    // বাসের সঠিক শুরুর সময় (depTime) এবং পৌঁছানোর সময় (arrTime)
+    let rawDep = trackingBus.depTime || trackingBus.fromTimeStr || trackingBus.sourceTime || trackingBus.srcTime;
+    if (!rawDep && globalBusesCatalog && globalBusesCatalog.length > 0) {
+      let matched = globalBusesCatalog.find(b => (b.number == trackingBus.number) || (b.name === trackingBus.name));
+      if (matched) rawDep = matched.depTime || matched.sourceTime || matched.srcTime;
+    }
+    let depTimeStr = formatCleanTime(rawDep || "10:15 AM");
+    let depMins = timeToMinutes(depTimeStr);
+    if (depMins === null) depMins = 10 * 60 + 15; // 10:15 AM fallback
+
+    let rawArr = trackingBus.arrTime || trackingBus.toTimeStr || trackingBus.destTime;
+    let arrMins = rawArr ? timeToMinutes(formatCleanTime(rawArr)) : null;
+
+    // প্রতিটি স্টপের ক্রমিক রোড দূরত্ব পরিমাপ
+    let cumDistances = [0];
+    let totalDistKm = 0;
+    for (let i = 1; i < stops.length; i++) {
+      let prevLat = Number(stops[i-1].latitude || stops[i-1].lat);
+      let prevLon = Number(stops[i-1].longitude || stops[i-1].lon);
+      let curLat = Number(stops[i].latitude || stops[i].lat);
+      let curLon = Number(stops[i].longitude || stops[i].lon);
+
+      let stepKm = 3.5;
+      if (!isNaN(prevLat) && !isNaN(prevLon) && !isNaN(curLat) && !isNaN(curLon) && prevLat !== 0 && curLat !== 0) {
+        stepKm = (getDistanceMeters(prevLat, prevLon, curLat, curLon) / 1000) * 1.15;
+        if (stepKm < 0.8) stepKm = 1.5;
+      }
+      totalDistKm += stepKm;
+      cumDistances.push(totalDistKm);
+    }
+
+    let totalDurationMins = 0;
+    if (arrMins !== null) {
+      if (arrMins < depMins) arrMins += 24 * 60;
+      totalDurationMins = arrMins - depMins;
+    }
+    if (totalDurationMins <= 0) {
+      totalDurationMins = Math.round(totalDistKm * 2.1) + ((stops.length - 1) * 2);
+    }
 
     stops.forEach((s, idx) => {
       let sName = typeof s === 'string' ? s : (s.name || s.stopName);
-      let estMin = srcMins + (idx * 14); // আনুমানিক ১২-১৫ মিনিট ব্যবধান
+      
+      let estMin = depMins;
+      if (idx > 0) {
+        if (idx === stops.length - 1 && arrMins !== null) {
+          estMin = arrMins;
+        } else if (totalDistKm > 0) {
+          let progress = cumDistances[idx] / totalDistKm;
+          estMin = depMins + Math.round(progress * totalDurationMins);
+        } else {
+          estMin = depMins + Math.round((idx / (stops.length - 1)) * totalDurationMins);
+        }
+      }
+
       let h = Math.floor(estMin / 60) % 24;
       let m = estMin % 60;
       let ampm = h >= 12 ? 'PM' : 'AM';
       h = h % 12 || 12;
       let timeFormatted = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')} ${ampm}`;
 
+      let isFirst = (idx === 0);
+      let isLast = (idx === stops.length - 1);
+      let statusLabel = isFirst ? 'যাত্রা শুরু' : (isLast ? 'গন্তব্য' : 'স্টপেজ');
+      let statusColor = isFirst ? '#15803d' : (isLast ? '#b91c1c' : '#475569');
+
       let tr = document.createElement("tr");
       tr.innerHTML = `
         <td style="text-align:center;font-weight:bold;">${idx + 1}</td>
         <td><b>🚏 ${sName}</b></td>
         <td><span style="background:#e0f2fe;color:#0369a1;padding:3px 6px;border-radius:4px;font-weight:bold;">${timeFormatted}</span></td>
-        <td><span style="color:${idx === 0 ? '#15803d' : (idx === stops.length - 1 ? '#b91c1c' : '#475569')};font-weight:bold;">${idx === 0 ? 'যাত্রা শুরু' : (idx === stops.length - 1 ? 'গন্তব্য' : 'স্টপেজ')}</span></td>
+        <td><span style="color:${statusColor};font-weight:bold;">${statusLabel}</span></td>
       `;
       tbody.appendChild(tr);
     });
@@ -4118,6 +4272,10 @@ https://aionline.in.net`;
 
   function sendWhatsAppShare() {
     let txt = getTripShareText();
+    if (window.AndroidBridge && window.AndroidBridge.shareWhatsApp) {
+      window.AndroidBridge.shareWhatsApp(txt);
+      return;
+    }
     let url = `https://api.whatsapp.com/send?text=${encodeURIComponent(txt)}`;
     window.open(url, "_blank");
   }
@@ -4135,6 +4293,10 @@ https://aionline.in.net`;
 
   function invokeNativeShare() {
     let txt = getTripShareText();
+    if (window.AndroidBridge && window.AndroidBridge.shareText) {
+      window.AndroidBridge.shareText(txt);
+      return;
+    }
     if (navigator.share) {
       navigator.share({
         title: 'বাস লাইভ ট্র্যাকিং আপডেট',
