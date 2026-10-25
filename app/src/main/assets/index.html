@@ -802,6 +802,274 @@
     .btn-voice-toggle:active {
       transform: scale(0.98);
     }
+
+    /* নতুন ৬টি ফিচারের কুইক অ্যাকশন গ্রিড */
+    .features-quick-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+      margin: 12px 0 16px 0;
+    }
+    @media (min-width: 600px) {
+      .features-quick-grid {
+        grid-template-columns: repeat(3, 1fr);
+      }
+    }
+    .feature-action-btn {
+      background: #ffffff;
+      border: 1.5px solid #cbd5e1;
+      border-radius: 12px;
+      padding: 10px 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 3px;
+      cursor: pointer;
+      text-align: left;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+      transition: all 0.2s ease;
+      position: relative;
+      overflow: hidden;
+    }
+    .feature-action-btn:active {
+      transform: scale(0.97);
+      background: #f1f5f9;
+    }
+    .feature-action-btn .feat-icon {
+      font-size: 20px;
+      margin-bottom: 2px;
+    }
+    .feature-action-btn .feat-label {
+      font-size: 13px;
+      font-weight: 800;
+      color: #0f172a;
+      line-height: 1.2;
+    }
+    .feature-action-btn .feat-sub {
+      font-size: 10.5px;
+      font-weight: 600;
+      color: #64748b;
+      line-height: 1.2;
+    }
+    .feature-action-btn .feat-badge {
+      font-size: 10px;
+      font-weight: 800;
+      padding: 2px 6px;
+      border-radius: 10px;
+      margin-top: 4px;
+      display: inline-block;
+    }
+    .btn-wake-alarm { border-color: #f59e0b; background: #fffbeb; }
+    .btn-wake-alarm .feat-label { color: #b45309; }
+    .btn-wake-alarm .feat-badge { background: #fef3c7; color: #b45309; border: 1px solid #fcd34d; }
+
+    .btn-fare { border-color: #10b981; background: #ecfdf5; }
+    .btn-fare .feat-label { color: #047857; }
+    .btn-fare .feat-sub { color: #059669; }
+
+    .btn-timetable { border-color: #3b82f6; background: #eff6ff; }
+    .btn-timetable .feat-label { color: #1d4ed8; }
+    .btn-timetable .feat-sub { color: #2563eb; }
+
+    .btn-share { border-color: #22c55e; background: #f0fdf4; }
+    .btn-share .feat-label { color: #15803d; }
+    .btn-share .feat-sub { color: #16a34a; }
+
+    .btn-helpline { border-color: #ef4444; background: #fef2f2; }
+    .btn-helpline .feat-label { color: #b91c1c; }
+    .btn-helpline .feat-sub { color: #dc2626; }
+
+    .btn-crowd { border-color: #8b5cf6; background: #f5f3ff; }
+    .btn-crowd .feat-label { color: #6d28d9; }
+    .badge-crowd-status { background: #dcfce7; color: #15803d; border: 1px solid #86efac; }
+
+    /* মোডাল স্টাইলসমূহ */
+    .app-feature-modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.65);
+      backdrop-filter: blur(4px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100000;
+      padding: 16px;
+    }
+    .app-feature-modal.hidden {
+      display: none !important;
+    }
+    .feature-modal-content {
+      background: #ffffff;
+      border-radius: 16px;
+      max-width: 520px;
+      width: 100%;
+      max-height: 85vh;
+      overflow-y: auto;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.25);
+      padding: 20px;
+      position: relative;
+      text-transform: none;
+    }
+    .feature-modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1.5px solid #e2e8f0;
+      padding-bottom: 12px;
+      margin-bottom: 14px;
+    }
+    .feature-modal-title {
+      font-size: 17px;
+      font-weight: 800;
+      color: #0d47a1;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .modal-close-x {
+      background: #f1f5f9;
+      border: none;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      font-size: 20px;
+      font-weight: bold;
+      color: #64748b;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-close-x:active { background: #e2e8f0; }
+
+    /* ওয়েক-আপ অ্যালার্ট স্টাইলিং */
+    .alarm-ringing-card {
+      background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+      border: 3px solid #f59e0b;
+      border-radius: 16px;
+      padding: 20px;
+      text-align: center;
+      box-shadow: 0 15px 35px rgba(245, 158, 11, 0.35);
+      animation: alarmPulse 1.2s infinite alternate;
+    }
+    @keyframes alarmPulse {
+      0% { transform: scale(0.99); }
+      100% { transform: scale(1.02); }
+    }
+    .alarm-bell-icon {
+      font-size: 50px;
+      display: inline-block;
+      animation: bellRing 0.8s infinite;
+    }
+    @keyframes bellRing {
+      0% { transform: rotate(0); }
+      20% { transform: rotate(20deg); }
+      40% { transform: rotate(-20deg); }
+      60% { transform: rotate(15deg); }
+      80% { transform: rotate(-15deg); }
+      100% { transform: rotate(0); }
+    }
+    .btn-dismiss-alarm {
+      background: #dc2626;
+      color: #ffffff;
+      font-size: 16px;
+      font-weight: 800;
+      padding: 14px 24px;
+      border-radius: 12px;
+      border: none;
+      cursor: pointer;
+      width: 100%;
+      margin-top: 14px;
+      box-shadow: 0 4px 14px rgba(220, 38, 38, 0.4);
+    }
+
+    /* টেবিল স্টাইল (ভাড়া ও সময়সূচি) */
+    .data-table-styled {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+      font-size: 12.5px;
+    }
+    .data-table-styled th {
+      background: #f1f5f9;
+      color: #1e293b;
+      font-weight: 800;
+      padding: 8px 10px;
+      border: 1px solid #cbd5e1;
+      text-align: left;
+    }
+    .data-table-styled td {
+      padding: 8px 10px;
+      border: 1px solid #e2e8f0;
+      color: #334155;
+    }
+    .data-table-styled tr:nth-child(even) {
+      background: #f8fafc;
+    }
+
+    /* হেল্পলাইন বাটনসমূহ */
+    .helpline-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px;
+      border-radius: 10px;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      margin-bottom: 8px;
+    }
+    .helpline-info {
+      display: flex;
+      flex-direction: column;
+    }
+    .helpline-title {
+      font-weight: 800;
+      font-size: 13.5px;
+      color: #0f172a;
+    }
+    .helpline-number {
+      font-size: 13px;
+      font-weight: 700;
+      color: #0284c7;
+      margin-top: 2px;
+    }
+    .btn-call-direct {
+      background: #16a34a;
+      color: #ffffff;
+      border: none;
+      border-radius: 8px;
+      padding: 8px 14px;
+      font-weight: 800;
+      font-size: 12.5px;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    /* ভিড়ের মাত্রা বাটনসমূহ */
+    .crowd-options-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+      margin-top: 14px;
+    }
+    .crowd-vote-btn {
+      padding: 12px 16px;
+      border-radius: 10px;
+      border: 2px solid transparent;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 14px;
+      font-weight: 800;
+      transition: all 0.2s;
+    }
+    .crowd-vote-low { background: #f0fdf4; border-color: #86efac; color: #166534; }
+    .crowd-vote-med { background: #fefce8; border-color: #fde047; color: #854d0e; }
+    .crowd-vote-high { background: #fef2f2; border-color: #fca5a5; color: #991b1b; }
+    .crowd-vote-btn:active { transform: scale(0.98); }
   </style>
 </head>
 <body>
@@ -871,14 +1139,16 @@
 </div>
 
 <div class="container">
-      <!-- দুর্গা পূজার শুভেচ্ছা ব্যানার -->
-  <div class="durga-banner-container" style="text-align: center; padding: 4px;">
-    <img src="file:///android_asset/durga_puja_banner.jpg" 
-         alt="" 
-         class="durga-banner-img" 
-         style="width: 100%; max-height: 150px; object-fit: contain; border-radius: 8px; display: block; margin: 0 auto;">
-    <div style="font-size: 15px; font-weight: bold; color: #b71c1c; margin-top: 6px;">
-      🌸 শুভ দুর্গাপূজার আন্তরিক প্রীতি ও শুভেচ্ছা 🌸
+  <!-- শুভ কোজাগরী লক্ষ্মীপূজার ব্যানার (GitHub ডায়নামিক আপডেট এবং লোকাল ফলব্যাক সহ) -->
+  <div class="festival-banner-container" style="text-align: center; padding: 6px; margin-bottom: 8px;">
+    <img id="festivalBannerImg"
+         src="https://raw.githubusercontent.com/evbasoftware-jpg/bus3/main/app/src/main/assets/festival_banner.png" 
+         onerror="this.onerror=null; this.src='file:///android_asset/lakshmi_puja_banner.png';" 
+         alt="শুভ কোজাগরী লক্ষ্মীপূজা" 
+         class="festival-banner-img" 
+         style="width: 100%; max-height: 165px; object-fit: contain; border-radius: 10px; display: block; margin: 0 auto; box-shadow: 0 4px 14px rgba(0,0,0,0.12); background: #ffffff;">
+    <div id="festivalBannerText" style="font-size: 15px; font-weight: 800; color: #b71c1c; margin-top: 6px;">
+      🌸 শুভ কোজাগরী লক্ষ্মীপূজার আন্তরিক প্রীতি ও শুভেচ্ছা 🌸
     </div>
   </div>
 
@@ -1001,6 +1271,46 @@
     </button>
   </div>
 
+  <!-- নতুন ৬টি ফিচারের কুইক অ্যাকশন টুলবার -->
+  <div class="features-quick-grid">
+    <button type="button" class="feature-action-btn btn-wake-alarm" onclick="openWakeAlarmModal()" title="গন্তব্যের ৫০০ মিটার পূর্বে ওয়েক-আপ অ্যালার্ট">
+      <span class="feat-icon">⏰</span>
+      <span class="feat-label">ওয়েক-আপ অ্যালার্ট</span>
+      <span class="feat-sub">৫০০ মিটার পূর্বে অ্যালার্ম</span>
+      <span class="feat-badge" id="wakeAlarmBadge">🔔 ৫০০মি. সক্রিয়</span>
+    </button>
+    <button type="button" class="feature-action-btn btn-fare" onclick="openFareModal()" title="বাসের ভাড়া তালিকা ও স্টেজ হিসাব">
+      <span class="feat-icon">💰</span>
+      <span class="feat-label">ভাড়া তালিকা</span>
+      <span class="feat-sub">স্টপ ও দূরত্ব ভিত্তিক ভাড়া</span>
+      <span class="feat-badge" style="background:#d1fae5;color:#065f46;">₹ তালিকা দেখুন</span>
+    </button>
+    <button type="button" class="feature-action-btn btn-timetable" onclick="openTimeTableModal()" title="বাস ছাড়ার সময়সূচি ও স্টপেজ সূচি">
+      <span class="feat-icon">🕒</span>
+      <span class="feat-label">বাসের সময়সূচি</span>
+      <span class="feat-sub">ছাড়ার সময় ও রুট শিডিউল</span>
+      <span class="feat-badge" style="background:#dbeafe;color:#1e40af;">📅 সময় দেখুন</span>
+    </button>
+    <button type="button" class="feature-action-btn btn-share" onclick="shareLiveTrip()" title="লাইভ ট্র্যাকিং শেয়ারিং">
+      <span class="feat-icon">📲</span>
+      <span class="feat-label">লাইভ শেয়ার</span>
+      <span class="feat-sub">হোয়াটসঅ্যাপ / লিঙ্ক</span>
+      <span class="feat-badge" style="background:#dcfce7;color:#15803d;">🚀 শেয়ার করুন</span>
+    </button>
+    <button type="button" class="feature-action-btn btn-helpline" onclick="openHelplineModal()" title="কন্ডাক্টর ও জরুরি হেল্পলাইন নম্বর">
+      <span class="feat-icon">📞</span>
+      <span class="feat-label">হেল্পলাইন নম্বর</span>
+      <span class="feat-sub">কন্ডাক্টর ও পুলিশ / অ্যাম্বুলেন্স</span>
+      <span class="feat-badge" style="background:#fee2e2;color:#991b1b;">🚨 জরুরি কল</span>
+    </button>
+    <button type="button" class="feature-action-btn btn-crowd" onclick="openCrowdModal()" title="বাসে ভিড়ের মাত্রা নির্দেশক">
+      <span class="feat-icon">👥</span>
+      <span class="feat-label">ভিড়ের মাত্রা</span>
+      <span class="feat-sub" id="quickCrowdSub">স্বাভাবিক</span>
+      <span class="feat-badge badge-crowd-status" id="quickCrowdBadge">🟢 কম ভিড়</span>
+    </button>
+  </div>
+
   <div id="currentLocationBox">বাসের বর্তমান অবস্থান: কোনো বাস নির্বাচিত হয়নি</div>
 
   <div class="card-grid">
@@ -1008,6 +1318,8 @@
     <div class="card card-next-stop"><b>⏩ পরবর্তী স্টপেজ:</b> <span id="infoNextStop">--</span></div>
     <div class="card card-dest-stop"><b>🎯 গন্তব্য:</b> <span id="infoDestStop">--</span></div>
     <div class="card"><b>⚡ বাসের গতিবেগ:</b> <span id="infoSpeed">--</span></div>
+    <div class="card"><b>👥 বাসের ভিড়ের মাত্রা:</b> <span id="infoCrowdLevel">🟢 কম ভিড় (খালি আসন আছে)</span></div>
+    <div class="card"><b>⏰ গন্তব্য অ্যালার্ট:</b> <span id="infoAlarmStatus">৫০০মি সক্রিয় 🔔</span></div>
     <div class="card"><b>📡 ব্যবহারকারীর GPS:</b> <span id="infoUserGPS">--</span></div>
     <div class="card"><b>📶 GPS সংকেত:</b> <span id="infoConfidence">--</span></div>
   </div>
@@ -1035,6 +1347,250 @@
     </svg>
     <span id="mapAddStopBtnText">ম্যাপে ক্লিক করে সরাসরি নতুন স্টপ যোগ করুন (অফলাইন মোড)</span>
   </button>
+
+<!-- ১) ওয়েক-আপ অ্যালার্ট সক্রিয়করণ ও সেটিংস মডাল -->
+<div id="wakeAlarmModal" class="app-feature-modal hidden">
+  <div class="feature-modal-content">
+    <div class="feature-modal-header">
+      <div class="feature-modal-title">⏰ গন্তব্যের ওয়েক-আপ অ্যালার্ট (Wake-up Alarm)</div>
+      <button type="button" class="modal-close-x" onclick="closeWakeAlarmModal()">&times;</button>
+    </div>
+    <p style="font-size:13.5px;color:#334155;line-height:1.45;margin-top:0;">
+      বাস আপনার গন্তব্যের নির্দিষ্ট দূরত্বের মধ্যে পৌঁছালে সতর্কবার্তা বেজে উঠবে যাতে আপনি সময়মতো নামার প্রস্তুতি নিতে পারেন।
+    </p>
+
+    <div style="background:#f8fafc;border:1.5px solid #cbd5e1;border-radius:10px;padding:12px;margin:12px 0;">
+      <div style="font-weight:bold;color:#0f172a;margin-bottom:6px;font-size:13.5px;">অ্যালার্মের দূরত্ব নির্ধারণ করুন:</div>
+      <div style="display:flex;gap:8px;margin-bottom:10px;">
+        <button type="button" id="distBtn200" class="btn" style="flex:1;padding:8px 4px;font-size:12px;background:#e2e8f0;color:#0f172a;" onclick="setAlarmDistance(200)">২০০ মিটার</button>
+        <button type="button" id="distBtn500" class="btn" style="flex:1;padding:8px 4px;font-size:12px;background:#1565c0;color:#fff;font-weight:bold;" onclick="setAlarmDistance(500)">৫০০ মিটার (আদর্শ)</button>
+        <button type="button" id="distBtn1000" class="btn" style="flex:1;padding:8px 4px;font-size:12px;background:#e2e8f0;color:#0f172a;" onclick="setAlarmDistance(1000)">১ কিমি</button>
+      </div>
+
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px;padding-top:10px;border-top:1px solid #e2e8f0;">
+        <span style="font-weight:bold;color:#1e293b;font-size:13px;">🔔 ওয়েক-আপ অ্যালার্ট চালু রাখবেন?</span>
+        <input type="checkbox" id="wakeAlarmToggleCheckbox" checked style="width:22px;height:22px;cursor:pointer;" onchange="toggleWakeAlarmState(this.checked)">
+      </div>
+    </div>
+
+    <div style="display:flex;gap:8px;margin-top:14px;">
+      <button type="button" class="btn" style="flex:1;background:#f59e0b;color:#fff;" onclick="testAlarmSound()">🔊 অ্যালার্ম সাউন্ড পরীক্ষা করুন</button>
+      <button type="button" class="btn" style="flex:1;background:#1565c0;color:#fff;" onclick="closeWakeAlarmModal()">ঠিক আছে (Save)</button>
+    </div>
+  </div>
+</div>
+
+<!-- ওয়েক-আপ অ্যালার্ট রিংগিং ফুল মডাল (গন্তব্যের ৫০০ মিটার পূর্বে বাজবে) -->
+<div id="wakeAlarmRingingModal" class="app-feature-modal hidden">
+  <div class="feature-modal-content" style="max-width:400px;text-align:center;">
+    <div class="alarm-ringing-card">
+      <div class="alarm-bell-icon">🔔</div>
+      <h3 style="color:#b45309;margin:8px 0;font-size:20px;">গন্তব্য সন্নিকটে!</h3>
+      <p style="font-size:15px;font-weight:bold;color:#1e293b;margin:6px 0;" id="alarmRingingText">
+        আপনার গন্তব্য আর মাত্র ৫০০ মিটার দূরে!<br>নামার প্রস্তুতি নিন।
+      </p>
+      <button type="button" class="btn-dismiss-alarm" onclick="stopWakeUpAlarm()">
+        🛑 অ্যালার্ম বন্ধ করুন (Dismiss)
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ২) ভাড়া তালিকা (Fare Chart) মডাল -->
+<div id="fareModal" class="app-feature-modal hidden">
+  <div class="feature-modal-content">
+    <div class="feature-modal-header">
+      <div class="feature-modal-title">💰 বাস ভাড়া তালিকা (Fare Chart)</div>
+      <button type="button" class="modal-close-x" onclick="closeFareModal()">&times;</button>
+    </div>
+
+    <div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:10px;padding:12px;margin-bottom:12px;">
+      <div style="font-weight:800;color:#166534;font-size:13.5px;margin-bottom:8px;">📍 স্টপেজ অনুযায়ী ভাড়া ক্যালকুলেটর:</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <div>
+          <label style="font-size:11px;font-weight:bold;color:#334155;">কোথা থেকে (From):</label>
+          <input type="text" id="fareFromInput" placeholder="শুরুর স্টপ" style="margin:2px 0 6px 0;padding:6px;font-size:13px;" oninput="calculateTripFare()">
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:bold;color:#334155;">কোথায় যাবেন (To):</label>
+          <input type="text" id="fareToInput" placeholder="গন্তব্য স্টপ" style="margin:2px 0 6px 0;padding:6px;font-size:13px;" oninput="calculateTripFare()">
+        </div>
+      </div>
+      <div id="fareCalculationResult" style="margin-top:6px;font-size:13px;font-weight:bold;color:#047857;background:#ffffff;padding:8px 10px;border-radius:6px;border:1px solid #bbf7d0;">
+        উভয় স্টপ নির্বাচন করলে দূরত্ব ও ভাড়া স্বয়ংক্রিয়ভাবে দেখাবে।
+      </div>
+    </div>
+
+    <div style="font-weight:800;color:#0d47a1;margin:12px 0 4px 0;font-size:13px;">📋 পশ্চিমবঙ্গ সরকারি বাস ভাড়া স্টেজ তালিকা:</div>
+    <div style="max-height:220px;overflow-y:auto;">
+      <table class="data-table-styled">
+        <thead>
+          <tr>
+            <th>দূরত্ব (কিমি)</th>
+            <th>স্টেজ</th>
+            <th>সাধারণ বাস ভাড়া</th>
+            <th>এক্সপ্রেস / লিমিটেড</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>০ - ৪ কিমি</td><td>স্টেজ ১</td><td><b>₹ ১০</b></td><td>₹ ১৫</td></tr>
+          <tr><td>৪ - ৮ কিমি</td><td>স্টেজ ২</td><td><b>₹ ১২</b></td><td>₹ ১৮</td></tr>
+          <tr><td>৮ - ১২ কিমি</td><td>স্টেজ ৩</td><td><b>₹ ১৫</b></td><td>₹ ২২</td></tr>
+          <tr><td>১২ - ১৬ কিমি</td><td>স্টেজ ৪</td><td><b>₹ ১৮</b></td><td>₹ ২৫</td></tr>
+          <tr><td>১৬ - ২০ কিমি</td><td>স্টেজ ৫</td><td><b>₹ ২০</b></td><td>₹ ২৮</td></tr>
+          <tr><td>২০ - ২৫ কিমি</td><td>স্টেজ ৬</td><td><b>₹ ২৩</b></td><td>₹ ৩২</td></tr>
+          <tr><td>২৫ - ৩০ কিমি</td><td>স্টেজ ৭</td><td><b>₹ ২৬</b></td><td>₹ ৩৬</td></tr>
+          <tr><td>৩০ - ৪০ কিমি</td><td>স্টেজ ৮</td><td><b>₹ ৩২</b></td><td>₹ ৪২</td></tr>
+          <tr><td>৪০ - ৫০ কিমি</td><td>স্টেজ ৯</td><td><b>₹ ৩৮</b></td><td>₹ ৪৮</td></tr>
+          <tr><td>৫০+ কিমি</td><td>লং রুট</td><td><b>₹ ৩৮ + ₹ ১.১০/কিমি</b></td><td>ভাড়ার অনুপাত প্রযোজ্য</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div style="font-size:11px;color:#64748b;margin-top:8px;">* দ্রষ্টব্য: রাজ্য পরিবহণ দপ্তর ও রুটের ক্যাটাগরি (সাধারণ, এক্সপ্রেস, এসি) অনুযায়ী নির্ধারিত ভাড়ার সামান্য তারতম্য হতে পারে।</div>
+  </div>
+</div>
+
+<!-- ৩) বাস ছাড়ার সময়সূচি (Bus Time Table) মডাল -->
+<div id="timeTableModal" class="app-feature-modal hidden">
+  <div class="feature-modal-content">
+    <div class="feature-modal-header">
+      <div class="feature-modal-title">🕒 বাস ছাড়ার সময়সূচি (Bus Time Table)</div>
+      <button type="button" class="modal-close-x" onclick="closeTimeTableModal()">&times;</button>
+    </div>
+
+    <div id="timeTableBusSummary" style="background:#eff6ff;border:1.5px solid #93c5fd;border-radius:10px;padding:12px;margin-bottom:12px;">
+      <div style="font-size:14px;font-weight:800;color:#1e40af;" id="ttBusHeader">🚌 বাস বিবরণী লোড হচ্ছে...</div>
+      <div style="font-size:12.5px;color:#334155;margin-top:4px;" id="ttBusRouteDetails">রুট ও সময়সূচি</div>
+    </div>
+
+    <div style="font-weight:800;color:#0f172a;margin-bottom:6px;font-size:13px;">🚏 স্টপেজ ভিত্তিক সময়সূচি তালিকা:</div>
+    <div style="max-height:260px;overflow-y:auto;">
+      <table class="data-table-styled">
+        <thead>
+          <tr>
+            <th style="width:35px;">ক্রম</th>
+            <th>স্টপেজের নাম</th>
+            <th>আনুমানিক সময়</th>
+            <th>স্ট্যাটাস</th>
+          </tr>
+        </thead>
+        <tbody id="timeTableBody">
+          <tr><td colspan="4" style="text-align:center;padding:14px;color:#64748b;">কোনো বাস নির্বাচিত হয়নি। উপরে একটি বাস নির্বাচন করুন।</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ৪) লাইভ ট্র্যাকিং শেয়ারিং (Share Live Trip) মডাল -->
+<div id="shareModal" class="app-feature-modal hidden">
+  <div class="feature-modal-content">
+    <div class="feature-modal-header">
+      <div class="feature-modal-title">📲 লাইভ ট্র্যাকিং শেয়ার করুন</div>
+      <button type="button" class="modal-close-x" onclick="closeShareModal()">&times;</button>
+    </div>
+
+    <p style="font-size:13px;color:#334155;margin-top:0;">আপনার বন্ধু ও পরিবারের সাথে বাসের রিয়েলটাইম লোকেশন, বর্তমান স্টপ ও ETA শেয়ার করুন:</p>
+
+    <div id="shareTextPreview" style="background:#f8fafc;border:1.5px solid #cbd5e1;border-radius:10px;padding:12px;font-size:12.5px;line-height:1.45;color:#1e293b;white-space:pre-wrap;margin:10px 0;max-height:180px;overflow-y:auto;font-family:monospace;">
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:8px;margin-top:14px;">
+      <button type="button" class="btn" style="background:#25d366;color:#ffffff;font-size:14px;display:flex;align-items:center;justify-content:center;gap:6px;" onclick="sendWhatsAppShare()">
+        💬 হোয়াটসঅ্যাপে সরাসরি শেয়ার করুন
+      </button>
+      <div style="display:flex;gap:8px;">
+        <button type="button" class="btn" style="flex:1;background:#1565c0;color:#fff;" onclick="copyShareText()">📋 টেক্সট কপি করুন</button>
+        <button type="button" class="btn" style="flex:1;background:#64748b;color:#fff;" onclick="invokeNativeShare()">🌐 অন্যান্য অ্যাপে শেয়ার</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ৫) কন্ডাক্টর ও হেল্পলাইন নম্বর (Emergency Helpline) মডাল -->
+<div id="helplineModal" class="app-feature-modal hidden">
+  <div class="feature-modal-content">
+    <div class="feature-modal-header">
+      <div class="feature-modal-title">📞 কন্ডাক্টর ও জরুরি হেল্পলাইন নম্বর</div>
+      <button type="button" class="modal-close-x" onclick="closeHelplineModal()">&times;</button>
+    </div>
+
+    <!-- বাসের কন্ডাক্টর / হেল্পলাইন নম্বর -->
+    <div class="helpline-item" style="background:#fefce8;border-color:#fde047;">
+      <div class="helpline-info">
+        <span class="helpline-title">🚌 বাসের কন্ডাক্টর / হেল্পলাইন</span>
+        <span class="helpline-number" id="conductorDisplayNumber">+91 98321 00000</span>
+      </div>
+      <a id="conductorCallLink" href="tel:+919832100000" class="btn-call-direct">📞 কল করুন</a>
+    </div>
+
+    <!-- জরুরি হেল্পলাইনসমূহ -->
+    <div class="helpline-item">
+      <div class="helpline-info">
+        <span class="helpline-title">🚨 জাতীয় জরুরি নম্বর (পুলিশ)</span>
+        <span class="helpline-number">১১২ (112 - National Emergency)</span>
+      </div>
+      <a href="tel:112" class="btn-call-direct">📞 কল করুন</a>
+    </div>
+
+    <div class="helpline-item">
+      <div class="helpline-info">
+        <span class="helpline-title">🚑 জরুরি অ্যাম্বুলেন্স সার্ভিস</span>
+        <span class="helpline-number">১০৮ / ১০২ (108 / 102)</span>
+      </div>
+      <a href="tel:108" class="btn-call-direct">📞 কল করুন</a>
+    </div>
+
+    <div class="helpline-item">
+      <div class="helpline-info">
+        <span class="helpline-title">👩‍🦰 নারী ও শিশু সুরক্ষা হেল্পলাইন</span>
+        <span class="helpline-number">১০৯১ / ১৮১ (1091 / 181)</span>
+      </div>
+      <a href="tel:1091" class="btn-call-direct">📞 কল করুন</a>
+    </div>
+
+    <div class="helpline-item">
+      <div class="helpline-info">
+        <span class="helpline-title">🛑 রাজ্য পরিবহন দপ্তর ও যাত্রী অভিযোগ</span>
+        <span class="helpline-number">১৮০০-৩৪৫-৩২৩২ (1800 345 3232)</span>
+      </div>
+      <a href="tel:18003453232" class="btn-call-direct">📞 কল করুন</a>
+    </div>
+  </div>
+</div>
+
+<!-- ৬) ভিড়ের মাত্রা নির্দেশক ও ভোট (Crowd Level) মডাল -->
+<div id="crowdModal" class="app-feature-modal hidden">
+  <div class="feature-modal-content">
+    <div class="feature-modal-header">
+      <div class="feature-modal-title">👥 ভিড়ের মাত্রা নির্দেশক (Crowd Status)</div>
+      <button type="button" class="modal-close-x" onclick="closeCrowdModal()">&times;</button>
+    </div>
+
+    <div style="background:#f8fafc;border:1.5px solid #cbd5e1;border-radius:10px;padding:12px;margin-bottom:12px;">
+      <div style="font-size:12.5px;color:#64748b;font-weight:bold;">বর্তমান বাসের ভিড়ের মাত্রা:</div>
+      <div style="font-size:17px;font-weight:800;color:#0f172a;margin-top:4px;" id="currentBusCrowdStatusText">
+        🟢 কম ভিড় (খালি আসন আছে)
+      </div>
+    </div>
+
+    <div style="font-weight:800;color:#1e293b;font-size:13.5px;">আপনি কি বাসে আছেন? বর্তমান ভিড়ের মাত্রা জানান:</div>
+    <div class="crowd-options-grid">
+      <button type="button" class="crowd-vote-btn crowd-vote-low" onclick="updateCrowdLevel('low')">
+        <span>🟢 কম ভিড় (খালি আসন আছে)</span>
+        <span>ভোট দিন ➔</span>
+      </button>
+      <button type="button" class="crowd-vote-btn crowd-vote-med" onclick="updateCrowdLevel('medium')">
+        <span>🟡 মাঝারি ভিড় (বসার জায়গা সীমিত)</span>
+        <span>ভোট দিন ➔</span>
+      </button>
+      <button type="button" class="crowd-vote-btn crowd-vote-high" onclick="updateCrowdLevel('high')">
+        <span>🔴 প্রচণ্ড ভিড় (দাঁড়ানোর জায়গা কম)</span>
+        <span>ভোট দিন ➔</span>
+      </button>
+    </div>
+  </div>
+</div>
 
 <!-- কনফার্মেশন মডাল -->
 <div id="confirmModal" class="modal-overlay hidden">
@@ -1467,11 +2023,15 @@
     iconSize: [46, 24], 
     iconAnchor: [23, 12] 
   });
+  // ৭ নম্বর ত্রুটি সংশোধন: ব্যবহারকারীর অবস্থানকে কখনোই বাসের আইকন দেখানো হবে না, সর্বদা পরিষ্কার যাত্রী ব্যাজ থাকবে
   const userIcon = L.divIcon({ 
-    html: '<div style="font-size:30px; line-height:1; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4));">📍</div>', 
+    html: `<div style="display:flex; flex-direction:column; align-items:center; filter: drop-shadow(0 3px 6px rgba(0,0,0,0.35));">
+      <div style="background:#1565c0; color:#fff; font-size:10px; font-weight:800; padding:2px 7px; border-radius:12px; border:1.5px solid #ffffff; white-space:nowrap; margin-bottom:2px;">👤 আপনি</div>
+      <div style="width:18px; height:18px; background:#1976d2; border:3px solid #ffffff; border-radius:50%; box-shadow:0 0 10px rgba(25,118,210,0.8);"></div>
+    </div>`, 
     className: '', 
-    iconSize: [32, 32], 
-    iconAnchor: [16, 30] 
+    iconSize: [60, 42], 
+    iconAnchor: [30, 36] 
   });
 
   function showAppAlert(msg, title = "বিজ্ঞপ্তি") {
@@ -1658,48 +2218,35 @@
     }
   }
   
+  // ৭ নম্বর ত্রুটি সমাধান: অ্যাপ খোলার পর ব্যবহারকারীর লোকেশনে বাসের আইকন যেন কখনোই না বসে
   function checkPassengerRideAndSync() {
-    if (!userPos || !trackingBus) return;
+    if (!userPos || !trackingBus || !busPos) return;
 
-    let isNearBus = false;
-    if (busPos) {
-      let distToBus = getDistanceMeters(userPos.lat, userPos.lon, busPos.lat, busPos.lon);
-      if (distToBus <= 200) isNearBus = true;
-    }
+    let distToBus = getDistanceMeters(userPos.lat, userPos.lon, busPos.lat, busPos.lon);
+    let isNearBus = (distToBus <= 100);
 
-    if (!isNearBus && currentBusStopsList && currentBusStopsList.length > 0) {
-      for (let s of currentBusStopsList) {
-        let sLat = Number(s.latitude || s.lat);
-        let sLon = Number(s.longitude || s.lon);
-        if (sLat && sLon && getDistanceMeters(userPos.lat, userPos.lon, sLat, sLon) <= 300) {
-          isNearBus = true;
-          break;
-        }
-      }
-    }
-
-    if (isNearBus || !busPos || userPos.speed > 8) {
+    // ব্যবহারকারী যদি বাসে উঠে উচ্চগতিতে ভ্রমণ করেন (১৬ কিমি/ঘণ্টার বেশি) তবেই কেবল লাইভ জিপিএস সিঙ্ক হবে
+    if (isNearBus && userPos.speed > 16) {
       busPos = { lat: userPos.lat, lon: userPos.lon, speed: userPos.speed };
-      
       if (busMarker) {
         busMarker.setLatLng([busPos.lat, busPos.lon]);
-      } else {
-        busMarker = L.marker([busPos.lat, busPos.lon], { icon: busIcon }).addTo(map);
       }
-
-      if (userPos.speed > 5) {
-        syncUserGPSAsBus(trackingBus.number, userPos.lat, userPos.lon, userPos.speed, userPos.acc);
-      }
+      syncUserGPSAsBus(trackingBus.number, userPos.lat, userPos.lon, userPos.speed, userPos.acc);
     }
   }
 
   function updateDistanceAndTracking() {
     if (!trackingBus) return;
 
-    let effectiveBusLat = busPos ? busPos.lat : (userPos ? userPos.lat : null);
-    let effectiveBusLon = busPos ? busPos.lon : (userPos ? userPos.lon : null);
+    // বাস সিগন্যাল না থাকলে ব্যবহারকারীকে কখনোই বাস হিসেবে ধরা হবে না
+    let effectiveBusLat = busPos ? busPos.lat : null;
+    let effectiveBusLon = busPos ? busPos.lon : null;
 
-    if (!effectiveBusLat || !effectiveBusLon) return;
+    if (!effectiveBusLat || !effectiveBusLon) {
+      let speedElem = document.getElementById("infoSpeed");
+      if (speedElem) speedElem.innerText = "--";
+      return;
+    }
 
     let distKm = 0;
     if (userPos && busPos) {
@@ -2029,6 +2576,7 @@
 
   window.addEventListener("DOMContentLoaded", async () => {
     loadDatalistSuggestions();
+    syncRemoteFestivalBanner();
   });
 
   let globalBusesCatalog = [];
@@ -2468,11 +3016,17 @@
     let initialNextStop = (trackingBus && trackingBus.selectedStops && trackingBus.selectedStops.length > 0) ? trackingBus.selectedStops[0] : "--";
     let initialDest = (trackingBus && trackingBus.dest) ? trackingBus.dest.toUpperCase() : "--";
 
+    hasTriggeredWakeAlarm = false;
+    lastAnnouncedArrivalStop = null;
+    lastAnnouncedNextStop = null;
+
     let statusText = document.getElementById("mapStatusText");
     if (statusText) {
       let fullName = (trackingBus && trackingBus.name && trackingBus.number) ? `${trackingBus.name} (${trackingBus.number})` : bName;
       statusText.innerText = `🚌 বাসের নাম: ${fullName} • লাইভ ট্র্যাকিং চলছে`;
     }
+
+    playVoiceAnnouncement(lang === "hi" ? `बस ${bName} की लाइव ट्रैकिंग शुरू हो गई है।` : (lang === "en" ? `Live tracking started for bus ${bName}.` : `বাস ${bName} লাইভ ট্র্যাকিং শুরু হয়েছে।`), lang);
 
     if (window.AndroidBridge) {
       if (window.AndroidBridge.startBackgroundTrackingWithDetails) {
@@ -3127,8 +3681,10 @@
     let curStopLat = Number(nearest.stop.latitude || nearest.stop.lat);
     let curStopLon = Number(nearest.stop.longitude || nearest.stop.lon);
 
+    // ৮ নম্বর ত্রুটি সংশোধন: distPastMeters ভ্যারিয়েবলটি ফাংশনাল স্কোপে ঘোষণা
+    let distPastMeters = 9999;
     if (!isNaN(curStopLat) && !isNaN(curStopLon) && curStopLat !== 0) {
-      let distPastMeters = Math.round(getDistanceMeters(refLat, refLon, curStopLat, curStopLon));
+      distPastMeters = Math.round(getDistanceMeters(refLat, refLon, curStopLat, curStopLon));
       
       if (distPastMeters > 50 && currentStopIndex < validStops.length - 1) {
         curStopDisplay = `${baseStopName} (${distPastMeters} মিটার পেরিয়ে গেছে)`;
@@ -3170,10 +3726,10 @@
     let destStopElem = document.getElementById("infoDestStop");
     let distDestFormatted = "";
     let destEta = "";
+    let totalDistanceMeters = 0;
 
     if (destStopElem && destName) {
       let targetDestIndex = validStops.length - 1;
-      let totalDistanceMeters = 0;
 
       if (targetDestIndex > nearest.index) {
         let prevLat = refLat;
@@ -3200,7 +3756,10 @@
       destStopElem.innerText = "--";
     }
 
-    // নোটিফিকেশনে রিয়েলটাইম বাস বিবরণী পাঠানো (নাম, নম্বর, বর্তমান স্টপ, পরবর্তী স্টপ, গন্তব্য দূরত্ব ও সময়, ভাষা)
+    // ১ নম্বর ফিচার: গন্তব্যের ৫০০ মিটার পূর্বে ওয়েক-আপ অ্যালার্ট (Wake-up Alarm)
+    checkDestinationWakeAlarm(totalDistanceMeters, destName);
+
+    // নোটিফিকেশনে রিয়েলটাইম বাস বিবরণী পাঠানো
     if (window.AndroidBridge && window.AndroidBridge.updateNotificationDetails) {
       let bNum = trackingBus ? (trackingBus.number || trackingBus.busNumber || "") : "";
       let bName = trackingBus ? (trackingBus.name || trackingBus.busName || "") : "";
@@ -3219,18 +3778,17 @@
     }
 
     // ==========================================
-    // ১) প্রতিটি স্টপেজে পৌঁছানোর ম্যাসেজ ও পরিষ্কার কণ্ঠে ঘোষণা
-    // ২) পরবর্তী স্টপেজের নাম ঘোষণা
+    // ৮ নম্বর ত্রুটি সংশোধন: প্রতিটি স্টপেজে পৌঁছানোর ম্যাসেজ ও কণ্ঠ ঘোষণা
     // ==========================================
     try {
       let cleanCurStop = cleanStopName(baseStopName);
       let isDestination = (nearest.index >= validStops.length - 1) || (destName && cleanCurStop === destName);
 
-      // স্টপে পৌঁছানোর মুহূর্ত শনাক্তকরণ (দূরত্ব ৬০ মিটারের কম হলে বা স্টপে পৌঁছালে)
-      if (distPastMeters <= 60 && cleanCurStop && lastAnnouncedArrivalStop !== cleanCurStop) {
+      // স্টপে পৌঁছানোর মুহূর্ত শনাক্তকরণ (দূরত্ব ১৮০ মিটারের কম হলে যাতে দ্রুতগতির বাসেও ঘোষণা মিস না হয়)
+      if (distPastMeters <= 180 && cleanCurStop && lastAnnouncedArrivalStop !== cleanCurStop) {
         lastAnnouncedArrivalStop = cleanCurStop;
         
-        // স্ক্রিনে স্টপে পৌঁছানোর ম্যাসেজ (অ্যালার্ট ব্যানার)
+        // স্ক্রিনে স্টপে পৌঁছানোর নোটিশ ব্যানার
         showArrivalAlertBanner(baseStopName, nextStopName, isDestination);
         
         // নির্বাচিত অ্যাপের ভাষায় স্পষ্ট স্টপ আগমন ঘোষণা
@@ -3239,9 +3797,9 @@
         playVoiceAnnouncement(arrivalSpeech, curLang);
       }
 
-      // পরবর্তী স্টপেজের নাম ঘোষণা (স্টপ ছেড়ে এগিয়ে চলার সময়)
+      // পরবর্তী স্টপেজের নাম ঘোষণা (বর্তমান স্টপ পেরিয়ে ১০০ মিটার অতিক্রম করলে)
       let cleanNext = cleanStopName(nextStopName);
-      if (cleanNext && cleanNext !== "--" && distPastMeters > 70 && lastAnnouncedNextStop !== cleanNext) {
+      if (cleanNext && cleanNext !== "--" && distPastMeters > 90 && lastAnnouncedNextStop !== cleanNext) {
         lastAnnouncedNextStop = cleanNext;
         let curLang = getCurrentAppLanguage();
         let nextSpeech = getNextStopAnnouncement(nextStopName, curLang);
@@ -3249,6 +3807,420 @@
           playVoiceAnnouncement(nextSpeech, curLang);
         }, 2200);
       }
+    } catch (_) {}
+  }
+
+  // ==========================================
+  // ১) গন্তব্যের অ্যালার্ম বা ওয়েক-আপ অ্যালার্ট (Wake-up Alarm at 500m)
+  // ==========================================
+  let wakeAlarmEnabled = true;
+  let wakeAlarmDistance = 500; // ৫০০ মিটার
+  let hasTriggeredWakeAlarm = false;
+  let alarmAudioCtx = null;
+  let alarmLoopInterval = null;
+
+  function openWakeAlarmModal() {
+    document.getElementById("wakeAlarmModal").classList.remove("hidden");
+  }
+
+  function closeWakeAlarmModal() {
+    document.getElementById("wakeAlarmModal").classList.add("hidden");
+  }
+
+  function setAlarmDistance(dist) {
+    wakeAlarmDistance = dist;
+    ["200", "500", "1000"].forEach(d => {
+      let btn = document.getElementById("distBtn" + d);
+      if (btn) {
+        if (d == dist) {
+          btn.style.background = "#1565c0";
+          btn.style.color = "#ffffff";
+          btn.style.fontWeight = "bold";
+        } else {
+          btn.style.background = "#e2e8f0";
+          btn.style.color = "#0f172a";
+          btn.style.fontWeight = "normal";
+        }
+      }
+    });
+
+    let badge = document.getElementById("wakeAlarmBadge");
+    if (badge) {
+      badge.innerText = wakeAlarmEnabled ? `🔔 ${dist}মি. সক্রিয়` : "অ্যালার্ট বন্ধ";
+    }
+    let statusCard = document.getElementById("infoAlarmStatus");
+    if (statusCard) {
+      statusCard.innerText = wakeAlarmEnabled ? `${dist}মি সক্রিয় 🔔` : "বন্ধ";
+    }
+  }
+
+  function toggleWakeAlarmState(enabled) {
+    wakeAlarmEnabled = enabled;
+    let badge = document.getElementById("wakeAlarmBadge");
+    if (badge) {
+      badge.innerText = enabled ? `🔔 ${wakeAlarmDistance}মি. সক্রিয়` : "অ্যালার্ট বন্ধ";
+      badge.style.background = enabled ? "#fef3c7" : "#fee2e2";
+      badge.style.color = enabled ? "#b45309" : "#991b1b";
+    }
+    let statusCard = document.getElementById("infoAlarmStatus");
+    if (statusCard) {
+      statusCard.innerText = enabled ? `${wakeAlarmDistance}মি সক্রিয় 🔔` : "বন্ধ";
+    }
+  }
+
+  function playAlertBeepSound() {
+    try {
+      if (!alarmAudioCtx) {
+        alarmAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      if (alarmAudioCtx.state === 'suspended') {
+        alarmAudioCtx.resume();
+      }
+      let osc = alarmAudioCtx.createOscillator();
+      let gain = alarmAudioCtx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(880, alarmAudioCtx.currentTime); // A5
+      osc.frequency.setValueAtTime(1174, alarmAudioCtx.currentTime + 0.15); // D6
+      gain.gain.setValueAtTime(0.4, alarmAudioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, alarmAudioCtx.currentTime + 0.5);
+      osc.connect(gain);
+      gain.connect(alarmAudioCtx.destination);
+      osc.start();
+      osc.stop(alarmAudioCtx.currentTime + 0.5);
+    } catch (_) {}
+  }
+
+  function testAlarmSound() {
+    playAlertBeepSound();
+    try {
+      if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+    } catch (_) {}
+    playVoiceAnnouncement("এটি ওয়েক-আপ অ্যালার্টের পরীক্ষামূলক শব্দ।", getCurrentAppLanguage());
+  }
+
+  function checkDestinationWakeAlarm(distanceMeters, destName) {
+    if (!wakeAlarmEnabled || !destName || distanceMeters <= 0) return;
+
+    if (distanceMeters <= wakeAlarmDistance && !hasTriggeredWakeAlarm) {
+      hasTriggeredWakeAlarm = true;
+      triggerWakeUpAlarm(destName, Math.round(distanceMeters));
+    } else if (distanceMeters > wakeAlarmDistance + 800) {
+      hasTriggeredWakeAlarm = false; // পরবর্তী যাত্রার জন্য রিসেট
+    }
+  }
+
+  function triggerWakeUpAlarm(destName, dist) {
+    let modal = document.getElementById("wakeAlarmRingingModal");
+    let text = document.getElementById("alarmRingingText");
+    if (text) {
+      text.innerHTML = `আপনার গন্তব্য <b>${destName}</b> আর মাত্র ${dist} মিটার দূরে!<br>নামার প্রস্তুতি নিন।`;
+    }
+    if (modal) modal.classList.remove("hidden");
+
+    // শব্দ ও ভাইব্রেশন শুরু
+    playAlertBeepSound();
+    if (alarmLoopInterval) clearInterval(alarmLoopInterval);
+    alarmLoopInterval = setInterval(() => {
+      playAlertBeepSound();
+      try {
+        if (navigator.vibrate) navigator.vibrate([300, 150, 300]);
+      } catch (_) {}
+    }, 1200);
+
+    let curLang = getCurrentAppLanguage();
+    let msg = `সতর্কবার্তা! আপনার গন্তব্য ${destName} আর মাত্র ${dist} মিটার দূরে। নামার প্রস্তুতি নিন।`;
+    playVoiceAnnouncement(msg, curLang);
+  }
+
+  function stopWakeUpAlarm() {
+    if (alarmLoopInterval) {
+      clearInterval(alarmLoopInterval);
+      alarmLoopInterval = null;
+    }
+    let modal = document.getElementById("wakeAlarmRingingModal");
+    if (modal) modal.classList.add("hidden");
+  }
+
+  // ==========================================
+  // ২) ভাড়া তালিকা (Fare Chart) ক্যালকুলেটর ও স্টেজ চার্ট
+  // ==========================================
+  function openFareModal() {
+    let fInp = document.getElementById("fareFromInput");
+    let tInp = document.getElementById("fareToInput");
+    let sFrom = document.getElementById("searchFrom").value.trim();
+    let sTo = document.getElementById("searchTo").value.trim();
+
+    if (sFrom && fInp) fInp.value = sFrom;
+    if (sTo && tInp) tInp.value = sTo;
+
+    document.getElementById("fareModal").classList.remove("hidden");
+    calculateTripFare();
+  }
+
+  function closeFareModal() {
+    document.getElementById("fareModal").classList.add("hidden");
+  }
+
+  function calculateTripFare() {
+    let fromVal = cleanStopName(document.getElementById("fareFromInput").value);
+    let toVal = cleanStopName(document.getElementById("fareToInput").value);
+    let resBox = document.getElementById("fareCalculationResult");
+    if (!resBox) return;
+
+    if (!fromVal || !toVal) {
+      resBox.innerHTML = `উভয় স্টপ লিখলে স্বয়ংক্রিয়ভাবে দূরত্ব ও সরকারি নিয়ম অনুযায়ী ভাড়া হিসাব করে দেখাবে।`;
+      return;
+    }
+
+    let allStops = masterStopsList || [];
+    let fromCoords = resolvePlaceCoords(fromVal, allStops);
+    let toCoords = resolvePlaceCoords(toVal, allStops);
+
+    let distKm = 10; // ডিফল্ট আনুমানিক
+    if (fromCoords && toCoords) {
+      let meters = getDistanceMeters(fromCoords.lat, fromCoords.lon, toCoords.lat, toCoords.lon);
+      distKm = Number(((meters / 1000) * 1.15).toFixed(1)); // রোড ফ্যাক্টর সহ
+    }
+
+    let fare = 10;
+    if (distKm <= 4) fare = 10;
+    else if (distKm <= 8) fare = 12;
+    else if (distKm <= 12) fare = 15;
+    else if (distKm <= 16) fare = 18;
+    else if (distKm <= 20) fare = 20;
+    else if (distKm <= 25) fare = 23;
+    else if (distKm <= 30) fare = 26;
+    else if (distKm <= 40) fare = 32;
+    else if (distKm <= 50) fare = 38;
+    else fare = Math.round(38 + ((distKm - 50) * 1.10));
+
+    let expFare = Math.round(fare * 1.35);
+
+    resBox.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+        <span>🛣️ আনুমানিক দূরত্ব: <b>${distKm} কিমি</b></span>
+        <span>⏱️ সময়: <b>~${Math.round(distKm * 2.1)} মিনিট</b></span>
+      </div>
+      <div style="font-size:15px;color:#047857;">
+        💵 সাধারণ বাস ভাড়া: <span style="font-size:18px;font-weight:900;">₹ ${fare}</span> 
+        <span style="font-size:12px;color:#1e40af;margin-left:10px;">(এক্সপ্রেস: <b>₹ ${expFare}</b>)</span>
+      </div>
+    `;
+  }
+
+  // ==========================================
+  // ৩) বাসের সময়সূচি (Bus Time Table)
+  // ==========================================
+  function openTimeTableModal() {
+    renderBusTimeTable();
+    document.getElementById("timeTableModal").classList.remove("hidden");
+  }
+
+  function closeTimeTableModal() {
+    document.getElementById("timeTableModal").classList.add("hidden");
+  }
+
+  function renderBusTimeTable() {
+    let header = document.getElementById("ttBusHeader");
+    let routeDetails = document.getElementById("ttBusRouteDetails");
+    let tbody = document.getElementById("timeTableBody");
+    if (!tbody) return;
+
+    if (!trackingBus) {
+      if (header) header.innerText = "🚌 বাস লাইভ সময়সূচি";
+      if (routeDetails) routeDetails.innerText = "যেকোনো একটি বাস নির্বাচন করলে তার সম্পূর্ণ স্টপ ভিত্তিক সময়সূচি এখানে দৃশ্যমান হবে।";
+      tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;padding:16px;color:#64748b;">উপরে বাসের লিস্ট থেকে যেকোনো বাস বেছে নিন।</td></tr>`;
+      return;
+    }
+
+    let bName = trackingBus.name || "বাস";
+    let bNum = trackingBus.number || "";
+    let bSrc = trackingBus.source || "প্রারম্ভিক স্টপ";
+    let bDest = trackingBus.dest || "গন্তব্য স্টপ";
+    let bCat = trackingBus.category || "PUBLIC";
+    let bDays = trackingBus.days || "প্রত্যহ (প্রতিদিন)";
+
+    if (header) header.innerText = `🚌 ${bName} (${bNum}) - [${bCat}]`;
+    if (routeDetails) routeDetails.innerHTML = `🛣️ রুট: <b>${bSrc}</b> ➔ <b>${bDest}</b><br>📅 চলাচলের দিন: <b>${bDays}</b>`;
+
+    let stops = (currentBusStopsList && currentBusStopsList.length > 0) ? currentBusStopsList : (trackingBus.selectedStops || []);
+    
+    if (!stops || stops.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;padding:16px;color:#64748b;">এই বাসের স্টপেজ তালিকা প্রস্তুত হচ্ছে...</td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = "";
+    let srcTime = trackingBus.sourceTime || "06:00 AM";
+    let srcMins = timeToMinutes(srcTime) || 360; // 06:00 AM
+
+    stops.forEach((s, idx) => {
+      let sName = typeof s === 'string' ? s : (s.name || s.stopName);
+      let estMin = srcMins + (idx * 14); // আনুমানিক ১২-১৫ মিনিট ব্যবধান
+      let h = Math.floor(estMin / 60) % 24;
+      let m = estMin % 60;
+      let ampm = h >= 12 ? 'PM' : 'AM';
+      h = h % 12 || 12;
+      let timeFormatted = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')} ${ampm}`;
+
+      let tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td style="text-align:center;font-weight:bold;">${idx + 1}</td>
+        <td><b>🚏 ${sName}</b></td>
+        <td><span style="background:#e0f2fe;color:#0369a1;padding:3px 6px;border-radius:4px;font-weight:bold;">${timeFormatted}</span></td>
+        <td><span style="color:${idx === 0 ? '#15803d' : (idx === stops.length - 1 ? '#b91c1c' : '#475569')};font-weight:bold;">${idx === 0 ? 'যাত্রা শুরু' : (idx === stops.length - 1 ? 'গন্তব্য' : 'স্টপেজ')}</span></td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+
+  // ==========================================
+  // ৪) লাইভ ট্র্যাকিং শেয়ারিং (Share Live Trip)
+  // ==========================================
+  function getTripShareText() {
+    let bName = trackingBus ? (trackingBus.name || "বাস") : "বাস";
+    let bNum = trackingBus ? (trackingBus.number || "") : "";
+    let bSrc = trackingBus ? (trackingBus.source || "--") : "--";
+    let bDest = trackingBus ? (trackingBus.dest || "--") : "--";
+    let curStop = document.getElementById("infoCurStop") ? document.getElementById("infoCurStop").innerText : "--";
+    let nextStop = document.getElementById("infoNextStop") ? document.getElementById("infoNextStop").innerText : "--";
+    let destStop = document.getElementById("infoDestStop") ? document.getElementById("infoDestStop").innerText : "--";
+    let speed = document.getElementById("infoSpeed") ? document.getElementById("infoSpeed").innerText : "--";
+    let crowd = document.getElementById("quickCrowdBadge") ? document.getElementById("quickCrowdBadge").innerText : "স্বাভাবিক";
+
+    let timeNow = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+    return `🚌 বাস লাইভ ট্র্যাকিং আপডেট (${timeNow})
+--------------------------------------
+বাসের নাম: ${bName}
+বাস নম্বর: ${bNum}
+রুট: ${bSrc} ➔ ${bDest}
+📍 বর্তমান অবস্থান: ${curStop}
+⏩ পরবর্তী স্টপ: ${nextStop}
+🎯 গন্তব্য: ${destStop}
+⚡ বাসের গতি: ${speed}
+👥 ভিড়ের মাত্রা: ${crowd}
+
+👉 বাসের রিয়েলটাইম লাইভ লোকেশন ম্যাপে দেখতে ক্লিক করুন:
+https://aionline.in.net`;
+  }
+
+  function shareLiveTrip() {
+    let txt = getTripShareText();
+    let preview = document.getElementById("shareTextPreview");
+    if (preview) preview.innerText = txt;
+    document.getElementById("shareModal").classList.remove("hidden");
+  }
+
+  function closeShareModal() {
+    document.getElementById("shareModal").classList.add("hidden");
+  }
+
+  function sendWhatsAppShare() {
+    let txt = getTripShareText();
+    let url = `https://api.whatsapp.com/send?text=${encodeURIComponent(txt)}`;
+    window.open(url, "_blank");
+  }
+
+  function copyShareText() {
+    let txt = getTripShareText();
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(txt).then(() => {
+        showAppAlert("লাইভ ট্র্যাকিং বিবরণী কপি হয়েছে! যেকোনো অ্যাপে পেস্ট করতে পারেন।");
+      });
+    } else {
+      showAppAlert("টেক্সট সিলেক্ট করে কপি করুন:\n\n" + txt);
+    }
+  }
+
+  function invokeNativeShare() {
+    let txt = getTripShareText();
+    if (navigator.share) {
+      navigator.share({
+        title: 'বাস লাইভ ট্র্যাকিং আপডেট',
+        text: txt
+      }).catch(() => {});
+    } else {
+      sendWhatsAppShare();
+    }
+  }
+
+  // ==========================================
+  // ৫) কন্ডাক্টর ও হেল্পলাইন নম্বর (Emergency Contact)
+  // ==========================================
+  function openHelplineModal() {
+    let condNum = (trackingBus && trackingBus.conductorPhone) ? trackingBus.conductorPhone : "+91 98321 00000";
+    let disp = document.getElementById("conductorDisplayNumber");
+    let link = document.getElementById("conductorCallLink");
+    if (disp) disp.innerText = condNum;
+    if (link) link.href = `tel:${condNum.replace(/\s+/g, '')}`;
+
+    document.getElementById("helplineModal").classList.remove("hidden");
+  }
+
+  function closeHelplineModal() {
+    document.getElementById("helplineModal").classList.add("hidden");
+  }
+
+  // ==========================================
+  // ৬) ভিড়ের মাত্রা নির্দেশক (Crowd Level Status)
+  // ==========================================
+  let currentCrowdLevel = "low";
+
+  function openCrowdModal() {
+    document.getElementById("crowdModal").classList.remove("hidden");
+  }
+
+  function closeCrowdModal() {
+    document.getElementById("crowdModal").classList.add("hidden");
+  }
+
+  function updateCrowdLevel(level) {
+    currentCrowdLevel = level;
+    let label = "🟢 কম ভিড় (খালি আসন আছে)";
+    let badgeText = "🟢 কম ভিড়";
+    let badgeClass = "badge-crowd-status";
+
+    if (level === "medium") {
+      label = "🟡 মাঝারি ভিড় (বসার জায়গা সীমিত)";
+      badgeText = "🟡 মাঝারি ভিড়";
+      badgeClass = "badge-crowd-status";
+    } else if (level === "high") {
+      label = "🔴 প্রচণ্ড ভিড় (দাঁড়ানোর জায়গা কম)";
+      badgeText = "🔴 প্রচণ্ড ভিড়";
+    }
+
+    let cardElem = document.getElementById("infoCrowdLevel");
+    if (cardElem) cardElem.innerText = label;
+
+    let quickBadge = document.getElementById("quickCrowdBadge");
+    if (quickBadge) quickBadge.innerText = badgeText;
+
+    let statusText = document.getElementById("currentBusCrowdStatusText");
+    if (statusText) statusText.innerText = label;
+
+    closeCrowdModal();
+    showAppAlert(`ধন্যবাদ! বাসের ভিড়ের মাত্রা "${label}" হিসেবে আপডেট হয়েছে।`, "ভিড়ের তথ্য আপডেট");
+  }
+
+  // ==========================================
+  // ৯) GitHub এ ছবি পরিবর্তন করলে সবার ফোনে স্বয়ংক্রিয়ভাবে আপডেট হওয়ার ব্যবস্থা
+  // ==========================================
+  function syncRemoteFestivalBanner() {
+    try {
+      let bannerImg = document.getElementById("festivalBannerImg");
+      if (!bannerImg) return;
+      // ব্যবহারকারীর GitHub রিপোজিটরি raw URL (ক্যাশ এড়াতে টাইমস্ট্যাম্প সহ)
+      let remoteGithubUrl = "https://raw.githubusercontent.com/evbasoftware-jpg/bus3/main/app/src/main/assets/festival_banner.png?v=" + new Date().getTime();
+      let testImg = new Image();
+      testImg.onload = function() {
+        bannerImg.src = remoteGithubUrl;
+      };
+      testImg.onerror = function() {
+        // অফলাইন বা নেটওয়ার্ক না থাকলে অ্যাপের বিল্ট-ইন লক্ষ্মী মায়ের ছবি দেখাবে
+        bannerImg.src = "file:///android_asset/lakshmi_puja_banner.png";
+      };
+      testImg.src = remoteGithubUrl;
     } catch (_) {}
   }
 
