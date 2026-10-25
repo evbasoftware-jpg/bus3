@@ -1259,8 +1259,9 @@
       <div><b>🟢 বাস চালক মোড সক্রিয়:</b> এই ফোনের GPS বাসের লোকেশন হিসেবে সার্ভারে সম্প্রচার হচ্ছে</div>
       <button type="button" onclick="stopStaffMode()" style="background:#ef4444;color:#fff;border:none;border-radius:6px;padding:6px 10px;font-size:11px;font-weight:bold;cursor:pointer;">বন্ধ করুন</button>
     </div>
-    <button type="button" id="btnOpenStaffModal" class="btn" onclick="openStaffModal()" style="background:#f8fafc;color:#1e293b;border:1.5px solid #94a3b8;font-size:12.5px;padding:9px 12px;display:flex;align-items:center;justify-content:center;gap:6px;width:100%;border-radius:8px;font-weight:700;">
-      <span>👨‍✈️ আপনি কি এই বাসের চালক বা কন্ডাক্টর? (স্টাফ পিন কোড)</span>
+    <button type="button" id="btnOpenStaffModal" onclick="openStaffModal()" style="background: linear-gradient(135deg, #0d47a1 0%, #1565c0 100%); color: #ffffff !important; border: 1.5px solid #0d47a1; font-size: 13.5px; padding: 13px 16px; display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; border-radius: 12px; font-weight: 800; box-shadow: 0 4px 14px rgba(13, 71, 161, 0.3); cursor: pointer; text-shadow: 0 1px 2px rgba(0,0,0,0.35);">
+      <span style="font-size: 18px; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.2));">👨‍✈️</span>
+      <span style="color: #ffffff !important; font-weight: 800; letter-spacing: 0.3px;">আপনি কি এই বাসের চালক বা কন্ডাক্টর? (স্টাফ পিন কোড)</span>
     </button>
   </div>
 
@@ -1619,12 +1620,12 @@
       <div class="feature-modal-title">👨‍✈️ বাস চালক ও কন্ডাক্টর মোড</div>
       <button type="button" class="modal-close-x" onclick="closeStaffModal()">&times;</button>
     </div>
-    <p style="font-size:13px;color:#334155;line-height:1.5;margin-top:0;">
-      সাধারণ যাত্রীদের জন্য শুধু <b>"👤 আপনি"</b> আইকন থাকবে। আপনি যদি এই বাসের অনুমোদিত চালক বা কন্ডাক্টর হন, তবে ৪ ডিজিটের সিকিউরিটি পিন দিন যাতে আপনার ফোন থেকে বাসের লাইভ লোকেশন সার্ভারে সম্প্রচারিত হয়:
+    <p style="font-size:13.5px;color:#1e293b;line-height:1.5;margin-top:0;">
+      আপনি যদি এই বাসের অনুমোদিত চালক বা কন্ডাক্টর হন, তবে সিকিউরিটি পিন দিন যাতে আপনার ফোন থেকে বাসের লাইভ লোকেশন সার্ভারে সম্প্রচারিত হয়:
     </p>
     <div style="margin:14px 0;">
-      <label style="font-size:12px;font-weight:bold;color:#475569;">স্টাফ সিকিউরিটি পিন (ডিফল্ট: 1234)</label>
-      <input type="password" id="staffPinInput" placeholder="৪ ডিজিট পিন কোড লিখুন" style="font-size:18px;letter-spacing:4px;text-align:center;padding:10px;margin-top:6px;border:2px solid #0284c7;border-radius:8px;outline:none;" maxlength="6" inputmode="numeric" />
+      <label style="font-size:12.5px;font-weight:bold;color:#0d47a1;">স্টাফ পিন: 1234 অথবা বাসের নম্বর (যেমন: WB-61-A-3344 এর জন্য 3344)</label>
+      <input type="text" id="staffPinInput" placeholder="পিন বা বাসের নম্বর লিখুন" style="font-size:18px;letter-spacing:3px;text-align:center;padding:10px;margin-top:6px;border:2px solid #0284c7;border-radius:8px;outline:none;text-transform:uppercase;" maxlength="12" />
     </div>
     <div style="display:flex;gap:8px;margin-top:12px;">
       <button type="button" class="btn btn-cancel" style="flex:1;" onclick="closeStaffModal()">বাতিল</button>
@@ -2262,16 +2263,140 @@
     }
   }
   
-  // ২ ও ৩ নম্বর নির্দেশনা সমাধান: যাত্রী মোডে ফোনের জিপিএস কখনোই বাসের অবস্থান হিসেবে সার্ভারে পাঠানো হবে না।
-  // শুধুমাত্র অনুমোদিত কর্মী (চালক বা কন্ডাক্টর) পিন দিয়ে স্টাফ মোড চালু করলেই GPS সম্প্রচারিত হবে।
-  function checkPassengerRideAndSync() {
-    if (!isStaffModeActive || !trackingBus || !userPos) return;
+  // ৪ নম্বর নির্দেশনা: কোনো যাত্রী বাসে উঠে বাস সিলেক্ট করার পর, যদি ওই যাত্রীর GPS গতি ১৫ কিমি/ঘণ্টার বেশি হয়,
+  // বাসের রুটের অভিমুখে হয় এবং যাত্রীর লোকেশনে বাসের চলার সময় মিলে যায়—তাহলে ওই যাত্রীর GPS ট্র্যাক করে বাসের লোকেশন দেখাবে
+  let isPassengerOnboardBus = false;
+  let lastUserPosForDirection = null;
 
-    busPos = { lat: userPos.lat, lon: userPos.lon, speed: userPos.speed };
-    if (busMarker) {
-      busMarker.setLatLng([busPos.lat, busPos.lon]);
+  function checkPassengerCrowdsourceConditions() {
+    if (isStaffModeActive) return true; // চালক বা কন্ডাক্টর মোড হলে সরাসরি অনুমোদিত
+    if (!trackingBus || !userPos) return false;
+
+    let speed = Number(userPos.speed || 0);
+    // ১. জিপিএস গতি ১৫ কিমি/ঘণ্টার বেশি হতে হবে
+    if (speed < 15) {
+      // যদি আগে বাসে শনাক্ত হয়ে থাকে এবং সাময়িক স্টপেজে দাঁড়িয়ে থাকে (কম গতি):
+      return isPassengerOnboardBus && speed >= 3;
     }
-    syncUserGPSAsBus(trackingBus.number, userPos.lat, userPos.lon, userPos.speed, userPos.acc);
+
+    let orderedStops = (typeof getOrderedRouteStopsForBus === 'function') ? getOrderedRouteStopsForBus(trackingBus) : [];
+    if (!orderedStops || orderedStops.length < 2) return false;
+
+    // ২. যাত্রীর লোকেশন বাসের রুটের কোনো স্টপেজের বা রাস্তার ২ কিমির মধ্যে আছে কিনা
+    let nearestStop = null;
+    let nearestIdx = -1;
+    let minStopDistMeters = Infinity;
+
+    orderedStops.forEach((s, idx) => {
+      let sLat = Number(s.latitude || s.lat);
+      let sLon = Number(s.longitude || s.lon);
+      if (!isNaN(sLat) && !isNaN(sLon) && sLat !== 0) {
+        let d = getDistanceMeters(userPos.lat, userPos.lon, sLat, sLon);
+        if (d < minStopDistMeters) {
+          minStopDistMeters = d;
+          nearestStop = s;
+          nearestIdx = idx;
+        }
+      }
+    });
+
+    if (minStopDistMeters > 2500) {
+      return false; // বাসের রুট থেকে আড়াই কিলোমিটার দূরে থাকলে তিনি বাসে নেই
+    }
+
+    // ৩. বাসের রুটের অভিমুখে গতি (গন্তব্যের দিকে অগ্রসর হওয়া)
+    let destStop = orderedStops[orderedStops.length - 1];
+    let destLat = Number(destStop.latitude || destStop.lat);
+    let destLon = Number(destStop.longitude || destStop.lon);
+
+    if (lastUserPosForDirection && !isNaN(destLat) && !isNaN(destLon) && destLat !== 0) {
+      let prevDistToDest = getDistanceMeters(lastUserPosForDirection.lat, lastUserPosForDirection.lon, destLat, destLon);
+      let curDistToDest = getDistanceMeters(userPos.lat, userPos.lon, destLat, destLon);
+      // গন্তব্যের দূরত্ব কমছে কিনা (বা সামান্য জিপিএস ফ্লিকার সহ ১৫০ মিটারের বেশি বিপরীত নয়)
+      if (curDistToDest > prevDistToDest + 150) {
+        return false; // উল্টো দিকে চলছে
+      }
+    }
+    lastUserPosForDirection = { lat: userPos.lat, lon: userPos.lon, time: Date.now() };
+
+    // ৪. যাত্রীর লোকেশনে বাসের চলার সময় মিলে যাওয়া
+    let depTimeStr = trackingBus.depTime || trackingBus.fromTimeStr || trackingBus.sourceTime || trackingBus.srcTime;
+    if (!depTimeStr && typeof globalBusesCatalog !== 'undefined' && globalBusesCatalog.length > 0) {
+      let mb = globalBusesCatalog.find(b => b.number == trackingBus.number);
+      if (mb) depTimeStr = mb.depTime || mb.sourceTime || mb.srcTime;
+    }
+    let depMins = timeToMinutes(formatCleanTime(depTimeStr || "10:15 AM"));
+    if (depMins === null) depMins = 10 * 60 + 15;
+
+    let arrTimeStr = trackingBus.arrTime || trackingBus.toTimeStr || trackingBus.destTime;
+    let arrMins = arrTimeStr ? timeToMinutes(formatCleanTime(arrTimeStr)) : null;
+
+    let now = new Date();
+    let currentMins = now.getHours() * 60 + now.getMinutes();
+
+    let tripDurationMins = 120;
+    if (arrMins !== null) {
+      let diff = arrMins - depMins;
+      if (diff < 0) diff += 1440;
+      tripDurationMins = diff;
+    }
+
+    let progressRatio = (nearestIdx >= 0) ? (nearestIdx / (orderedStops.length - 1)) : 0.5;
+    let expectedStopMins = depMins + Math.round(progressRatio * tripDurationMins);
+    if (expectedStopMins >= 1440) expectedStopMins -= 1440;
+
+    let timeDiff = Math.abs(currentMins - expectedStopMins);
+    if (timeDiff > 720) timeDiff = 1440 - timeDiff;
+
+    // শিডিউল সময়ের ±45 মিনিটের মধ্যে মিলে গেলে অথবা সামগ্রিক ট্রিপ সময়ের মধ্যে থাকলে
+    if (timeDiff <= 45) {
+      return true;
+    }
+
+    let minTripMins = depMins - 15;
+    let maxTripMins = depMins + tripDurationMins + 45;
+    if (currentMins >= minTripMins && currentMins <= maxTripMins) {
+      return true;
+    }
+
+    return false;
+  }
+
+  function checkPassengerRideAndSync() {
+    if (!trackingBus || !userPos) return;
+
+    if (isStaffModeActive) {
+      busPos = { lat: userPos.lat, lon: userPos.lon, speed: userPos.speed };
+      if (busMarker) {
+        busMarker.setLatLng([busPos.lat, busPos.lon]);
+      } else {
+        busMarker = L.marker([busPos.lat, busPos.lon], { icon: busIcon }).addTo(map);
+      }
+      syncUserGPSAsBus(trackingBus.number, userPos.lat, userPos.lon, userPos.speed, userPos.acc);
+      return;
+    }
+
+    // ৪ নম্বর নির্দেশনা: কর্মী পিন না দিলে চলন্ত বাসের যাত্রী স্বয়ংক্রিয়ভাবে বাসের লাইভ জিপিএস দেবে
+    let isCrowdsourceValid = checkPassengerCrowdsourceConditions();
+    if (isCrowdsourceValid) {
+      isPassengerOnboardBus = true;
+      busPos = { lat: userPos.lat, lon: userPos.lon, speed: userPos.speed };
+
+      let locBox = document.getElementById("currentLocationBox");
+      if (locBox) {
+        locBox.innerText = `বাসের লাইভ অবস্থান: বাসের যাত্রী দ্বারা স্বয়ংক্রিয়ভাবে শনাক্ত (গতি: ${busPos.speed} KM/H)`;
+      }
+
+      if (!busMarker) {
+        busMarker = L.marker([busPos.lat, busPos.lon], { icon: busIcon }).addTo(map);
+      } else {
+        busMarker.setLatLng([busPos.lat, busPos.lon]);
+      }
+
+      syncUserGPSAsBus(trackingBus.number, userPos.lat, userPos.lon, userPos.speed, userPos.acc);
+    } else {
+      isPassengerOnboardBus = false;
+    }
   }
 
   function updateDistanceAndTracking() {
@@ -3122,15 +3247,17 @@
       }
 
       if (!data.ok || !data.live) {
-        locBox.innerText = `বাসের লাইভ জিপিএস সিগন্যালে ড্রাইভার এখনও যুক্ত হননি (${busNo})`;
-        if (busMarker) {
-          map.removeLayer(busMarker);
-          busMarker = null;
-        }
-        busPos = null;
-        if (routeLine) {
-          map.removeLayer(routeLine);
-          routeLine = null;
+        if (!isStaffModeActive && !isPassengerOnboardBus) {
+          locBox.innerText = `বাসের লাইভ জিপিএস সিগন্যালে ড্রাইভার এখনও যুক্ত হননি (${busNo})`;
+          if (busMarker) {
+            map.removeLayer(busMarker);
+            busMarker = null;
+          }
+          busPos = null;
+          if (routeLine) {
+            map.removeLayer(routeLine);
+            routeLine = null;
+          }
         }
         if (window.AndroidBridge && window.AndroidBridge.updateNotificationDetails) {
           let bNum = trackingBus ? (trackingBus.number || busNo) : busNo;
@@ -3359,7 +3486,42 @@
   }
 
   let isStaffModeActive = false;
-  const STAFF_PIN_CODE = "1234"; // ডিফল্ট বাসের কর্মী সিকিউরিটি পিন
+  const DEFAULT_STAFF_PIN = "1234";
+
+  // ৩ নম্বর নির্দেশনা: ডিফল্ট পিন 1234 বাদে বাসের নম্বরে যে সংখ্যা আছে (যেমন: WB-61-A-3344 এর ক্ষেত্রে 3344) সেটা লিখলেও বাসের কর্মী হিসেবে চিহ্নিত হবে
+  function isValidStaffPin(pin, bus) {
+    let cleanPin = String(pin || "").trim().toUpperCase();
+    if (!cleanPin) return false;
+    if (cleanPin === DEFAULT_STAFF_PIN) return true;
+
+    if (bus && bus.number) {
+      let bNum = String(bus.number).trim().toUpperCase();
+      if (cleanPin === bNum) return true;
+
+      let digitGroups = bNum.match(/\d+/g) || [];
+      if (digitGroups.includes(cleanPin)) return true;
+
+      let allDigits = bNum.replace(/\D/g, '');
+      if (allDigits && (cleanPin === allDigits || (allDigits.length >= 4 && cleanPin === allDigits.slice(-4)))) {
+        return true;
+      }
+    }
+
+    if (typeof globalBusesCatalog !== 'undefined' && globalBusesCatalog.length > 0) {
+      for (let b of globalBusesCatalog) {
+        let bNum = String(b.number || "").trim().toUpperCase();
+        if (cleanPin === bNum) return true;
+        let digitGroups = bNum.match(/\d+/g) || [];
+        if (digitGroups.includes(cleanPin)) return true;
+        let allDigits = bNum.replace(/\D/g, '');
+        if (allDigits && (cleanPin === allDigits || (allDigits.length >= 4 && cleanPin === allDigits.slice(-4)))) {
+          return true;
+        }
+      }
+    }
+
+    return false;
+  }
 
   function openStaffModal() {
     let pinInput = document.getElementById("staffPinInput");
@@ -3373,8 +3535,16 @@
 
   function verifyAndStartStaffMode() {
     let pin = document.getElementById("staffPinInput").value.trim();
-    if (pin !== STAFF_PIN_CODE) {
-      showAppAlert("ভুল পিন কোড! অনুমোদিত কর্মী পিন কোড দিন (ডিফল্ট: 1234)।", "ভুল পিন");
+
+    if (!trackingBus && typeof globalBusesCatalog !== 'undefined' && globalBusesCatalog.length > 0) {
+      let matchedBus = globalBusesCatalog.find(b => isValidStaffPin(pin, b));
+      if (matchedBus) {
+        selectBus(matchedBus);
+      }
+    }
+
+    if (!isValidStaffPin(pin, trackingBus)) {
+      showAppAlert("ভুল পিন কোড! অনুমোদিত কর্মী পিন (1234) অথবা আপনার বাসের নম্বরের সংখ্যা (যেমন: WB-61-A-3344 এর জন্য 3344) লিখুন।", "ভুল পিন");
       return;
     }
 
@@ -3396,12 +3566,19 @@
     showAppAlert(`বাস কর্মী মোড সফলভাবে সক্রিয় হয়েছে! এখন ${trackingBus.name} (${trackingBus.number}) বাসের লাইভ লোকেশন এই ফোন থেকে সম্প্রচার করা হবে।`, "কর্মী মোড সক্রিয়");
 
     if (userPos) {
+      busPos = { lat: userPos.lat, lon: userPos.lon, speed: userPos.speed };
+      if (!busMarker) {
+        busMarker = L.marker([busPos.lat, busPos.lon], { icon: busIcon }).addTo(map);
+      } else {
+        busMarker.setLatLng([busPos.lat, busPos.lon]);
+      }
       syncUserGPSAsBus(trackingBus.number, userPos.lat, userPos.lon, userPos.speed, userPos.acc);
     }
   }
 
   function stopStaffMode() {
     isStaffModeActive = false;
+    isPassengerOnboardBus = false;
     if (window.AndroidBridge && window.AndroidBridge.setStaffMode) {
       window.AndroidBridge.setStaffMode(false);
     }
@@ -3411,7 +3588,7 @@
   }
 
   async function syncUserGPSAsBus(busNo, lat, lon, speed, acc) {
-    if (!isStaffModeActive) return;
+    if (!isStaffModeActive && !isPassengerOnboardBus) return;
     let payload = { action: "updateGPS", busNumber: busNo, lat: lat, lon: lon, speed: speed, accuracy: acc };
     fetch(API_URL, {
       method: "POST",
