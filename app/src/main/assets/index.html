@@ -1249,9 +1249,11 @@
 
   <div id="busList"></div>
   
-  <br>
   <label>বাস নম্বর / নাম</label>
-  <input type="text" id="busTrackInput" placeholder="বাস নম্বর বা নাম লিখুন">
+  <div style="position: relative; width: 100%;">
+    <input type="text" id="busTrackInput" placeholder="বাস নম্বর বা নাম লিখুন (যেমন: 159, Didibhai, 999...)" autocomplete="off">
+    <div id="busTrackSuggestions" class="suggestions-box hidden" style="position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 2000; max-height: 250px; overflow-y: auto; background: #ffffff; border: 1.5px solid #0284c7; border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,0.18);"></div>
+  </div>
 
   <!-- বাসের চালক / কন্ডাক্টর স্টাফ মোড বাটন ও সক্রিয় ব্যানার -->
   <div id="staffModeContainer" style="margin: 6px 0 12px 0;">
@@ -2744,34 +2746,12 @@
   });
 
   let globalBusesCatalog = [];
+  let isCatalogLoading = false;
 
-  async function loadDatalistSuggestions() {
-    try {
-      let res = await fetch(`${API_URL}?action=getStopsList`);
-      let data = await res.json();
-      if (data.stops) {
-        masterStopsList = data.stops;
-
-        let rawNames = data.stops.map(s => typeof s === 'string' ? s : (s.name || s.stopName));
-        let uniqueNames = [];
-        let seen = new Set();
-
-        rawNames.forEach(name => {
-          let clean = cleanStopName(name);
-          if (clean && !seen.has(clean)) {
-            seen.add(clean);
-            uniqueNames.push(name.trim().toUpperCase());
-          }
-        });
-
-        allStopNames = uniqueNames;
-        renderAllMasterStopsOnMap(masterStopsList);
-      }
-    } catch (e) {
-      console.log("Error loading suggestions:", e);
-    }
-
-    // ব্যাকগ্রাউন্ডে সমস্ত বাসের তথ্যও ক্যাশ করে রাখা যাতে সরাসরি বাস নম্বর দিয়ে খুঁজলেও নাম, গন্তব্য ও স্টপ পাওয়া যায়
+  async function ensureBusesCatalogLoaded() {
+    if (globalBusesCatalog && globalBusesCatalog.length > 0) return globalBusesCatalog;
+    if (isCatalogLoading) return [];
+    isCatalogLoading = true;
     try {
       let bRes = await fetch(`${API_URL}?action=getBuses`);
       let bData = await bRes.json();
@@ -2779,6 +2759,130 @@
         globalBusesCatalog = bData.buses;
       }
     } catch (_) {}
+    isCatalogLoading = false;
+    return globalBusesCatalog;
+  }
+
+  function searchBusesInCatalog(query) {
+    if (!query) return [];
+    let q = query.trim().toUpperCase();
+    if (!q) return [];
+    if (!globalBusesCatalog || globalBusesCatalog.length === 0) return [];
+
+    let cleanQ = q.replace(/[^A-Z0-9]/g, '');
+    let scored = [];
+    let seen = new Set();
+
+    for (let b of globalBusesCatalog) {
+      let bNum = String(b.number || '').trim().toUpperCase();
+      let bName = String(b.name || '').trim().toUpperCase();
+      let bCleanNum = bNum.replace(/[^A-Z0-9]/g, '');
+      let key = `${bNum}_${bName}`;
+      if (seen.has(key)) continue;
+
+      let score = 0;
+      if (bNum === q || (cleanQ.length > 0 && bCleanNum === cleanQ)) {
+        score = 100;
+      } else if (bName === q) {
+        score = 95;
+      } else if (bNum.startsWith(q) || (cleanQ.length >= 2 && bCleanNum.startsWith(cleanQ))) {
+        score = 80;
+      } else if (bName.startsWith(q)) {
+        score = 75;
+      } else if (bNum.includes(q) || (cleanQ.length >= 2 && bCleanNum.includes(cleanQ))) {
+        score = 60;
+      } else if (bName.includes(q)) {
+        score = 50;
+      }
+
+      if (score > 0) {
+        seen.add(key);
+        scored.push({ bus: b, score: score });
+      }
+    }
+
+    scored.sort((a, b) => b.score - a.score);
+    return scored.map(s => s.bus);
+  }
+
+  function renderBusTrackSuggestions(query) {
+    let box = document.getElementById("busTrackSuggestions");
+    if (!box) return;
+
+    if (!query || query.trim().length === 0) {
+      box.innerHTML = "";
+      box.classList.add("hidden");
+      return;
+    }
+
+    let matches = searchBusesInCatalog(query);
+    if (matches.length === 0) {
+      box.innerHTML = `<div style="padding:12px;font-size:12.5px;color:#94a3b8;text-align:center;">'${query}' নম্বরের বা নামের কোনো বাস পাওয়া যায়নি</div>`;
+      box.classList.remove("hidden");
+      return;
+    }
+
+    box.innerHTML = "";
+    matches.slice(0, 15).forEach(b => {
+      let item = document.createElement("div");
+      item.className = "suggestion-item";
+      item.style.cssText = "padding: 10px 12px; border-bottom: 1px solid #f1f5f9; cursor: pointer; display: flex; align-items: center; justify-content: space-between;";
+      item.innerHTML = `
+        <div style="flex:1;">
+          <div style="font-weight: 800; color: #0d47a1; font-size: 13.5px;">🚌 ${b.name || 'বাস'}</div>
+          <div style="font-size: 11.5px; color: #64748b; margin-top: 3px;">
+            নম্বর: <b style="color: #0284c7; font-size: 12px;">${b.number}</b>
+            ${b.source && b.dest ? ` • <span>${b.source} ➔ ${b.dest}</span>` : ''}
+            ${b.category ? ` • <span style="background:#e0f2fe;color:#0369a1;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:700;">${b.category}</span>` : ''}
+          </div>
+        </div>
+        <div style="font-size: 11px; font-weight: 700; color: #0284c7; background: #f0f9ff; border: 1px solid #bae6fd; padding: 4px 8px; border-radius: 6px; white-space: nowrap; margin-left: 8px;">
+          সিলেক্ট করুন ➔
+        </div>
+      `;
+      let onPick = (ev) => {
+        if (ev) ev.preventDefault();
+        selectBus(b);
+        box.classList.add("hidden");
+      };
+      item.addEventListener("mousedown", onPick);
+      item.addEventListener("click", onPick);
+      box.appendChild(item);
+    });
+    box.classList.remove("hidden");
+  }
+
+  async function loadDatalistSuggestions() {
+    // স্টপ ও বাসের তালিকা সমান্তরালভাবে (parallel) দ্রুত লোড করুন
+    Promise.all([
+      (async () => {
+        try {
+          let res = await fetch(`${API_URL}?action=getStopsList`);
+          let data = await res.json();
+          if (data.stops) {
+            masterStopsList = data.stops;
+
+            let rawNames = data.stops.map(s => typeof s === 'string' ? s : (s.name || s.stopName));
+            let uniqueNames = [];
+            let seen = new Set();
+
+            rawNames.forEach(name => {
+              let clean = cleanStopName(name);
+              if (clean && !seen.has(clean)) {
+                seen.add(clean);
+                uniqueNames.push(name.trim().toUpperCase());
+              }
+            });
+
+            allStopNames = uniqueNames;
+            renderAllMasterStopsOnMap(masterStopsList);
+          }
+        } catch (e) {
+          console.log("Error loading suggestions:", e);
+        }
+      })(),
+      ensureBusesCatalogLoaded()
+    ]);
   }
 
   let allStopNames = [];
@@ -3151,21 +3255,72 @@
     trackBus(b.number);
   }
   
-  document.getElementById("busTrackInput").addEventListener("input", e => {
-    let val = e.target.value.trim();
-    if (val.length >= 3) {
-      clearTimeout(debounceTimer);
-      debounceTimer = setTimeout(() => trackBus(val), 500);
-    } else if (val.length === 0) {
-      clearTimeout(debounceTimer);
-      if (trackingInterval) clearInterval(trackingInterval);
-      trackingBus = null;
-      if (busMarker) { map.removeLayer(busMarker); busMarker = null; }
-      if (stopRoutePolyline) { map.removeLayer(stopRoutePolyline); stopRoutePolyline = null; }
-      stopMarkersLayer.clearLayers();
-      let routeCard = document.getElementById("routeTrackerCard");
-      if (routeCard) routeCard.classList.add("hidden");
-      renderAllMasterStopsOnMap(masterStopsList);
+  const busTrackInputEl = document.getElementById("busTrackInput");
+  if (busTrackInputEl) {
+    busTrackInputEl.addEventListener("input", e => {
+      let val = e.target.value.trim();
+      ensureBusesCatalogLoaded().then(() => {
+        renderBusTrackSuggestions(val);
+      });
+
+      if (val.length === 0) {
+        clearTimeout(debounceTimer);
+        if (trackingInterval) clearInterval(trackingInterval);
+        trackingBus = null;
+        if (busMarker) { map.removeLayer(busMarker); busMarker = null; }
+        if (stopRoutePolyline) { map.removeLayer(stopRoutePolyline); stopRoutePolyline = null; }
+        stopMarkersLayer.clearLayers();
+        let routeCard = document.getElementById("routeTrackerCard");
+        if (routeCard) routeCard.classList.add("hidden");
+        renderAllMasterStopsOnMap(masterStopsList);
+        let suggestionsBox = document.getElementById("busTrackSuggestions");
+        if (suggestionsBox) suggestionsBox.classList.add("hidden");
+      } else if (val.length >= 2) {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => {
+          let matches = searchBusesInCatalog(val);
+          if (matches.length > 0) {
+            let exactMatch = matches.find(b => 
+              String(b.number).trim().toUpperCase() === val.toUpperCase() || 
+              String(b.name).trim().toUpperCase() === val.toUpperCase()
+            );
+            if (exactMatch) {
+              selectBus(exactMatch);
+              let suggestionsBox = document.getElementById("busTrackSuggestions");
+              if (suggestionsBox) suggestionsBox.classList.add("hidden");
+            }
+          }
+        }, 600);
+      }
+    });
+
+    busTrackInputEl.addEventListener("focus", () => {
+      let val = busTrackInputEl.value.trim();
+      if (val.length > 0) {
+        ensureBusesCatalogLoaded().then(() => {
+          renderBusTrackSuggestions(val);
+        });
+      }
+    });
+
+    busTrackInputEl.addEventListener("keydown", e => {
+      if (e.key === "Enter") {
+        let val = busTrackInputEl.value.trim();
+        let matches = searchBusesInCatalog(val);
+        if (matches.length > 0) {
+          selectBus(matches[0]);
+          let suggestionsBox = document.getElementById("busTrackSuggestions");
+          if (suggestionsBox) suggestionsBox.classList.add("hidden");
+        }
+      }
+    });
+  }
+
+  document.addEventListener("click", e => {
+    let input = document.getElementById("busTrackInput");
+    let box = document.getElementById("busTrackSuggestions");
+    if (box && input && !input.contains(e.target) && !box.contains(e.target)) {
+      box.classList.add("hidden");
     }
   });
 
@@ -3174,7 +3329,10 @@
 
     // যদি সরাসরি বাস নম্বর দিয়ে ট্র্যাকিং শুরু হয়, গ্লোবাল ক্যাটালগ থেকে তথ্য পূরণ করুন
     if ((!trackingBus || trackingBus.number != busNo) && globalBusesCatalog.length > 0) {
-      let matched = globalBusesCatalog.find(b => b.number == busNo || b.number === busNo);
+      let matched = globalBusesCatalog.find(b => 
+        String(b.number).trim().toUpperCase() === String(busNo).trim().toUpperCase() ||
+        String(b.name).trim().toUpperCase() === String(busNo).trim().toUpperCase()
+      );
       if (matched) {
         trackingBus = Object.assign({}, matched);
         let stopsRaw = matched.selectedStops || matched.Selected_Stops || matched["SELECTED STOPS"] || [];
@@ -3182,6 +3340,10 @@
           trackingBus.selectedStops = stopsRaw.split(",").map(s => cleanStopName(s));
         } else if (Array.isArray(stopsRaw)) {
           trackingBus.selectedStops = stopsRaw.map(s => cleanStopName(s));
+        }
+        let inputEl = document.getElementById("busTrackInput");
+        if (inputEl && (!inputEl.value || inputEl.value === busNo)) {
+          inputEl.value = `${matched.number} - ${matched.name}`;
         }
       }
     }
@@ -3488,38 +3650,50 @@
   let isStaffModeActive = false;
   const DEFAULT_STAFF_PIN = "1234";
 
-  // ৩ নম্বর নির্দেশনা: ডিফল্ট পিন 1234 বাদে বাসের নম্বরে যে সংখ্যা আছে (যেমন: WB-61-A-3344 এর ক্ষেত্রে 3344) সেটা লিখলেও বাসের কর্মী হিসেবে চিহ্নিত হবে
-  function isValidStaffPin(pin, bus) {
+  function findBusByStaffPin(pin) {
     let cleanPin = String(pin || "").trim().toUpperCase();
-    if (!cleanPin) return false;
-    if (cleanPin === DEFAULT_STAFF_PIN) return true;
+    if (!cleanPin || cleanPin === DEFAULT_STAFF_PIN) {
+      return null; // 1234 কোনো নির্দিষ্ট বাসের একক পরিচয় নয়
+    }
+    if (!globalBusesCatalog || globalBusesCatalog.length === 0) return null;
 
-    if (bus && bus.number) {
-      let bNum = String(bus.number).trim().toUpperCase();
-      if (cleanPin === bNum) return true;
+    // ১. হুবহু বাস নম্বর ম্যাচ (যেমন: 159, 999, WB-61-A-3344)
+    let matched = globalBusesCatalog.find(b => {
+      let bNum = String(b.number || "").trim().toUpperCase();
+      return bNum === cleanPin;
+    });
+    if (matched) return matched;
 
+    // ২. বাসের সংখ্যাক্রম বা ডিজিট ম্যাচ (যেমন: 3344 বা শেষ ৪টি সংখ্যা)
+    matched = globalBusesCatalog.find(b => {
+      let bNum = String(b.number || "").trim().toUpperCase();
       let digitGroups = bNum.match(/\d+/g) || [];
       if (digitGroups.includes(cleanPin)) return true;
-
       let allDigits = bNum.replace(/\D/g, '');
       if (allDigits && (cleanPin === allDigits || (allDigits.length >= 4 && cleanPin === allDigits.slice(-4)))) {
         return true;
       }
-    }
+      return false;
+    });
+    return matched || null;
+  }
 
-    if (typeof globalBusesCatalog !== 'undefined' && globalBusesCatalog.length > 0) {
-      for (let b of globalBusesCatalog) {
-        let bNum = String(b.number || "").trim().toUpperCase();
-        if (cleanPin === bNum) return true;
-        let digitGroups = bNum.match(/\d+/g) || [];
-        if (digitGroups.includes(cleanPin)) return true;
-        let allDigits = bNum.replace(/\D/g, '');
-        if (allDigits && (cleanPin === allDigits || (allDigits.length >= 4 && cleanPin === allDigits.slice(-4)))) {
-          return true;
-        }
-      }
-    }
+  function isPinValidForBus(pin, bus) {
+    let cleanPin = String(pin || "").trim().toUpperCase();
+    if (!cleanPin) return false;
+    if (cleanPin === DEFAULT_STAFF_PIN) return true; // 1234 নির্বাচিত যে কোনো বাসের জন্যই গ্রহণযোগ্য
+    if (!bus || !bus.number) return false;
 
+    let bNum = String(bus.number).trim().toUpperCase();
+    if (cleanPin === bNum) return true;
+
+    let digitGroups = bNum.match(/\d+/g) || [];
+    if (digitGroups.includes(cleanPin)) return true;
+
+    let allDigits = bNum.replace(/\D/g, '');
+    if (allDigits && (cleanPin === allDigits || (allDigits.length >= 4 && cleanPin === allDigits.slice(-4)))) {
+      return true;
+    }
     return false;
   }
 
@@ -3535,22 +3709,32 @@
 
   function verifyAndStartStaffMode() {
     let pin = document.getElementById("staffPinInput").value.trim();
+    if (!pin) {
+      showAppAlert("অনুগ্রহ করে স্টাফ পিন কোড বা আপনার বাসের নম্বরের সংখ্যা লিখুন।", "পিন লিখুন");
+      return;
+    }
 
-    if (!trackingBus && typeof globalBusesCatalog !== 'undefined' && globalBusesCatalog.length > 0) {
-      let matchedBus = globalBusesCatalog.find(b => isValidStaffPin(pin, b));
+    // ১. যদি পূর্বে বাস নির্বাচন না করা থাকে এবং পিন কোনো বাসের নম্বর বা সংখ্যা হয় (যেমন 159, 999 বা 3344), বাসটি স্বয়ংক্রিয়ভাবে শনাক্ত করুন
+    if (!trackingBus) {
+      let matchedBus = findBusByStaffPin(pin);
       if (matchedBus) {
         selectBus(matchedBus);
       }
     }
 
-    if (!isValidStaffPin(pin, trackingBus)) {
-      showAppAlert("ভুল পিন কোড! অনুমোদিত কর্মী পিন (1234) অথবা আপনার বাসের নম্বরের সংখ্যা (যেমন: WB-61-A-3344 এর জন্য 3344) লিখুন।", "ভুল পিন");
+    // ২. যদি এখনও কোনো বাস সিলেক্ট না থাকে (যেমন ব্যবহারকারী শুধুই 1234 দিয়েছেন কিন্তু কোনো বাস সিলেক্ট করেননি)
+    if (!trackingBus) {
+      if (pin === DEFAULT_STAFF_PIN) {
+        showAppAlert("ডিফল্ট পিন (1234) ব্যবহারের পূর্বে অনুগ্রহ করে 'বাস নম্বর / নাম' এর ঘরে আপনার বাস সিলেক্ট করুন (যেমন: 159 বা 999), অথবা সরাসরি আপনার বাসের নম্বরটি পিন হিসেবে লিখুন।", "বাস সিলেক্ট করুন");
+      } else {
+        showAppAlert("নম্বর '" + pin + "' যুক্ত কোনো বাস পাওয়া যায়নি। অনুগ্রহ করে সঠিক বাস নম্বর বা 1234 লিখুন।", "বাস পাওয়া যায়নি");
+      }
       return;
     }
 
-    if (!trackingBus) {
-      showAppAlert("প্রথমে যেকোনো একটি বাস সিলেক্ট করুন যার চালক বা কন্ডাক্টর আপনি।", "বাস সিলেক্ট করুন");
-      closeStaffModal();
+    // ৩. নির্দিষ্ট বাসের জন্য পিনটি যাচাই করুন
+    if (!isPinValidForBus(pin, trackingBus)) {
+      showAppAlert("ভুল পিন কোড! অনুমোদিত কর্মী পিন (1234) অথবা আপনার বাসের নম্বরের সংখ্যা (যেমন: " + (trackingBus.number || "3344") + ") লিখুন।", "ভুল পিন");
       return;
     }
 
