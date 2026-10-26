@@ -339,17 +339,119 @@
 
     #map {
       height: 380px;
-      border-radius: 12px;
-      margin-top: 6px;
+      min-height: 180px;
+      border-radius: 12px 12px 0 0;
+      margin-top: 4px;
       border: 2px solid #90caf9;
+      border-bottom: 1px solid #bfdbfe;
       width: 100%;
       z-index: 10;
       box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+      transition: height 0.2s ease-out;
     }
     .live-map-wrapper {
       position: relative;
-      margin-top: 14px;
+      margin-top: 6px;
       margin-bottom: 8px;
+    }
+    .live-map-wrapper.map-fullscreen-mode {
+      position: fixed !important;
+      top: 0 !important;
+      left: 0 !important;
+      right: 0 !important;
+      bottom: 0 !important;
+      width: 100vw !important;
+      height: 100vh !important;
+      z-index: 999999 !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      background: #000 !important;
+    }
+    .live-map-wrapper.map-fullscreen-mode #map {
+      height: 100% !important;
+      max-height: 100vh !important;
+      border-radius: 0 !important;
+      border: none !important;
+      margin: 0 !important;
+    }
+    .live-map-wrapper.map-fullscreen-mode .map-resize-drag-handle {
+      display: none !important;
+    }
+    .map-size-toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 10px;
+      margin-bottom: 4px;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .map-size-buttons {
+      display: flex;
+      gap: 4px;
+      flex-wrap: wrap;
+    }
+    .btn-map-size {
+      background: #f1f5f9;
+      border: 1px solid #cbd5e1;
+      color: #334155;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 4px 8px;
+      border-radius: 6px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      transition: all 0.15s;
+    }
+    .btn-map-size:hover {
+      background: #e2e8f0;
+      border-color: #94a3b8;
+    }
+    .btn-map-size.active {
+      background: #1565c0;
+      color: #ffffff;
+      border-color: #0d47a1;
+    }
+    .btn-fullscreen-toggle {
+      background: #0d47a1;
+      color: #ffffff;
+      border-color: #0a3880;
+    }
+    .btn-fullscreen-toggle:hover {
+      background: #0a3880;
+    }
+    .map-resize-drag-handle {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: #f8fafc;
+      border: 2px solid #90caf9;
+      border-top: none;
+      border-radius: 0 0 12px 12px;
+      padding: 6px 0;
+      cursor: ns-resize;
+      user-select: none;
+      touch-action: none;
+      box-shadow: 0 3px 6px rgba(0,0,0,0.06);
+    }
+    .map-resize-drag-handle:active {
+      background: #e0f2fe;
+      border-color: #0284c7;
+    }
+    .drag-bar-pill {
+      width: 46px;
+      height: 4px;
+      background: #94a3b8;
+      border-radius: 3px;
+      margin-bottom: 2px;
+    }
+    .drag-bar-text {
+      font-size: 10px;
+      font-weight: 700;
+      color: #64748b;
     }
     .map-floating-bar {
       position: absolute;
@@ -1298,12 +1400,31 @@
     <div class="card"><b>📶 GPS সংকেত:</b> <span id="infoConfidence">--</span></div>
   </div>
 
-  <!-- লাইভ ম্যাপ সেকশন (১ নম্বর নির্দেশনা: GPS সংকেতের নিচে) -->
-  <div class="live-map-wrapper">
+  <!-- লাইভ ম্যাপ সেকশন: ফ্লেক্সিবল সাইজ ও নিয়ন্ত্রণ বার (ছোট, মাঝারি, বড় বা ইচ্ছামত ড্র্যাগ) -->
+  <div class="map-size-toolbar">
+    <span style="font-size:12px;font-weight:700;color:#1e3a8a;display:inline-flex;align-items:center;gap:4px;">
+      🗺️ ম্যাপের আকার (Map Size):
+    </span>
+    <div class="map-size-buttons">
+      <button type="button" class="btn-map-size" id="btnMapSmall" onclick="setMapHeight(220, this)" title="ছোট সাইজ">ছোট (220px)</button>
+      <button type="button" class="btn-map-size active" id="btnMapMedium" onclick="setMapHeight(380, this)" title="মাঝারি সাইজ">মাঝারি (380px)</button>
+      <button type="button" class="btn-map-size" id="btnMapLarge" onclick="setMapHeight(550, this)" title="বড় সাইজ">বড় (550px)</button>
+      <button type="button" class="btn-map-size btn-fullscreen-toggle" id="btnMapFullscreen" onclick="toggleMapFullscreen()" title="ফুলস্ক্রিন ম্যাপ">⛶ ফুলস্ক্রিন</button>
+    </div>
+  </div>
+
+  <div class="live-map-wrapper" id="liveMapWrapper">
     <div id="map"></div>
+    <div class="map-resize-drag-handle" id="mapDragHandle" title="ম্যাপের উচ্চতা ছোট বা বড় করতে টেনে নিন">
+      <div class="drag-bar-pill"></div>
+      <span class="drag-handle-hint">⇅ টেনে ম্যাপের আকার ছোট বা বড় করুন (Drag to resize)</span>
+    </div>
     <div class="map-floating-bar" style="justify-content: flex-end;">
       <button id="focusViewBtn" class="btn-map-focus" onclick="focusBothUserAndVehicle()" title="ব্যবহারকারী ও যানের অবস্থান দেখুন">
         🎯 অবস্থান দেখান
+      </button>
+      <button id="fullscreenExitBtn" class="btn-map-focus hidden" onclick="toggleMapFullscreen()" style="background:#dc2626;" title="ফুলস্ক্রিন থেকে বের হন">
+        ✕ ফুলস্ক্রিন বন্ধ
       </button>
     </div>
   </div>
@@ -1862,6 +1983,121 @@
   window.addEventListener('load', () => {
     try { map.invalidateSize(); } catch(_) {}
   });
+
+  // ম্যাপের সাইজ পরিবর্তন (ছোট, মাঝারি, বড়)
+  function setMapHeight(newHeight, btn) {
+    let mapDiv = document.getElementById("map");
+    let wrapper = document.getElementById("liveMapWrapper");
+    if (!mapDiv) return;
+
+    if (wrapper && wrapper.classList.contains("map-fullscreen-mode")) {
+      toggleMapFullscreen();
+    }
+
+    mapDiv.style.height = newHeight + "px";
+
+    document.querySelectorAll(".btn-map-size").forEach(b => {
+      if (b.id !== "btnMapFullscreen") b.classList.remove("active");
+    });
+    if (btn) btn.classList.add("active");
+
+    setTimeout(() => {
+      try { map.invalidateSize(); } catch(_) {}
+    }, 200);
+  }
+
+  // ম্যাপ ফুলস্ক্রিন টগল
+  function toggleMapFullscreen() {
+    let wrapper = document.getElementById("liveMapWrapper");
+    let btnFs = document.getElementById("btnMapFullscreen");
+    let exitBtn = document.getElementById("fullscreenExitBtn");
+    if (!wrapper) return;
+
+    let isFs = wrapper.classList.toggle("map-fullscreen-mode");
+    if (btnFs) {
+      if (isFs) {
+        btnFs.innerHTML = "✕ ফুলস্ক্রিন বন্ধ";
+        btnFs.classList.add("active");
+      } else {
+        btnFs.innerHTML = "⛶ ফুলস্ক্রিন";
+        btnFs.classList.remove("active");
+      }
+    }
+    if (exitBtn) {
+      if (isFs) exitBtn.classList.remove("hidden");
+      else exitBtn.classList.add("hidden");
+    }
+
+    setTimeout(() => {
+      try { map.invalidateSize(); } catch(_) {}
+    }, 150);
+    setTimeout(() => {
+      try { map.invalidateSize(); } catch(_) {}
+    }, 350);
+  }
+
+  // ম্যাপ ড্র্যাগ রিসাইজ (টাচ বা মাউস দিয়ে টেনে ছোট বা বড় করা)
+  function initMapDragResize() {
+    let handle = document.getElementById("mapDragHandle");
+    let mapDiv = document.getElementById("map");
+    let wrapper = document.getElementById("liveMapWrapper");
+    if (!handle || !mapDiv) return;
+
+    let startY = 0;
+    let startHeight = 380;
+    let isDragging = false;
+
+    function onPointerDown(e) {
+      if (wrapper && wrapper.classList.contains("map-fullscreen-mode")) return;
+      isDragging = true;
+      startY = e.clientY || (e.touches && e.touches[0] ? e.touches[0].clientY : 0);
+      startHeight = mapDiv.offsetHeight;
+      document.body.style.userSelect = "none";
+      document.addEventListener("pointermove", onPointerMove);
+      document.addEventListener("pointerup", onPointerUp);
+      document.addEventListener("touchmove", onTouchMove, { passive: false });
+      document.addEventListener("touchend", onPointerUp);
+    }
+
+    function onPointerMove(e) {
+      if (!isDragging) return;
+      let curY = e.clientY || (e.touches && e.touches[0] ? e.touches[0].clientY : 0);
+      let diff = curY - startY;
+      let newH = Math.max(160, Math.min(800, startHeight + diff));
+      mapDiv.style.height = newH + "px";
+      try { map.invalidateSize(); } catch(_) {}
+    }
+
+    function onTouchMove(e) {
+      if (!isDragging) return;
+      e.preventDefault();
+      let curY = (e.touches && e.touches[0] ? e.touches[0].clientY : 0);
+      let diff = curY - startY;
+      let newH = Math.max(160, Math.min(800, startHeight + diff));
+      mapDiv.style.height = newH + "px";
+      try { map.invalidateSize(); } catch(_) {}
+    }
+
+    function onPointerUp() {
+      if (!isDragging) return;
+      isDragging = false;
+      document.body.style.userSelect = "";
+      document.removeEventListener("pointermove", onPointerMove);
+      document.removeEventListener("pointerup", onPointerUp);
+      document.removeEventListener("touchmove", onTouchMove);
+      document.removeEventListener("touchend", onPointerUp);
+      try { map.invalidateSize(); } catch(_) {}
+    }
+
+    handle.addEventListener("pointerdown", onPointerDown);
+    handle.addEventListener("touchstart", onPointerDown, { passive: true });
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initMapDragResize);
+  } else {
+    initMapDragResize();
+  }
 
   let busMarker = null, userMarker = null, routeLine = null;
   let allMasterStopMarkersLayer = L.layerGroup().addTo(map);
@@ -2616,40 +2852,35 @@
         allowedStops = trackingBus.selectedStops.map(s => cleanStopName(s));
       }
     }
+    if (trackingBus) {
+      if (trackingBus.source) allowedStops.push(cleanStopName(trackingBus.source));
+      if (trackingBus.dest) allowedStops.push(cleanStopName(trackingBus.dest));
+    }
 
-    // ১. ম্যাপে স্টপেজের মার্কার রেন্ডার করা
+    // ১. ম্যাপে স্টপেজের মার্কার রেন্ডার করা (নীল দাগ ছাড়া পরিষ্কার মার্কার)
     orderedStops.forEach((s, i) => {
       let sLat = Number(s.latitude || s.lat);
       let sLon = Number(s.longitude || s.lon);
       let sName = s.name || s.stopName || `STOP ${i+1}`;
       let cName = cleanStopName(sName);
 
-      let isSkipped = allowedStops.length > 0 && !allowedStops.includes(cName);
-
       if (!isNaN(sLat) && !isNaN(sLon) && sLat !== 0) {
         latLngs.push([sLat, sLon]);
 
+        let isPassed = (busLat && busLon && i <= nearestStopIndex);
         let circleMarker = L.circleMarker([sLat, sLon], {
-          radius: isSkipped ? 6 : 7,
-          fillColor: isSkipped ? "#ffcdd2" : ((busLat && busLon && i <= nearestStopIndex) ? "#1565c0" : "#ffffff"),
-          color: isSkipped ? "#d32f2f" : "#0d47a1",
-          weight: isSkipped ? 2 : 3,
-          dashArray: isSkipped ? "3, 3" : null,
+          radius: 7,
+          fillColor: isPassed ? "#1565c0" : "#ffffff",
+          color: "#0d47a1",
+          weight: 3,
           opacity: 1,
           fillOpacity: 0.95
         });
 
-        let tooltipContent = isSkipped
-          ? `<div style="text-align:center; text-decoration:none !important;">
-               <b style="color:#c62828; text-decoration:line-through; font-size:12px;">${sName}</b><br>
-               <span style="color:#d32f2f; font-size:11px; font-weight:bold; text-decoration:none !important; display:inline-block;">(এখানে থামবে না)</span>
-             </div>`
-          : `<b>📍 ${sName}</b>`;
-
-        circleMarker.bindTooltip(tooltipContent, {
+        circleMarker.bindTooltip(`<b>📍 ${sName}</b>`, {
           permanent: true,
           direction: 'top',
-          className: isSkipped ? 'stop-marker-label skipped-label' : 'stop-marker-label',
+          className: 'stop-marker-label',
           offset: [0, -8]
         });
 
@@ -2657,13 +2888,10 @@
       }
     });
 
-    // ম্যাপে স্টপগুলোর সংযোগকারী রুট লাইন আঁকা
-    if (latLngs.length > 1) {
-      stopRoutePolyline = L.polyline(latLngs, {
-        color: '#1565c0',
-        weight: 4,
-        opacity: 0.85
-      }).addTo(map);
+    // ৩ নম্বর নির্দেশনা: ম্যাপে স্টপেজগুলোর মাঝে নীল দাগ থাকবে না
+    if (stopRoutePolyline) {
+      try { map.removeLayer(stopRoutePolyline); } catch(_) {}
+      stopRoutePolyline = null;
     }
 
     // যদি লাইভ বাস অবস্থান না থাকে অথবা প্রথমবার লোড হয়, তাহলে পুরো রুটের সব স্টপকে স্ক্রিনের মাঝে ফিট করুন
@@ -3332,15 +3560,28 @@
     // ১. প্রত্যক্ষ রুট স্টপেজ ক্রমানুসারে অনুসন্ধান (Direct Sequential Stop Match)
     function findStopIndexInList(query, list) {
       if (!query || !list || list.length === 0) return -1;
-      let exact = list.findIndex(s => s === query);
+      let q = cleanStopName(query);
+      if (!q) return -1;
+
+      // ১. হুবহু মিল (Exact Match)
+      let exact = list.findIndex(s => cleanStopName(s) === q);
       if (exact !== -1) return exact;
-      let partial = list.findIndex(s => s.startsWith(query) || query.startsWith(s) || s.includes(query) || query.includes(s));
+
+      // ২. শব্দ/টোকেন মিল (যেমন "SURI BUS STAND" এর সাথে "SURI")
+      let partial = list.findIndex(s => {
+        let item = cleanStopName(s);
+        if (item === q) return true;
+        if (item.startsWith(q + " ") || item.endsWith(" " + q) || item.includes(" " + q + " ")) return true;
+        if (q.startsWith(item + " ") || q.endsWith(" " + item) || q.includes(" " + item + " ")) return true;
+        return false;
+      });
       return partial;
     }
 
     let fromIdx = findStopIndexInList(normFrom, orderedStops);
     let toIdx = findStopIndexInList(normTo, orderedStops);
 
+    // কেবল এবং কেবল যদি From এবং To উভয়ই বাসের রুটে বিদ্যমান থাকে এবং বাসের গন্তব্য অভিমুখে From এর পর To আসে
     if (fromIdx !== -1 && toIdx !== -1 && fromIdx < toIdx) {
       let fromDisplayName = orderedStops[fromIdx];
       let toDisplayName = orderedStops[toIdx];
@@ -3377,42 +3618,7 @@
       };
     }
 
-    // ২. ভৌগোলিক প্রজেকশন যাচাই (যদি কোনো কারণে স্টপ টেক্সট সম্পূর্ণ না মেলে)
-    let allKnownStops = [];
-    if (masterStopsList && masterStopsList.length > 0) allKnownStops.push(...masterStopsList);
-    if (currentBusStopsList && currentBusStopsList.length > 0) allKnownStops.push(...currentBusStopsList);
-
-    let busSrcCoords = resolvePlaceCoords(bus.source, allKnownStops);
-    let busDestCoords = resolvePlaceCoords(bus.dest, allKnownStops);
-    let userFromCoords = resolvePlaceCoords(normFrom, allKnownStops);
-    let userToCoords = resolvePlaceCoords(normTo, allKnownStops);
-
-    if (busSrcCoords && busDestCoords && userFromCoords && userToCoords) {
-      let dLat = busDestCoords.lat - busSrcCoords.lat;
-      let dLon = busDestCoords.lon - busSrcCoords.lon;
-      let tripDistSq = (dLat * dLat) + (dLon * dLon);
-
-      if (tripDistSq > 0) {
-        let progFrom = (((userFromCoords.lat - busSrcCoords.lat) * dLat + (userFromCoords.lon - busSrcCoords.lon) * dLon) / tripDistSq);
-        let progTo = (((userToCoords.lat - busSrcCoords.lat) * dLat + (userToCoords.lon - busSrcCoords.lon) * dLon) / tripDistSq);
-
-        if (progFrom < progTo && progFrom >= -0.15 && progTo <= 1.15) {
-          let fTime = estimateStopTime(userFromCoords, busSrcCoords, busDestCoords, bus.depTime, bus.arrTime) || bus.depTime || "--";
-          let tTime = estimateStopTime(userToCoords, busSrcCoords, busDestCoords, bus.depTime, bus.arrTime) || bus.arrTime || "--";
-          let fMins = timeToMinutes(fTime) || 9999;
-
-          return {
-            bus: bus,
-            fromDisplayName: normFrom,
-            fromTimeStr: formatCleanTime(fTime),
-            toDisplayName: normTo,
-            toTimeStr: formatCleanTime(tTime),
-            sortMinutes: fMins
-          };
-        }
-      }
-    }
-
+    // বাসের রুটের মধ্যে From ও To ক্রমিকভাবে না থাকলে বাসটি বাতিল করা হবে (অন্য রুটের বাস দেখাবে না)
     return null;
   }
 
