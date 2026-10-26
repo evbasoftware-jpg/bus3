@@ -1523,14 +1523,14 @@
 
 <!-- ৫) কন্ডাক্টর ও হেল্পলাইন নম্বর (Emergency Helpline) মডাল -->
 <div id="helplineModal" class="app-feature-modal hidden">
-  <div class="feature-modal-content">
+  <div class="feature-modal-content" style="max-height:85vh;overflow-y:auto;">
     <div class="feature-modal-header">
       <div class="feature-modal-title">📞 কন্ডাক্টর ও জরুরি হেল্পলাইন নম্বর</div>
       <button type="button" class="modal-close-x" onclick="closeHelplineModal()">&times;</button>
     </div>
 
     <!-- বাসের কন্ডাক্টর / হেল্পলাইন নম্বর -->
-    <div class="helpline-item" style="background:#fefce8;border-color:#fde047;">
+    <div class="helpline-item" style="background:#fefce8;border-color:#fde047;margin-bottom:12px;">
       <div class="helpline-info">
         <span class="helpline-title">🚌 বাসের কন্ডাক্টর / হেল্পলাইন</span>
         <span class="helpline-number" id="conductorDisplayNumber">+91 98321 00000</span>
@@ -1538,37 +1538,93 @@
       <a id="conductorCallLink" href="tel:+919832100000" class="btn-call-direct">📞 কল করুন</a>
     </div>
 
-    <!-- জরুরি হেল্পলাইনসমূহ -->
+    <!-- ব্যবহারকারীর নির্দেশিত ১১টি জরুরি হেল্পলাইনসমূহ -->
     <div class="helpline-item">
       <div class="helpline-info">
-        <span class="helpline-title">🚨 জাতীয় জরুরি নম্বর (পুলিশ)</span>
-        <span class="helpline-number">১১২ (112 - National Emergency)</span>
+        <span class="helpline-title">🧓 Senior Citizens Helpline</span>
+        <span class="helpline-number">011-20893999 / 14567</span>
+      </div>
+      <a href="tel:14567" class="btn-call-direct">📞 কল করুন</a>
+    </div>
+
+    <div class="helpline-item">
+      <div class="helpline-info">
+        <span class="helpline-title">♿ Persons with Disabilities Helpline</span>
+        <span class="helpline-number">14456</span>
+      </div>
+      <a href="tel:14456" class="btn-call-direct">📞 কল করুন</a>
+    </div>
+
+    <div class="helpline-item">
+      <div class="helpline-info">
+        <span class="helpline-title">🧒 Child Help Line</span>
+        <span class="helpline-number">1098</span>
+      </div>
+      <a href="tel:1098" class="btn-call-direct">📞 কল করুন</a>
+    </div>
+
+    <div class="helpline-item">
+      <div class="helpline-info">
+        <span class="helpline-title">👩 National Commission for Women Helpline</span>
+        <span class="helpline-number">7827170170</span>
+      </div>
+      <a href="tel:7827170170" class="btn-call-direct">📞 কল করুন</a>
+    </div>
+
+    <div class="helpline-item">
+      <div class="helpline-info">
+        <span class="helpline-title">🛡️ Women Helpline Number</span>
+        <span class="helpline-number">181</span>
+      </div>
+      <a href="tel:181" class="btn-call-direct">📞 কল করুন</a>
+    </div>
+
+    <div class="helpline-item">
+      <div class="helpline-info">
+        <span class="helpline-title">🚗 Road Accident Helpline</span>
+        <span class="helpline-number">1073</span>
+      </div>
+      <a href="tel:1073" class="btn-call-direct">📞 কল করুন</a>
+    </div>
+
+    <div class="helpline-item">
+      <div class="helpline-info">
+        <span class="helpline-title">🚨 Integrated Helpline (ERSS Police, Fire & Rescue, Health services etc)</span>
+        <span class="helpline-number">112</span>
       </div>
       <a href="tel:112" class="btn-call-direct">📞 কল করুন</a>
     </div>
 
     <div class="helpline-item">
       <div class="helpline-info">
-        <span class="helpline-title">🚑 জরুরি অ্যাম্বুলেন্স সার্ভিস</span>
-        <span class="helpline-number">১০৮ / ১০২ (108 / 102)</span>
+        <span class="helpline-title">🚑 National Ambulance Service (NAS)</span>
+        <span class="helpline-number">102</span>
       </div>
-      <a href="tel:108" class="btn-call-direct">📞 কল করুন</a>
+      <a href="tel:102" class="btn-call-direct">📞 কল করুন</a>
     </div>
 
     <div class="helpline-item">
       <div class="helpline-info">
-        <span class="helpline-title">👩‍🦰 নারী ও শিশু সুরক্ষা হেল্পলাইন</span>
-        <span class="helpline-number">১০৯১ / ১৮১ (1091 / 181)</span>
+        <span class="helpline-title">👮 Police Helpline</span>
+        <span class="helpline-number">100</span>
       </div>
-      <a href="tel:1091" class="btn-call-direct">📞 কল করুন</a>
+      <a href="tel:100" class="btn-call-direct">📞 কল করুন</a>
     </div>
 
     <div class="helpline-item">
       <div class="helpline-info">
-        <span class="helpline-title">🛑 রাজ্য পরিবহন দপ্তর ও যাত্রী অভিযোগ</span>
-        <span class="helpline-number">১৮০০-৩৪৫-৩২৩২ (1800 345 3232)</span>
+        <span class="helpline-title">🚒 Fire Helpline</span>
+        <span class="helpline-number">101</span>
       </div>
-      <a href="tel:18003453232" class="btn-call-direct">📞 কল করুন</a>
+      <a href="tel:101" class="btn-call-direct">📞 কল করুন</a>
+    </div>
+
+    <div class="helpline-item">
+      <div class="helpline-info">
+        <span class="helpline-title">🧭 Tourist Helpline No</span>
+        <span class="helpline-number">1800-11-1363 / 1363</span>
+      </div>
+      <a href="tel:1363" class="btn-call-direct">📞 কল করুন</a>
     </div>
   </div>
 </div>
@@ -2756,7 +2812,14 @@
       let bRes = await fetch(`${API_URL}?action=getBuses`);
       let bData = await bRes.json();
       if (bData && bData.buses && bData.buses.length > 0) {
-        globalBusesCatalog = bData.buses;
+        // ৩ নম্বর নির্দেশনা: Status কলমে 'active' থাকলে তবেই তালিকায় থাকবে
+        globalBusesCatalog = bData.buses.filter(b => {
+          let st = b.status !== undefined ? b.status : b.Status;
+          if (st !== undefined && st !== null) {
+            return String(st).trim().toLowerCase() === "active";
+          }
+          return true; // আগের এন্ট্রির ক্ষেত্রে ডিফল্ট সক্রিয় রাখা
+        });
       }
     } catch (_) {}
     isCatalogLoading = false;
@@ -2774,6 +2837,12 @@
     let seen = new Set();
 
     for (let b of globalBusesCatalog) {
+      // স্ট্যাটাস সক্রিয় না থাকলে বাদ দিন
+      let st = b.status !== undefined ? b.status : b.Status;
+      if (st !== undefined && st !== null && String(st).trim().toLowerCase() !== "active") {
+        continue;
+      }
+
       let bNum = String(b.number || '').trim().toUpperCase();
       let bName = String(b.name || '').trim().toUpperCase();
       let bCleanNum = bNum.replace(/[^A-Z0-9]/g, '');
@@ -2987,9 +3056,17 @@
         return;
       }
 
+      let activeBuses = data.buses.filter(b => {
+        let st = b.status !== undefined ? b.status : b.Status;
+        if (st !== undefined && st !== null) {
+          return String(st).trim().toLowerCase() === "active";
+        }
+        return true;
+      });
+
       let uniqueTrips = [];
       let seenTrips = new Set();
-      data.buses.forEach(b => {
+      activeBuses.forEach(b => {
         let tripKey = `${b.id || ''}_${b.number}_${b.source}_${b.depTime}_${b.dest}_${b.arrTime}`;
         if (!seenTrips.has(tripKey)) {
           seenTrips.add(tripKey);
@@ -3453,6 +3530,38 @@
         return;
       }
 
+      // পুরনো দিনের বা বাসি জিপিএস সিগন্যাল যাচাই (যদি তারিখ আজকের না হয় এবং এই ফোনে স্টাফ মোড না থাকে):
+      let isStale = false;
+      if (b.lastUpdate) {
+        try {
+          let parts = String(b.lastUpdate).split(",");
+          if (parts.length >= 2) {
+            let dateParts = parts[0].trim().split("/");
+            if (dateParts.length === 3) {
+              let day = parseInt(dateParts[0], 10);
+              let month = parseInt(dateParts[1], 10) - 1;
+              let year = parseInt(dateParts[2], 10);
+              let dObj = new Date(year, month, day);
+              let now = new Date();
+              if (dObj.getFullYear() !== now.getFullYear() || dObj.getMonth() !== now.getMonth() || dObj.getDate() !== now.getDate()) {
+                isStale = true;
+              }
+            }
+          }
+        } catch (_) {}
+      }
+
+      if (isStale && !isStaffModeActive && !isPassengerOnboardBus) {
+        locBox.innerText = `বাসের লাইভ জিপিএস সিগন্যালে ড্রাইভার এখনও যুক্ত হননি (${busNo})`;
+        if (busMarker) {
+          map.removeLayer(busMarker);
+          busMarker = null;
+        }
+        busPos = null;
+        updateDistanceAndTracking();
+        return;
+      }
+
       // ২ ও ৩ নম্বর ত্রুটি স্থায়ী সমাধান:
       // যাত্রী মোডে (সাধারণ যাত্রী) থাকাকালীন যদি সার্ভার থেকে আগের পুরনো ভুল কো-অর্ডিনেট আসে যা যাত্রীর বর্তমান অবস্থানের সমান:
       if (!isStaffModeActive && userPos) {
@@ -3513,7 +3622,8 @@
       depTime: srcTime,
       dest: document.getElementById("dest").value,
       arrTime: destTime,
-      selectedStops: selectedStops
+      selectedStops: selectedStops,
+      status: "active"
     };
 
     if (!payload.busNumber || !payload.source) return showAppAlert("প্রয়োজনীয় তথ্য পূরণ করুন!");
@@ -3786,6 +3896,101 @@
     let a = 0.5 - Math.cos((lat2 - lat1) * p) / 2 + Math.cos(lat1 * p) * Math.cos(lat2 * p) * (1 - Math.cos((lon2 - lon1) * p)) / 2;
     return 2 * R * Math.asin(Math.sqrt(a));
   }
+
+  function distanceToSegmentMeters(pLat, pLon, aLat, aLon, bLat, bLon) {
+    const R = 6371000;
+    const rad = Math.PI / 180;
+    const cosLat = Math.cos(((aLat + bLat) / 2) * rad);
+
+    const ax = 0, ay = 0;
+    const bx = (bLon - aLon) * rad * R * cosLat;
+    const by = (bLat - aLat) * rad * R;
+    const px = (pLon - aLon) * rad * R * cosLat;
+    const py = (pLat - aLat) * rad * R;
+
+    const dx = bx - ax;
+    const dy = by - ay;
+    const lenSq = dx * dx + dy * dy;
+
+    if (lenSq === 0) return Math.sqrt(px * px + py * py);
+
+    let t = ((px - ax) * dx + (py - dy) * dy) / lenSq;
+    if (t < 0) return Math.sqrt(px * px + py * py);
+    if (t > 1) {
+      const ex = px - bx, ey = py - by;
+      return Math.sqrt(ex * ex + ey * ey);
+    }
+    const projX = ax + t * dx, projY = ay + t * dy;
+    return Math.sqrt((px - projX) ** 2 + (py - projY) ** 2);
+  }
+
+  // বাসের রুটের ভেতরের স্টপ কি না তা নিশ্চিতকরণ (রুটের বাইরের স্টপেজে দাঁড়িয়ে বাস সিলেক্ট করলে পপআপ আসবে না)
+  function isStopOnBusRoute(stopObj, bus) {
+    if (!stopObj || !bus) return false;
+    let sLat = Number(stopObj.latitude || stopObj.lat);
+    let sLon = Number(stopObj.longitude || stopObj.lon);
+    if (isNaN(sLat) || isNaN(sLon) || sLat === 0) return false;
+
+    let routePoints = [];
+
+    function findStopCoord(name) {
+      if (!name) return null;
+      let cName = cleanStopName(name);
+      if (currentBusStopsList && currentBusStopsList.length > 0) {
+        let f = currentBusStopsList.find(st => cleanStopName(st.name || st.stopName) === cName);
+        if (f && !isNaN(Number(f.lat || f.latitude))) {
+          return { lat: Number(f.lat || f.latitude), lon: Number(f.lon || f.longitude) };
+        }
+      }
+      if (masterStopsList && masterStopsList.length > 0) {
+        let f = masterStopsList.find(st => cleanStopName(st.name || st.stopName) === cName);
+        if (f && !isNaN(Number(f.lat || f.latitude))) {
+          return { lat: Number(f.lat || f.latitude), lon: Number(f.lon || f.longitude) };
+        }
+      }
+      return null;
+    }
+
+    if (bus.source) {
+      let p = findStopCoord(bus.source);
+      if (p) routePoints.push(p);
+    }
+
+    let rawStops = bus.selectedStops || [];
+    if (typeof rawStops === "string") rawStops = rawStops.split(",");
+    rawStops.forEach(st => {
+      let p = findStopCoord(st);
+      if (p) routePoints.push(p);
+    });
+
+    if (bus.dest) {
+      let p = findStopCoord(bus.dest);
+      if (p) routePoints.push(p);
+    }
+
+    if (routePoints.length === 0) {
+      return false; // রুটের কোনো কো-অর্ডিনেট না থাকলে অনুমান করে পপআপ দেওয়া যাবে না
+    }
+
+    if (routePoints.length === 1) {
+      return getDistanceMeters(sLat, sLon, routePoints[0].lat, routePoints[0].lon) <= 1500;
+    }
+
+    // বাসের প্রতিটি পরপর স্টপের মধ্যবর্তী করিডোর থেকে দূরত্ব হিসাব (সর্বোচ্চ ১৫০০ মিটার)
+    const MAX_CORRIDOR_METERS = 1500;
+    for (let i = 0; i < routePoints.length - 1; i++) {
+      let dist = distanceToSegmentMeters(
+        sLat, sLon,
+        routePoints[i].lat, routePoints[i].lon,
+        routePoints[i + 1].lat, routePoints[i + 1].lon
+      );
+      if (dist <= MAX_CORRIDOR_METERS) {
+        return true;
+      }
+    }
+
+    return false;
+  }
   
   function swapLocations() {
     const fromInput = document.getElementById("searchFrom");
@@ -3826,7 +4031,8 @@
 
       let dist = getDistanceMeters(busLat, busLon, sLat, sLon);
 
-      if (dist <= 50) {
+      // ১ নম্বর নির্দেশনা: শুধুমাত্র যদি স্টপটি এই বাসের রুটের করিডোরের ভেতরের কোনো স্টপ হয়, তবেই শনাক্তকরণ পপআপ আসবে
+      if (dist <= 50 && isStopOnBusRoute(s, trackingBus)) {
         foundNearby = { stop: s, name: sName, cleanName: cleanName, lat: sLat, lon: sLon };
         break;
       }
