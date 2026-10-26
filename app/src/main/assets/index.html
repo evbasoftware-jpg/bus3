@@ -339,15 +339,14 @@
 
     #map {
       height: 380px;
-      min-height: 180px;
-      border-radius: 12px 12px 0 0;
+      min-height: 250px;
+      border-radius: 12px;
       margin-top: 4px;
       border: 2px solid #90caf9;
-      border-bottom: 1px solid #bfdbfe;
       width: 100%;
       z-index: 10;
       box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
-      transition: height 0.2s ease-out;
+      touch-action: pan-x pan-y pinch-zoom;
     }
     .live-map-wrapper {
       position: relative;
@@ -1400,31 +1399,12 @@
     <div class="card"><b>📶 GPS সংকেত:</b> <span id="infoConfidence">--</span></div>
   </div>
 
-  <!-- লাইভ ম্যাপ সেকশন: ফ্লেক্সিবল সাইজ ও নিয়ন্ত্রণ বার (ছোট, মাঝারি, বড় বা ইচ্ছামত ড্র্যাগ) -->
-  <div class="map-size-toolbar">
-    <span style="font-size:12px;font-weight:700;color:#1e3a8a;display:inline-flex;align-items:center;gap:4px;">
-      🗺️ ম্যাপের আকার (Map Size):
-    </span>
-    <div class="map-size-buttons">
-      <button type="button" class="btn-map-size" id="btnMapSmall" onclick="setMapHeight(220, this)" title="ছোট সাইজ">ছোট (220px)</button>
-      <button type="button" class="btn-map-size active" id="btnMapMedium" onclick="setMapHeight(380, this)" title="মাঝারি সাইজ">মাঝারি (380px)</button>
-      <button type="button" class="btn-map-size" id="btnMapLarge" onclick="setMapHeight(550, this)" title="বড় সাইজ">বড় (550px)</button>
-      <button type="button" class="btn-map-size btn-fullscreen-toggle" id="btnMapFullscreen" onclick="toggleMapFullscreen()" title="ফুলস্ক্রিন ম্যাপ">⛶ ফুলস্ক্রিন</button>
-    </div>
-  </div>
-
+  <!-- লাইভ ম্যাপ সেকশন (দুই আঙুল দিয়ে সহজে জুম ও প্যান করা যাবে) -->
   <div class="live-map-wrapper" id="liveMapWrapper">
     <div id="map"></div>
-    <div class="map-resize-drag-handle" id="mapDragHandle" title="ম্যাপের উচ্চতা ছোট বা বড় করতে টেনে নিন">
-      <div class="drag-bar-pill"></div>
-      <span class="drag-handle-hint">⇅ টেনে ম্যাপের আকার ছোট বা বড় করুন (Drag to resize)</span>
-    </div>
     <div class="map-floating-bar" style="justify-content: flex-end;">
       <button id="focusViewBtn" class="btn-map-focus" onclick="focusBothUserAndVehicle()" title="ব্যবহারকারী ও যানের অবস্থান দেখুন">
         🎯 অবস্থান দেখান
-      </button>
-      <button id="fullscreenExitBtn" class="btn-map-focus hidden" onclick="toggleMapFullscreen()" style="background:#dc2626;" title="ফুলস্ক্রিন থেকে বের হন">
-        ✕ ফুলস্ক্রিন বন্ধ
       </button>
     </div>
   </div>
@@ -1965,8 +1945,20 @@
 
   let map = L.map('map', {
     zoomControl: true,
-    tap: false
+    tap: false,
+    touchZoom: true,
+    scrollWheelZoom: true,
+    doubleClickZoom: true,
+    dragging: true
   }).setView([23.82, 87.75], 11);
+
+  // ৪ নম্বর নির্দেশনা: দুই আঙুল দিয়ে জুম/প্যান করলে সাথে সাথে আগের অবস্থানে ফিরে যাবে না
+  let userInteractedWithMap = false;
+  let hasFittedBoundsForBusNumber = null;
+
+  map.on('dragstart zoomstart movestart touchstart', () => {
+    userInteractedWithMap = true;
+  });
 
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { 
     maxZoom: 19,
@@ -1984,119 +1976,34 @@
     try { map.invalidateSize(); } catch(_) {}
   });
 
-  // ম্যাপের সাইজ পরিবর্তন (ছোট, মাঝারি, বড়)
-  function setMapHeight(newHeight, btn) {
-    let mapDiv = document.getElementById("map");
-    let wrapper = document.getElementById("liveMapWrapper");
-    if (!mapDiv) return;
+  // ২ নম্বর নির্দেশনা: বাসের রুট ও বর্তমান অবস্থান টাইমলাইন স্ক্রল ট্র্যাকিং (১ মিনিট অপেক্ষা করবে)
+  let userLastTimelineScrollTime = 0;
+  let isTimelineAutoScrolling = false;
 
-    if (wrapper && wrapper.classList.contains("map-fullscreen-mode")) {
-      toggleMapFullscreen();
+  function setupTimelineScrollListeners() {
+    let tc = document.querySelector(".route-timeline-container");
+    if (!tc || tc._hasScrollListeners) return;
+    tc._hasScrollListeners = true;
+
+    function onUserTouchTimeline() {
+      userLastTimelineScrollTime = Date.now();
     }
 
-    mapDiv.style.height = newHeight + "px";
-
-    document.querySelectorAll(".btn-map-size").forEach(b => {
-      if (b.id !== "btnMapFullscreen") b.classList.remove("active");
-    });
-    if (btn) btn.classList.add("active");
-
-    setTimeout(() => {
-      try { map.invalidateSize(); } catch(_) {}
-    }, 200);
-  }
-
-  // ম্যাপ ফুলস্ক্রিন টগল
-  function toggleMapFullscreen() {
-    let wrapper = document.getElementById("liveMapWrapper");
-    let btnFs = document.getElementById("btnMapFullscreen");
-    let exitBtn = document.getElementById("fullscreenExitBtn");
-    if (!wrapper) return;
-
-    let isFs = wrapper.classList.toggle("map-fullscreen-mode");
-    if (btnFs) {
-      if (isFs) {
-        btnFs.innerHTML = "✕ ফুলস্ক্রিন বন্ধ";
-        btnFs.classList.add("active");
-      } else {
-        btnFs.innerHTML = "⛶ ফুলস্ক্রিন";
-        btnFs.classList.remove("active");
+    tc.addEventListener("touchstart", onUserTouchTimeline, { passive: true });
+    tc.addEventListener("touchmove", onUserTouchTimeline, { passive: true });
+    tc.addEventListener("mousedown", onUserTouchTimeline);
+    tc.addEventListener("wheel", onUserTouchTimeline, { passive: true });
+    tc.addEventListener("scroll", () => {
+      if (!isTimelineAutoScrolling) {
+        userLastTimelineScrollTime = Date.now();
       }
-    }
-    if (exitBtn) {
-      if (isFs) exitBtn.classList.remove("hidden");
-      else exitBtn.classList.add("hidden");
-    }
-
-    setTimeout(() => {
-      try { map.invalidateSize(); } catch(_) {}
-    }, 150);
-    setTimeout(() => {
-      try { map.invalidateSize(); } catch(_) {}
-    }, 350);
-  }
-
-  // ম্যাপ ড্র্যাগ রিসাইজ (টাচ বা মাউস দিয়ে টেনে ছোট বা বড় করা)
-  function initMapDragResize() {
-    let handle = document.getElementById("mapDragHandle");
-    let mapDiv = document.getElementById("map");
-    let wrapper = document.getElementById("liveMapWrapper");
-    if (!handle || !mapDiv) return;
-
-    let startY = 0;
-    let startHeight = 380;
-    let isDragging = false;
-
-    function onPointerDown(e) {
-      if (wrapper && wrapper.classList.contains("map-fullscreen-mode")) return;
-      isDragging = true;
-      startY = e.clientY || (e.touches && e.touches[0] ? e.touches[0].clientY : 0);
-      startHeight = mapDiv.offsetHeight;
-      document.body.style.userSelect = "none";
-      document.addEventListener("pointermove", onPointerMove);
-      document.addEventListener("pointerup", onPointerUp);
-      document.addEventListener("touchmove", onTouchMove, { passive: false });
-      document.addEventListener("touchend", onPointerUp);
-    }
-
-    function onPointerMove(e) {
-      if (!isDragging) return;
-      let curY = e.clientY || (e.touches && e.touches[0] ? e.touches[0].clientY : 0);
-      let diff = curY - startY;
-      let newH = Math.max(160, Math.min(800, startHeight + diff));
-      mapDiv.style.height = newH + "px";
-      try { map.invalidateSize(); } catch(_) {}
-    }
-
-    function onTouchMove(e) {
-      if (!isDragging) return;
-      e.preventDefault();
-      let curY = (e.touches && e.touches[0] ? e.touches[0].clientY : 0);
-      let diff = curY - startY;
-      let newH = Math.max(160, Math.min(800, startHeight + diff));
-      mapDiv.style.height = newH + "px";
-      try { map.invalidateSize(); } catch(_) {}
-    }
-
-    function onPointerUp() {
-      if (!isDragging) return;
-      isDragging = false;
-      document.body.style.userSelect = "";
-      document.removeEventListener("pointermove", onPointerMove);
-      document.removeEventListener("pointerup", onPointerUp);
-      document.removeEventListener("touchmove", onTouchMove);
-      document.removeEventListener("touchend", onPointerUp);
-      try { map.invalidateSize(); } catch(_) {}
-    }
-
-    handle.addEventListener("pointerdown", onPointerDown);
-    handle.addEventListener("touchstart", onPointerDown, { passive: true });
+    }, { passive: true });
   }
 
   if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", initMapDragResize);
+    document.addEventListener("DOMContentLoaded", setupTimelineScrollListeners);
   } else {
-    initMapDragResize();
+    setupTimelineScrollListeners();
   }
 
   let busMarker = null, userMarker = null, routeLine = null;
@@ -2541,6 +2448,7 @@
 
   // এই বোতামে ক্লিক করলে ম্যাপ ব্যবহারকারী এবং যানের অবস্থান স্ক্রিনে কেন্দ্রীভূত করবে
   function focusBothUserAndVehicle() {
+    userInteractedWithMap = false;
     try { map.invalidateSize(); } catch(_) {}
     if (userPos && busPos) {
       let bounds = L.latLngBounds([
@@ -2894,9 +2802,11 @@
       stopRoutePolyline = null;
     }
 
-    // যদি লাইভ বাস অবস্থান না থাকে অথবা প্রথমবার লোড হয়, তাহলে পুরো রুটের সব স্টপকে স্ক্রিনের মাঝে ফিট করুন
-    if (latLngs.length > 0 && (!busLat || !busLon)) {
+    // ৪ নম্বর নির্দেশনা: দুই আঙুল দিয়ে ইচ্ছামত ছোট বা বড় করা যাবে, স্বয়ংক্রিয়ভাবে আগের অবস্থানে ফিরে যাবে না
+    let currentBusId = trackingBus ? (trackingBus.number || trackingBus.name) : null;
+    if (latLngs.length > 0 && hasFittedBoundsForBusNumber !== currentBusId && !userInteractedWithMap) {
       try {
+        hasFittedBoundsForBusNumber = currentBusId;
         let bounds = L.latLngBounds(latLngs);
         map.fitBounds(bounds.pad(0.18));
       } catch(_) {}
@@ -3010,20 +2920,31 @@
       indicator.style.left = "40px";
     }
 
-    setTimeout(() => {
-      let activeElem = document.getElementById("currentActiveTimelineNode");
-      if (activeElem && timelineContainer) {
-        let containerWidth = timelineContainer.clientWidth;
-        let nodeLeft = activeElem.offsetLeft;
-        let nodeWidth = activeElem.clientWidth;
+    // ২ নম্বর নির্দেশনা: বাসের রুট অংশে আঙুল দিয়ে টানলে স্বাধীনভাবে দেখা যাবে, ১ মিনিট পার না হওয়া পর্যন্ত স্বয়ংক্রিয় স্ক্রল হবে না
+    setupTimelineScrollListeners();
 
-        let scrollTarget = nodeLeft - (containerWidth / 2) + (nodeWidth / 2);
-        timelineContainer.scrollTo({
-          left: scrollTarget,
-          behavior: 'smooth'
-        });
-      }
-    }, 500);
+    let nowTime = Date.now();
+    let timeSinceUserScroll = nowTime - userLastTimelineScrollTime;
+    let shouldAutoScroll = (userLastTimelineScrollTime === 0) || (timeSinceUserScroll >= 60000);
+
+    if (shouldAutoScroll) {
+      setTimeout(() => {
+        let activeElem = document.getElementById("currentActiveTimelineNode");
+        if (activeElem && timelineContainer) {
+          let containerWidth = timelineContainer.clientWidth;
+          let nodeLeft = activeElem.offsetLeft;
+          let nodeWidth = activeElem.clientWidth;
+
+          let scrollTarget = nodeLeft - (containerWidth / 2) + (nodeWidth / 2);
+          isTimelineAutoScrolling = true;
+          timelineContainer.scrollTo({
+            left: scrollTarget,
+            behavior: 'smooth'
+          });
+          setTimeout(() => { isTimelineAutoScrolling = false; }, 600);
+        }
+      }, 500);
+    }
   }
 
   function calculateETAString(distKm, speed) {
@@ -3117,8 +3038,10 @@
           };
           let busNum = String(getCol(2)).trim();
           if (!busNum) return;
-          let status = String(getCol(11)).trim().toLowerCase();
-          if (getCol(11) && status !== "active") return;
+          let rawStatus = getCol(11);
+          let status = String(rawStatus || "").trim().toLowerCase();
+          // ৩ নম্বর নির্দেশনা: যদি Status কলম থাকে কিন্তু তাতে 'active' না থাকে (বা ডিলিট করা হয়), তবে বাসটি বাদ দিন
+          if (r.c.length > 11 && status !== "active") return;
 
           let rawStops = String(getCol(10) || "");
           let selectedStops = rawStops.split(",").map(s => cleanStopName(s)).filter(Boolean);
@@ -3550,14 +3473,30 @@
       allowed = rawAllowed.map(s => cleanStopName(s)).filter(Boolean);
     }
 
+    let destClean = cleanStopName(bus.dest);
+
     allowed.forEach(s => {
-      if (s && !orderedStops.includes(s)) orderedStops.push(s);
+      if (s && !orderedStops.includes(s) && s !== destClean) {
+        orderedStops.push(s);
+      }
     });
 
-    let destClean = cleanStopName(bus.dest);
-    if (destClean && !orderedStops.includes(destClean)) orderedStops.push(destClean);
+    if (destClean && !orderedStops.includes(destClean)) {
+      orderedStops.push(destClean);
+    }
 
-    // ১. প্রত্যক্ষ রুট স্টপেজ ক্রমানুসারে অনুসন্ধান (Direct Sequential Stop Match)
+    // স্টপ ম্যাচিং হেল্পার (হুবহু মিল অথবা পূর্ণাঙ্গ শব্দ/টোকেন মিল)
+    function isStopEqual(q, s) {
+      if (!q || !s) return false;
+      let a = cleanStopName(q);
+      let b = cleanStopName(s);
+      if (a === b) return true;
+      if (a.startsWith(b + " ") || a.endsWith(" " + b) || a.includes(" " + b + " ")) return true;
+      if (b.startsWith(a + " ") || b.endsWith(" " + a) || b.includes(" " + a + " ")) return true;
+      return false;
+    }
+
+    // প্রত্যক্ষ রুট স্টপেজ ক্রমানুসারে অনুসন্ধান (Direct Sequential Stop Match)
     function findStopIndexInList(query, list) {
       if (!query || !list || list.length === 0) return -1;
       let q = cleanStopName(query);
@@ -3568,21 +3507,38 @@
       if (exact !== -1) return exact;
 
       // ২. শব্দ/টোকেন মিল (যেমন "SURI BUS STAND" এর সাথে "SURI")
-      let partial = list.findIndex(s => {
-        let item = cleanStopName(s);
-        if (item === q) return true;
-        if (item.startsWith(q + " ") || item.endsWith(" " + q) || item.includes(" " + q + " ")) return true;
-        if (q.startsWith(item + " ") || q.endsWith(" " + item) || q.includes(" " + item + " ")) return true;
-        return false;
-      });
+      let partial = list.findIndex(s => isStopEqual(q, s));
       return partial;
     }
 
-    let fromIdx = findStopIndexInList(normFrom, orderedStops);
-    let toIdx = findStopIndexInList(normTo, orderedStops);
+    // ব্যবহারকারীর নির্দেশনা:
+    // ধাপ ১: "Buses" শিটে source এবং Destination এর সঙ্গে from এবং to এর মিল রেখে যাচাই করা
+    let matchSrc = isStopEqual(normFrom, srcClean);
+    let matchDst = isStopEqual(normTo, destClean);
 
-    // কেবল এবং কেবল যদি From এবং To উভয়ই বাসের রুটে বিদ্যমান থাকে এবং বাসের গন্তব্য অভিমুখে From এর পর To আসে
-    if (fromIdx !== -1 && toIdx !== -1 && fromIdx < toIdx) {
+    let fromIdx = -1;
+    let toIdx = -1;
+
+    if (matchSrc && matchDst) {
+      fromIdx = 0;
+      toIdx = orderedStops.length - 1;
+    } else if (matchSrc) {
+      fromIdx = 0;
+      toIdx = findStopIndexInList(normTo, orderedStops);
+    } else if (matchDst) {
+      toIdx = orderedStops.length - 1;
+      fromIdx = findStopIndexInList(normFrom, orderedStops);
+    } 
+    // ধাপ ২: source ও Destination এর মিল না পাওয়া গেলে "Selected_Stops" কলমে from এবং to খোঁজা
+    else {
+      fromIdx = findStopIndexInList(normFrom, orderedStops);
+      toIdx = findStopIndexInList(normTo, orderedStops);
+    }
+
+    // ধাপ ৩: From অথবা To না পাওয়া গেলে অথবা From এর অবস্থান To এর পরে হলে অন্য রুটের বাস হিসাবে সম্পূর্ণ বাতিল
+    if (fromIdx === -1 || toIdx === -1 || fromIdx >= toIdx) {
+      return null;
+    }
       let fromDisplayName = orderedStops[fromIdx];
       let toDisplayName = orderedStops[toIdx];
 
@@ -3616,10 +3572,6 @@
         toTimeStr: formatCleanTime(toTimeStr),
         sortMinutes: fMins !== null ? fMins : (depMins !== null ? depMins : 9999)
       };
-    }
-
-    // বাসের রুটের মধ্যে From ও To ক্রমিকভাবে না থাকলে বাসটি বাতিল করা হবে (অন্য রুটের বাস দেখাবে না)
-    return null;
   }
 
   function selectBus(b, searchResultItem) {
@@ -4566,58 +4518,72 @@
     return null;
   }
 
+  // ১ নম্বর নির্দেশনা: ম্যাপের মত স্টপেজগুলো পরপর সাজিয়ে দেওয়া (Source -> Selected_Stops -> Destination)
   function sortStopsAlongTrip(stops, bus) {
-    if (!stops || stops.length === 0) return [];
+    if (!stops || stops.length <= 1) return stops || [];
 
-    let valid = stops.filter(s => {
+    let srcName = cleanStopName((bus && (bus.source || bus.searchFrom)) || (document.getElementById("searchFrom") ? document.getElementById("searchFrom").value.trim() : ""));
+    let destName = cleanStopName((bus && (bus.dest || bus.searchTo)) || (document.getElementById("searchTo") ? document.getElementById("searchTo").value.trim() : ""));
+
+    let stopsWithCoords = [];
+    let stopsWithoutCoords = [];
+
+    stops.forEach((s, originalIndex) => {
       let lat = Number(s.latitude || s.lat);
       let lon = Number(s.longitude || s.lon);
-      return !isNaN(lat) && !isNaN(lon) && lat !== 0;
-    });
-
-    let uniqueStops = [];
-    let seenNames = new Set();
-    valid.forEach(s => {
-      let name = cleanStopName(s.name || s.stopName);
-      if (!seenNames.has(name)) {
-        seenNames.add(name);
-        uniqueStops.push(s);
+      if (!isNaN(lat) && !isNaN(lon) && lat !== 0) {
+        stopsWithCoords.push({ ...s, latitude: lat, longitude: lon, lat: lat, lon: lon, originalIndex: originalIndex });
+      } else {
+        stopsWithoutCoords.push({ ...s, originalIndex: originalIndex });
       }
     });
-    valid = uniqueStops;
 
-    if (valid.length <= 1) return valid;
+    if (stopsWithCoords.length <= 1) return stops;
 
-    let srcName = cleanStopName(document.getElementById("searchFrom").value.trim() || (bus && bus.source));
-    let destName = cleanStopName(document.getElementById("searchTo").value.trim() || (bus && bus.dest));
-
-    let allAvailable = [...valid, ...(masterStopsList || [])];
-    let srcCoords = resolvePlaceCoords(srcName, allAvailable) || { lat: Number(valid[0].latitude || valid[0].lat), lon: Number(valid[0].longitude || valid[0].lon) };
+    let allAvailable = [...stopsWithCoords, ...(masterStopsList || []), ...(currentBusStopsList || [])];
+    let srcCoords = resolvePlaceCoords(srcName, allAvailable) || { lat: stopsWithCoords[0].lat, lon: stopsWithCoords[0].lon };
     let destCoords = resolvePlaceCoords(destName, allAvailable);
-
-    let sorted = [];
-    let remaining = [...valid];
-    let currentPoint = { lat: srcCoords.lat, lon: srcCoords.lon };
-
-    let srcIdx = remaining.findIndex(s => cleanStopName(s.name || s.stopName) === srcName);
-    if (srcIdx !== -1) {
-      sorted.push(remaining.splice(srcIdx, 1)[0]);
-      currentPoint = { lat: Number(sorted[0].latitude || sorted[0].lat), lon: Number(sorted[0].longitude || sorted[0].lon) };
+    if (!destCoords && stopsWithCoords.length > 0) {
+      let last = stopsWithCoords[stopsWithCoords.length - 1];
+      destCoords = { lat: last.lat, lon: last.lon };
     }
 
+    let sorted = [];
+    let remaining = [];
+    let destStopObj = null;
+
+    // গন্তব্য স্টপকে আলাদা রেখে রুট ক্রমানুসারে একদম শেষে রাখা
+    stopsWithCoords.forEach(s => {
+      let cName = cleanStopName(s.name || s.stopName);
+      if (destName && cName === destName && !destStopObj) {
+        destStopObj = s;
+      } else {
+        remaining.push(s);
+      }
+    });
+
+    let currentPoint = { lat: srcCoords.lat, lon: srcCoords.lon };
+
+    // প্রারম্ভিক স্টপ দিয়ে শুরু
+    let srcIdx = remaining.findIndex(s => cleanStopName(s.name || s.stopName) === srcName);
+    if (srcIdx !== -1) {
+      let sObj = remaining.splice(srcIdx, 1)[0];
+      sorted.push(sObj);
+      currentPoint = { lat: sObj.lat, lon: sObj.lon };
+    }
+
+    // প্রতি ধাপে ক্রমানুসারে পরবর্তী নিকটবর্তী স্টপ নির্বাচন (গন্তব্যের দিকে অগ্রসর হওয়া)
     while (remaining.length > 0) {
       let nearestIdx = 0;
       let minScore = Infinity;
 
       for (let i = 0; i < remaining.length; i++) {
-        let sLat = Number(remaining[i].latitude || remaining[i].lat);
-        let sLon = Number(remaining[i].longitude || remaining[i].lon);
-        let distFromCurrent = getDistanceMeters(currentPoint.lat, currentPoint.lon, sLat, sLon);
-        
+        let s = remaining[i];
+        let distFromCurrent = getDistanceMeters(currentPoint.lat, currentPoint.lon, s.lat, s.lon);
         let score = distFromCurrent;
         if (destCoords) {
-          let distToDest = getDistanceMeters(sLat, sLon, destCoords.lat, destCoords.lon);
-          score += (distToDest * 0.15);
+          let distToDest = getDistanceMeters(s.lat, s.lon, destCoords.lat, destCoords.lon);
+          score += (distToDest * 0.2);
         }
 
         if (score < minScore) {
@@ -4628,8 +4594,19 @@
 
       let nextStop = remaining.splice(nearestIdx, 1)[0];
       sorted.push(nextStop);
-      currentPoint = { lat: Number(nextStop.latitude || nextStop.lat), lon: Number(nextStop.longitude || nextStop.lon) };
+      currentPoint = { lat: nextStop.lat, lon: nextStop.lon };
     }
+
+    // গন্তব্য স্টপ সবার শেষে যুক্ত করা
+    if (destStopObj) {
+      sorted.push(destStopObj);
+    }
+
+    // কো-অর্ডিনেট বিহীন স্টপগুলোকে তাদের মূল অবস্থান অনুযায়ী সমন্বয় করা
+    stopsWithoutCoords.forEach(item => {
+      let insertIdx = Math.min(item.originalIndex, sorted.length);
+      sorted.splice(insertIdx, 0, item);
+    });
 
     return sorted;
   }
@@ -4703,6 +4680,11 @@
     });
 
     if (validStops.length === 0) return;
+
+    // ১ নম্বর নির্দেশনা: ম্যাপের মত স্টপেজগুলো পরপর সাজিয়ে দিন (Sequential Route Order)
+    if (validStops.length > 1) {
+      validStops = sortStopsAlongTrip(validStops, trackingBus);
+    }
 
     // যদি refLat না থাকে, রুটের প্রথম যে স্টপে কো-অর্ডিনেট আছে সেটি নেওয়া
     if (!refLat || !refLon) {
