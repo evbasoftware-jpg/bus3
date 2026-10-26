@@ -2281,47 +2281,77 @@
     document.getElementById("customAlertModal").classList.add("hidden");
   }
 
+  function parseAnyTimeToMinutes(val) {
+    if (!val) return null;
+    let str = String(val).trim();
+    if (!str || str === "--" || str === "--:--" || str === "null" || str === "undefined") return null;
+
+    // ১. গুগল ভিজ্যুয়ালাইজেশন কুয়েরি ডেট অবজেক্ট: Date(year, month, day, hour, min, sec)
+    let gvizMatch = str.match(/Date\(\s*\d+\s*,\s*\d+\s*,\s*\d+\s*,\s*(\d+)\s*,\s*(\d+)/i);
+    if (gvizMatch) {
+      let h = parseInt(gvizMatch[1], 10);
+      let m = parseInt(gvizMatch[2], 10);
+      return (h * 60 + m) % 1440;
+    }
+
+    // ২. গুগল শিট / অ্যাপস স্ক্রিপ্ট টাইম অবজেক্ট: 1899-12-30THH:MM:SS.000Z
+    // এশিয়া/কলকাতা টাইমজোন ১৮৯৯ সালে ছিল UTC+05:21:10 (৫ ঘণ্টা ২১ মিনিট ১০ সেকেন্ড)
+    // এটি যোগ করলে গুগল শিটের আসল ইনপুট সময় (যেমন 4:30 PM, 3:00 PM) অবিকল উদ্ধার হয়
+    let isoMatch = str.match(/1899-12-30T(\d{2}):(\d{2}):(\d{2})/i);
+    if (isoMatch) {
+      let uH = parseInt(isoMatch[1], 10);
+      let uM = parseInt(isoMatch[2], 10);
+      let uS = parseInt(isoMatch[3], 10);
+      let totalSec = (uH * 3600) + (uM * 60) + uS + (5 * 3600 + 21 * 60 + 10);
+      let totalMins = Math.round(totalSec / 60) % 1440;
+      return totalMins;
+    }
+
+    // অন্য যেকোনো সাধারণ ISO তারিখ ফরম্যাট থাকলে (যেমন YYYY-MM-DDTHH:MM:SS)
+    if (str.includes("T") && str.includes("Z")) {
+      try {
+        let d = new Date(str);
+        if (!isNaN(d.getTime())) {
+          return (d.getHours() * 60 + d.getMinutes()) % 1440;
+        }
+      } catch(_) {}
+    }
+
+    // ৩. প্রচলিত ভারতীয় সময় ফরম্যাট: "4:30 PM", "11.20 AM", "02.30 PM", "6:10 PM", "11:05 am", "10:15"
+    let ampmMatch = str.match(/(\d{1,2})[.:](\d{2})\s*(AM|PM)?/i);
+    if (ampmMatch) {
+      let h = parseInt(ampmMatch[1], 10);
+      let m = parseInt(ampmMatch[2], 10);
+      let ap = ampmMatch[3] ? ampmMatch[3].toUpperCase() : "";
+      if (ap === "PM" && h < 12) h += 12;
+      if (ap === "AM" && h === 12) h = 0;
+      return (h * 60 + m) % 1440;
+    }
+
+    // ৪. কেবল ঘণ্টা ফরম্যাট: "4 PM", "11 AM"
+    let pureHourMatch = str.match(/^(\d{1,2})\s*(AM|PM)$/i);
+    if (pureHourMatch) {
+      let h = parseInt(pureHourMatch[1], 10);
+      let ap = pureHourMatch[2].toUpperCase();
+      if (ap === "PM" && h < 12) h += 12;
+      if (ap === "AM" && h === 12) h = 0;
+      return (h * 60) % 1440;
+    }
+
+    return null;
+  }
+
   function formatCleanTime(timeStr) {
     if (!timeStr) return "--:--";
-    let str = String(timeStr).trim();
-
-    let matchFullDate = str.match(/(\d{1,2}):(\d{2})(?::\d{2})?\s*(AM|PM)?/i);
-    if (matchFullDate) {
-      let h = parseInt(matchFullDate[1], 10);
-      let m = matchFullDate[2];
-      let ampm = matchFullDate[3] ? matchFullDate[3].toUpperCase() : '';
-
-      if (!ampm) {
-        ampm = h >= 12 ? 'PM' : 'AM';
-        h = h % 12 || 12;
-      }
-      return `${String(h).padStart(2, '0')}:${m} ${ampm}`;
+    let mins = parseAnyTimeToMinutes(timeStr);
+    if (mins !== null) {
+      return formatMinutesToTime(mins);
     }
-
-    let dotMatch = str.match(/^(\d{1,2})[.:](\d{2})\s*(AM|PM)?$/i);
-    if (dotMatch) {
-      let h = parseInt(dotMatch[1], 10);
-      let m = dotMatch[2];
-      let ampm = dotMatch[3] ? dotMatch[3].toUpperCase() : (h >= 12 ? 'PM' : 'AM');
-      h = h % 12 || 12;
-      return `${String(h).padStart(2, '0')}:${m} ${ampm}`;
-    }
-
-    return str.toUpperCase();
+    return String(timeStr).trim();
   }
 
   function timeToMinutes(tStr) {
-    if (!tStr) return null;
-    let str = String(tStr).trim().toUpperCase();
-    let m = str.match(/(\d{1,2})[.:](\d{2})\s*(AM|PM)?/);
-    if (!m) return null;
-    let h = parseInt(m[1], 10);
-    let min = parseInt(m[2], 10);
-    let ampm = m[3];
-
-    if (ampm === 'PM' && h < 12) h += 12;
-    if (ampm === 'AM' && h === 12) h = 0;
-    return h * 60 + min;
+    return parseAnyTimeToMinutes(tStr);
   }
 
   function cleanStopName(name) {
@@ -2334,7 +2364,7 @@
   }
 
   function formatMinutesToTime(totalMins) {
-    if (totalMins === null || isNaN(totalMins)) return "--";
+    if (totalMins === null || isNaN(totalMins)) return "--:--";
     totalMins = Math.round(totalMins);
     let normalized = ((totalMins % 1440) + 1440) % 1440;
     let h = Math.floor(normalized / 60);
@@ -3055,9 +3085,9 @@
             category: getCol(4) || "PUBLIC",
             days: getCol(5) || "Daily",
             source: cleanStopName(getCol(6)),
-            depTime: String(getCol(7)),
+            depTime: formatCleanTime(getCol(7)),
             dest: cleanStopName(getCol(8)),
-            arrTime: String(getCol(9)),
+            arrTime: formatCleanTime(getCol(9)),
             selectedStops: selectedStops,
             status: "active"
           });
@@ -3077,27 +3107,36 @@
     if (globalBusesCatalog && globalBusesCatalog.length > 0) return globalBusesCatalog;
     if (isCatalogLoading) return [];
     isCatalogLoading = true;
-    try {
-      let bRes = await fetch(`${API_URL}?action=getBuses`);
-      let bData = await bRes.json();
-      if (bData && bData.buses && bData.buses.length > 0) {
-        // ৩ নম্বর নির্দেশনা: Status কলমে 'active' থাকলে তবেই তালিকায় থাকবে
-        globalBusesCatalog = bData.buses.filter(b => {
-          let st = b.status !== undefined ? b.status : b.Status;
-          if (st !== undefined && st !== null) {
-            return String(st).trim().toLowerCase() === "active";
-          }
-          return true; // আগের এন্ট্রির ক্ষেত্রে ডিফল্ট সক্রিয় রাখা
-        });
-      }
-    } catch (_) {}
 
-    // যদি Apps Script থেকে বাস না আসে বা নেটওয়ার্ক বিঘ্নিত হয়, সরাসরি পাবলিক গুগল শীট থেকে আনুন
-    if (!globalBusesCatalog || globalBusesCatalog.length === 0) {
+    // ১. প্রথমে সরাসরি দ্রুততম গুগল শীট (gviz) থেকে আনুন যাতে কোনো বিলম্ব ও ফরম্যাট বিকৃতি ছাড়াই সঠিক সময় ও স্টপ পাওয়া যায়
+    try {
       let directBuses = await fetchBusesDirect();
       if (directBuses && directBuses.length > 0) {
         globalBusesCatalog = directBuses;
       }
+    } catch (_) {}
+
+    // ২. যদি সরাসরি না পাওয়া যায়, তবেই Apps Script থেকে আনুন এবং সময়গুলো ঠিক করে নিন
+    if (!globalBusesCatalog || globalBusesCatalog.length === 0) {
+      try {
+        let bRes = await fetch(`${API_URL}?action=getBuses`);
+        let bData = await bRes.json();
+        if (bData && bData.buses && bData.buses.length > 0) {
+          globalBusesCatalog = bData.buses.filter(b => {
+            let st = b.status !== undefined ? b.status : b.Status;
+            if (st !== undefined && st !== null) {
+              return String(st).trim().toLowerCase() === "active";
+            }
+            return true;
+          }).map(b => {
+            return {
+              ...b,
+              depTime: formatCleanTime(b.depTime),
+              arrTime: b.arrTime ? formatCleanTime(b.arrTime) : ""
+            };
+          });
+        }
+      } catch (_) {}
     }
 
     isCatalogLoading = false;
@@ -3551,8 +3590,13 @@
 
       if (depMins !== null) {
         if (arrMins !== null) {
-          if (arrMins < depMins) arrMins += 24 * 60;
-          let totalTripMins = arrMins - depMins;
+          let diff = arrMins - depMins;
+          if (diff < 0) diff += 1440;
+          let totalTripMins = diff;
+          // নিশ্চিত করা যে মোট সময় প্রতি স্টপে অন্তত ৩ মিনিট হয়
+          if (totalTripMins < totalStopsCount * 2) {
+            totalTripMins = totalStopsCount * 3;
+          }
           fMins = Math.round(depMins + (fromIdx / totalStopsCount) * totalTripMins);
           tMins = Math.round(depMins + (toIdx / totalStopsCount) * totalTripMins);
         } else {
@@ -3561,8 +3605,8 @@
         }
       }
 
-      let fromTimeStr = (fromIdx === 0 && bus.depTime) ? bus.depTime : (fMins !== null ? formatMinutesToTime(fMins) : (bus.depTime || "--"));
-      let toTimeStr = (toIdx === orderedStops.length - 1 && bus.arrTime) ? bus.arrTime : (tMins !== null ? formatMinutesToTime(tMins) : (bus.arrTime || "--"));
+      let fromTimeStr = (fromIdx === 0 && bus.depTime) ? formatCleanTime(bus.depTime) : (fMins !== null ? formatMinutesToTime(fMins) : formatCleanTime(bus.depTime));
+      let toTimeStr = (toIdx === orderedStops.length - 1 && bus.arrTime) ? formatCleanTime(bus.arrTime) : (tMins !== null ? formatMinutesToTime(tMins) : (bus.arrTime ? formatCleanTime(bus.arrTime) : (tMins !== null ? formatMinutesToTime(tMins) : "--")));
 
       return {
         bus: bus,
@@ -3579,13 +3623,21 @@
     activeApproachingStop = null;
     lastAnnouncedArrivalStop = null;
     lastAnnouncedNextStop = null;
-    trackingBus = b;
+    
+    // ক্লোন তৈরি করে সংরক্ষণ করুন যাতে গ্লোবাল ক্যাটালগ বিনষ্ট না হয়
+    trackingBus = Object.assign({}, b);
+    trackingBus.originalSource = b.source;
+    trackingBus.originalDest = b.dest;
+    trackingBus.originalDepTime = b.depTime;
+    trackingBus.originalArrTime = b.arrTime;
 
     if (searchResultItem) {
-      trackingBus.depTime = searchResultItem.fromTimeStr || b.depTime || b.srcTime || b.sourceTime;
-      trackingBus.arrTime = searchResultItem.toTimeStr || b.arrTime || b.destTime;
       trackingBus.searchFrom = searchResultItem.fromDisplayName || b.source;
       trackingBus.searchTo = searchResultItem.toDisplayName || b.dest;
+      trackingBus.searchFromTime = searchResultItem.fromTimeStr;
+      trackingBus.searchToTime = searchResultItem.toTimeStr;
+      trackingBus.fromTimeStr = searchResultItem.fromTimeStr;
+      trackingBus.toTimeStr = searchResultItem.toTimeStr;
     } else {
       let sFrom = document.getElementById("searchFrom") ? document.getElementById("searchFrom").value.trim() : "";
       let sTo = document.getElementById("searchTo") ? document.getElementById("searchTo").value.trim() : "";
@@ -5181,17 +5233,48 @@
     tbody.innerHTML = "";
 
     // বাসের সঠিক শুরুর সময় (depTime) এবং পৌঁছানোর সময় (arrTime)
-    let rawDep = trackingBus.depTime || trackingBus.fromTimeStr || trackingBus.sourceTime || trackingBus.srcTime;
-    if (!rawDep && globalBusesCatalog && globalBusesCatalog.length > 0) {
-      let matched = globalBusesCatalog.find(b => (b.number == trackingBus.number) || (b.name === trackingBus.name));
-      if (matched) rawDep = matched.depTime || matched.sourceTime || matched.srcTime;
-    }
-    let depTimeStr = formatCleanTime(rawDep || "10:15 AM");
-    let depMins = timeToMinutes(depTimeStr);
-    if (depMins === null) depMins = 10 * 60 + 15; // 10:15 AM fallback
+    let origDep = trackingBus.originalDepTime || trackingBus.depTime;
+    let origArr = trackingBus.originalArrTime || trackingBus.arrTime;
 
-    let rawArr = trackingBus.arrTime || trackingBus.toTimeStr || trackingBus.destTime;
-    let arrMins = rawArr ? timeToMinutes(formatCleanTime(rawArr)) : null;
+    if (!origDep && globalBusesCatalog && globalBusesCatalog.length > 0) {
+      let matched = globalBusesCatalog.find(b => (b.number == trackingBus.number) || (b.name === trackingBus.name));
+      if (matched) {
+        origDep = matched.depTime;
+        if (!origArr) origArr = matched.arrTime;
+      }
+    }
+
+    let startStopName = stops[0] ? cleanStopName(stops[0].name || stops[0].stopName || stops[0]) : "";
+    let endStopName = stops[stops.length - 1] ? cleanStopName(stops[stops.length - 1].name || stops[stops.length - 1].stopName || stops[stops.length - 1]) : "";
+    let busSrcClean = cleanStopName(trackingBus.originalSource || trackingBus.source);
+    let busDestClean = cleanStopName(trackingBus.originalDest || trackingBus.dest);
+
+    let depTimeStr = origDep;
+    if (startStopName === busSrcClean || !trackingBus.searchFromTime) {
+      depTimeStr = origDep;
+    } else {
+      depTimeStr = trackingBus.searchFromTime || origDep;
+    }
+
+    let arrTimeStr = origArr;
+    if (endStopName === busDestClean || !trackingBus.searchToTime) {
+      arrTimeStr = origArr;
+    } else {
+      arrTimeStr = trackingBus.searchToTime || origArr;
+    }
+
+    let depMins = timeToMinutes(depTimeStr);
+    if (depMins === null && origDep) {
+      depMins = timeToMinutes(origDep);
+    }
+    if (depMins === null) {
+      depMins = 10 * 60; // 10:00 AM fallback
+    }
+
+    let arrMins = timeToMinutes(arrTimeStr);
+    if (arrMins === null && origArr) {
+      arrMins = timeToMinutes(origArr);
+    }
 
     // প্রতিটি স্টপের ক্রমিক রোড দূরত্ব পরিমাপ
     let cumDistances = [0];
@@ -5202,45 +5285,56 @@
       let curLat = Number(stops[i].latitude || stops[i].lat);
       let curLon = Number(stops[i].longitude || stops[i].lon);
 
-      let stepKm = 3.5;
+      let stepKm = 2.5;
       if (!isNaN(prevLat) && !isNaN(prevLon) && !isNaN(curLat) && !isNaN(curLon) && prevLat !== 0 && curLat !== 0) {
-        stepKm = (getDistanceMeters(prevLat, prevLon, curLat, curLon) / 1000) * 1.15;
-        if (stepKm < 0.8) stepKm = 1.5;
+        stepKm = (getDistanceMeters(prevLat, prevLon, curLat, curLon) / 1000) * 1.25;
+        if (stepKm < 1.0) stepKm = 1.8;
       }
       totalDistKm += stepKm;
       cumDistances.push(totalDistKm);
     }
 
-    let totalDurationMins = 0;
-    if (arrMins !== null) {
-      if (arrMins < depMins) arrMins += 24 * 60;
-      totalDurationMins = arrMins - depMins;
-    }
-    if (totalDurationMins <= 0) {
-      totalDurationMins = Math.round(totalDistKm * 2.1) + ((stops.length - 1) * 2);
+    let minExpectedDuration = Math.max(Math.round(totalDistKm * 2.1), (stops.length - 1) * 3, 20);
+    let totalDurationMins = minExpectedDuration;
+
+    if (arrMins !== null && depMins !== null) {
+      let diff = arrMins - depMins;
+      if (diff < 0) diff += 1440; // overnight trip
+      // যদি শীটের arrMins এবং depMins স্বাভাবিক ব্যবধানে থাকে
+      if (diff >= (stops.length - 1) * 2 && diff <= 1440) {
+        totalDurationMins = diff;
+      } else {
+        totalDurationMins = minExpectedDuration;
+        arrMins = depMins + totalDurationMins;
+      }
+    } else {
+      totalDurationMins = minExpectedDuration;
     }
 
+    let prevMin = depMins - 2;
     stops.forEach((s, idx) => {
       let sName = typeof s === 'string' ? s : (s.name || s.stopName);
       
       let estMin = depMins;
-      if (idx > 0) {
-        if (idx === stops.length - 1 && arrMins !== null) {
-          estMin = arrMins;
-        } else if (totalDistKm > 0) {
+      if (idx === 0) {
+        estMin = depMins;
+      } else if (idx === stops.length - 1 && arrMins !== null) {
+        estMin = Math.max(arrMins, prevMin + 2);
+      } else {
+        if (totalDistKm > 0) {
           let progress = cumDistances[idx] / totalDistKm;
           estMin = depMins + Math.round(progress * totalDurationMins);
         } else {
           estMin = depMins + Math.round((idx / (stops.length - 1)) * totalDurationMins);
         }
+        // প্রতিটি স্টপ যেন আগের স্টপের চেয়ে অন্তত ২ মিনিট এগিয়ে থাকে (কখনোই একই মিনিট না হয়)
+        if (estMin <= prevMin) {
+          estMin = prevMin + 2;
+        }
       }
+      prevMin = estMin;
 
-      let h = Math.floor(estMin / 60) % 24;
-      let m = estMin % 60;
-      let ampm = h >= 12 ? 'PM' : 'AM';
-      h = h % 12 || 12;
-      let timeFormatted = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')} ${ampm}`;
-
+      let timeFormatted = formatMinutesToTime(estMin);
       let isFirst = (idx === 0);
       let isLast = (idx === stops.length - 1);
       let statusLabel = isFirst ? 'যাত্রা শুরু' : (isLast ? 'গন্তব্য' : 'স্টপেজ');
@@ -5250,7 +5344,7 @@
       tr.innerHTML = `
         <td style="text-align:center;font-weight:bold;">${idx + 1}</td>
         <td><b>🚏 ${sName}</b></td>
-        <td><span style="background:#e0f2fe;color:#0369a1;padding:3px 6px;border-radius:4px;font-weight:bold;">${timeFormatted}</span></td>
+        <td><span style="background:#e0f2fe;color:#0369a1;padding:4px 8px;border-radius:6px;font-weight:800;font-size:13px;">${timeFormatted}</span></td>
         <td><span style="color:${statusColor};font-weight:bold;">${statusLabel}</span></td>
       `;
       tbody.appendChild(tr);
