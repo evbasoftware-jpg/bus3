@@ -2183,7 +2183,24 @@
 
   function cleanStopName(name) {
     if (!name) return "";
-    return name.replace(/^[^a-zA-Z0-9]+/, '').replace(/^[iI|]\s+/, '').trim().toUpperCase();
+    return String(name)
+      .replace(/[\u200B-\u200D\uFEFF]/g, "")
+      .replace(/^[\s,.\-_/\\|]+|[\s,.\-_/\\|]+$/g, "")
+      .trim()
+      .toUpperCase();
+  }
+
+  function formatMinutesToTime(totalMins) {
+    if (totalMins === null || isNaN(totalMins)) return "--";
+    totalMins = Math.round(totalMins);
+    let normalized = ((totalMins % 1440) + 1440) % 1440;
+    let h = Math.floor(normalized / 60);
+    let m = normalized % 60;
+    let ampm = h >= 12 ? 'PM' : 'AM';
+    let h12 = h % 12 || 12;
+    let hStr = String(h12).padStart(2, '0');
+    let mStr = String(m).padStart(2, '0');
+    return `${hStr}:${mStr} ${ampm}`;
   }
 
   // ম্যাপে ক্লিক করে স্টপ যুক্ত করার মোড টগল
@@ -2451,15 +2468,8 @@
   function updateDistanceAndTracking() {
     if (!trackingBus) return;
 
-    // বাস সিগন্যাল না থাকলে ব্যবহারকারীকে কখনোই বাস হিসেবে ধরা হবে না
     let effectiveBusLat = busPos ? busPos.lat : null;
     let effectiveBusLon = busPos ? busPos.lon : null;
-
-    if (!effectiveBusLat || !effectiveBusLon) {
-      let speedElem = document.getElementById("infoSpeed");
-      if (speedElem) speedElem.innerText = "--";
-      return;
-    }
 
     let distKm = 0;
     if (userPos && busPos) {
@@ -2478,17 +2488,27 @@
         map.removeLayer(routeLine);
         routeLine = null;
       }
+    } else if (routeLine) {
+      map.removeLayer(routeLine);
+      routeLine = null;
     }
 
     let currentEffectiveSpeed = (busPos && busPos.speed) ? busPos.speed : (userPos && userPos.speed > 5 ? userPos.speed : 0);
     
     let speedElem = document.getElementById("infoSpeed");
     if (speedElem) {
-      speedElem.innerText = `${currentEffectiveSpeed} KM/H`;
+      speedElem.innerText = (busPos && busPos.speed !== undefined) ? `${currentEffectiveSpeed} KM/H` : "--";
     }
 
-    evaluateStoppagesAndEta(distKm, currentEffectiveSpeed, effectiveBusLat, effectiveBusLon);
-    checkNearbyMasterStops(effectiveBusLat, effectiveBusLon);
+    // রেফারেন্স অবস্থান: বাসের লাইভ লোকেশন থাকলে সেটি, অন্যথায় ব্যবহারকারীর লোকেশন
+    let refLat = effectiveBusLat || (userPos ? userPos.lat : null);
+    let refLon = effectiveBusLon || (userPos ? userPos.lon : null);
+
+    // বাস অফলাইন থাকলেও স্টপ তালিকা ও রুট টাইমলাইন কার্ড সক্রিয় থাকবে
+    evaluateStoppagesAndEta(distKm, currentEffectiveSpeed, refLat, refLon);
+    if (effectiveBusLat && effectiveBusLon) {
+      checkNearbyMasterStops(effectiveBusLat, effectiveBusLon);
+    }
   }
   
   // সমস্ত সংরক্ষিত মাস্টার স্টপ ম্যাপে সব সময় প্রদর্শন
@@ -2577,7 +2597,10 @@
     let statusText = document.getElementById("mapStatusText");
     if (statusText && trackingBus) {
       let fullName = (trackingBus.name && trackingBus.number) ? `${trackingBus.name} (${trackingBus.number})` : (trackingBus.name || trackingBus.number);
-      statusText.innerText = `🚌 বাসের নাম: ${fullName} • লাইভ ট্র্যাকিং চলছে`;
+      let isLive = (busLat && busLon);
+      statusText.innerText = isLive 
+        ? `🚌 বাসের নাম: ${fullName} • লাইভ ট্র্যাকিং চলছে`
+        : `🚌 বাসের নাম: ${fullName} • রুট ও স্টপেজ তালিকা`;
     }
 
     if (!orderedStops || orderedStops.length === 0) return;
@@ -2608,12 +2631,12 @@
 
         let circleMarker = L.circleMarker([sLat, sLon], {
           radius: isSkipped ? 6 : 7,
-          fillColor: isSkipped ? "#ffcdd2" : (i <= nearestStopIndex ? "#1565c0" : "#ffffff"),
+          fillColor: isSkipped ? "#ffcdd2" : ((busLat && busLon && i <= nearestStopIndex) ? "#1565c0" : "#ffffff"),
           color: isSkipped ? "#d32f2f" : "#0d47a1",
           weight: isSkipped ? 2 : 3,
           dashArray: isSkipped ? "3, 3" : null,
           opacity: 1,
-          fillOpacity: 0.9
+          fillOpacity: 0.95
         });
 
         let tooltipContent = isSkipped
@@ -2621,7 +2644,7 @@
                <b style="color:#c62828; text-decoration:line-through; font-size:12px;">${sName}</b><br>
                <span style="color:#d32f2f; font-size:11px; font-weight:bold; text-decoration:none !important; display:inline-block;">(এখানে থামবে না)</span>
              </div>`
-          : `<b>${sName}</b>`;
+          : `<b>📍 ${sName}</b>`;
 
         circleMarker.bindTooltip(tooltipContent, {
           permanent: true,
@@ -2634,10 +2657,27 @@
       }
     });
 
+    // ম্যাপে স্টপগুলোর সংযোগকারী রুট লাইন আঁকা
+    if (latLngs.length > 1) {
+      stopRoutePolyline = L.polyline(latLngs, {
+        color: '#1565c0',
+        weight: 4,
+        opacity: 0.85
+      }).addTo(map);
+    }
+
+    // যদি লাইভ বাস অবস্থান না থাকে অথবা প্রথমবার লোড হয়, তাহলে পুরো রুটের সব স্টপকে স্ক্রিনের মাঝে ফিট করুন
+    if (latLngs.length > 0 && (!busLat || !busLon)) {
+      try {
+        let bounds = L.latLngBounds(latLngs);
+        map.fitBounds(bounds.pad(0.18));
+      } catch(_) {}
+    }
+
     let card = document.getElementById("routeTrackerCard");
     let trackBar = document.getElementById("routeTrackBar");
     let timelineContainer = document.querySelector(".route-timeline-container");
-    card.classList.remove("hidden");
+    if (card) card.classList.remove("hidden");
 
     let displayStops = orderedStops;
     let activeRelativeIndex = nearestStopIndex;
@@ -2792,6 +2832,93 @@
     syncRemoteFestivalBanner();
   });
 
+  const SPREADSHEET_ID = "1BG2_yeNhcvTzamezXwqbYlVvnsnPvCjB5MQ4cek6_YI";
+
+  async function fetchMasterStopsDirect() {
+    try {
+      let url = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:json&sheet=Master_Stops`;
+      let res = await fetch(url);
+      let text = await res.text();
+      let start = text.indexOf("{");
+      let end = text.lastIndexOf("}");
+      if (start !== -1 && end !== -1) {
+        let json = JSON.parse(text.substring(start, end + 1));
+        let rows = (json.table && json.table.rows) ? json.table.rows : [];
+        let list = [];
+        rows.forEach(r => {
+          if (!r.c) return;
+          let rawName = r.c[0] ? (r.c[0].v !== undefined ? r.c[0].v : r.c[0].f) : "";
+          let lat = r.c[1] ? Number(r.c[1].v) : NaN;
+          let lon = r.c[2] ? Number(r.c[2].v) : NaN;
+          let clean = cleanStopName(rawName);
+          if (clean && !isNaN(lat) && !isNaN(lon) && lat !== 0) {
+            list.push({
+              name: clean,
+              stopName: clean,
+              lat: lat,
+              latitude: lat,
+              lon: lon,
+              longitude: lon
+            });
+          }
+        });
+        return list;
+      }
+    } catch (e) {
+      console.warn("fetchMasterStopsDirect fallback failed:", e);
+    }
+    return [];
+  }
+
+  async function fetchBusesDirect() {
+    try {
+      let url = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:json&sheet=Buses`;
+      let res = await fetch(url);
+      let text = await res.text();
+      let start = text.indexOf("{");
+      let end = text.lastIndexOf("}");
+      if (start !== -1 && end !== -1) {
+        let json = JSON.parse(text.substring(start, end + 1));
+        let rows = (json.table && json.table.rows) ? json.table.rows : [];
+        let list = [];
+        rows.forEach((r, idx) => {
+          if (!r.c) return;
+          let getCol = (colIdx) => {
+            if (!r.c[colIdx]) return "";
+            return r.c[colIdx].f !== undefined ? r.c[colIdx].f : (r.c[colIdx].v !== undefined ? r.c[colIdx].v : "");
+          };
+          let busNum = String(getCol(2)).trim();
+          if (!busNum) return;
+          let status = String(getCol(11)).trim().toLowerCase();
+          if (getCol(11) && status !== "active") return;
+
+          let rawStops = String(getCol(10) || "");
+          let selectedStops = rawStops.split(",").map(s => cleanStopName(s)).filter(Boolean);
+
+          list.push({
+            id: idx + 1,
+            state: getCol(0),
+            district: getCol(1),
+            number: busNum,
+            name: String(getCol(3)).trim(),
+            category: getCol(4) || "PUBLIC",
+            days: getCol(5) || "Daily",
+            source: cleanStopName(getCol(6)),
+            depTime: String(getCol(7)),
+            dest: cleanStopName(getCol(8)),
+            arrTime: String(getCol(9)),
+            selectedStops: selectedStops,
+            status: "active"
+          });
+        });
+        return list;
+      }
+    } catch (e) {
+      console.warn("fetchBusesDirect fallback failed:", e);
+    }
+    return [];
+  }
+
   let globalBusesCatalog = [];
   let isCatalogLoading = false;
 
@@ -2813,6 +2940,15 @@
         });
       }
     } catch (_) {}
+
+    // যদি Apps Script থেকে বাস না আসে বা নেটওয়ার্ক বিঘ্নিত হয়, সরাসরি পাবলিক গুগল শীট থেকে আনুন
+    if (!globalBusesCatalog || globalBusesCatalog.length === 0) {
+      let directBuses = await fetchBusesDirect();
+      if (directBuses && directBuses.length > 0) {
+        globalBusesCatalog = directBuses;
+      }
+    }
+
     isCatalogLoading = false;
     return globalBusesCatalog;
   }
@@ -2919,26 +3055,36 @@
         try {
           let res = await fetch(`${API_URL}?action=getStopsList`);
           let data = await res.json();
-          if (data.stops) {
+          if (data && data.stops && data.stops.length >= 10) {
             masterStopsList = data.stops;
-
-            let rawNames = data.stops.map(s => typeof s === 'string' ? s : (s.name || s.stopName));
-            let uniqueNames = [];
-            let seen = new Set();
-
-            rawNames.forEach(name => {
-              let clean = cleanStopName(name);
-              if (clean && !seen.has(clean)) {
-                seen.add(clean);
-                uniqueNames.push(name.trim().toUpperCase());
-              }
-            });
-
-            allStopNames = uniqueNames;
-            renderAllMasterStopsOnMap(masterStopsList);
           }
         } catch (e) {
-          console.log("Error loading suggestions:", e);
+          console.log("Error loading stops from API:", e);
+        }
+
+        // যদি API থেকে পর্যাপ্ত স্টপ না আসে (যেমন Apps Script এ এখনও Master_Stops কনফিগার করা না থাকলে)
+        if (!masterStopsList || masterStopsList.length < 10) {
+          let directStops = await fetchMasterStopsDirect();
+          if (directStops && directStops.length > 0) {
+            masterStopsList = directStops;
+          }
+        }
+
+        if (masterStopsList && masterStopsList.length > 0) {
+          let rawNames = masterStopsList.map(s => typeof s === 'string' ? s : (s.name || s.stopName));
+          let uniqueNames = [];
+          let seen = new Set();
+
+          rawNames.forEach(name => {
+            let clean = cleanStopName(name);
+            if (clean && !seen.has(clean)) {
+              seen.add(clean);
+              uniqueNames.push(clean);
+            }
+          });
+
+          allStopNames = uniqueNames;
+          renderAllMasterStopsOnMap(masterStopsList);
         }
       })(),
       ensureBusesCatalogLoaded()
@@ -3039,21 +3185,27 @@
     listDiv.innerHTML = `<div style="padding:12px;text-align:center;color:#1565c0;font-weight:bold;">বাসের তথ্য খোঁজা হচ্ছে...</div>`;
 
     try {
-      let res = await fetch(`${API_URL}?action=getBuses`);
-      let data = await res.json();
-
-      if (!data.buses || data.buses.length === 0) {
-        listDiv.innerHTML = `<div style="padding:12px;color:#c62828;text-align:center;font-weight:bold;">কোনো বাস পাওয়া যায়নি।</div>`;
-        return;
+      let activeBuses = await ensureBusesCatalogLoaded();
+      if (!activeBuses || activeBuses.length === 0) {
+        try {
+          let res = await fetch(`${API_URL}?action=getBuses`);
+          let data = await res.json();
+          if (data && data.buses) {
+            activeBuses = data.buses.filter(b => {
+              let st = b.status !== undefined ? b.status : b.Status;
+              if (st !== undefined && st !== null) {
+                return String(st).trim().toLowerCase() === "active";
+              }
+              return true;
+            });
+          }
+        } catch(_) {}
       }
 
-      let activeBuses = data.buses.filter(b => {
-        let st = b.status !== undefined ? b.status : b.Status;
-        if (st !== undefined && st !== null) {
-          return String(st).trim().toLowerCase() === "active";
-        }
-        return true;
-      });
+      if (!activeBuses || activeBuses.length === 0) {
+        listDiv.innerHTML = `<div style="padding:12px;color:#c62828;text-align:center;font-weight:bold;">কোনো বাসের তথ্য পাওয়া যায়নি।</div>`;
+        return;
+      }
 
       let uniqueTrips = [];
       let seenTrips = new Set();
@@ -3152,112 +3304,116 @@
   }
 
   async function processBusDirectionAndTime(bus, fromInput, toInput) {
-    let busNo = bus.number;
-    let stops = stopsCache[busNo];
-
-    if (!stops) {
-      try {
-        let res = await fetch(`${API_URL}?action=getLive&busNo=${encodeURIComponent(busNo)}`);
-        let data = await res.json();
-        if (data && data.stops) {
-          stopsCache[busNo] = data.stops;
-          stops = data.stops;
-        }
-      } catch (e) {}
-    }
-
-    if (!stops) stops = [];
-
     let normFrom = cleanStopName(fromInput);
     let normTo = cleanStopName(toInput);
 
     if (!normFrom || !normTo) return null;
 
-    let allKnownStops = [...stops];
-    if (masterStopsList && masterStopsList.length > 0) {
-      allKnownStops.push(...masterStopsList);
+    // বাসের ক্রমানুসারে পূর্ণাঙ্গ স্টপ তালিকা (Source -> Selected_Stops -> Dest)
+    let orderedStops = [];
+    let srcClean = cleanStopName(bus.source);
+    if (srcClean) orderedStops.push(srcClean);
+
+    let rawAllowed = bus.selectedStops || bus.Selected_Stops || bus["SELECTED STOPS"] || [];
+    let allowed = [];
+    if (typeof rawAllowed === "string") {
+      allowed = rawAllowed.split(",").map(s => cleanStopName(s)).filter(Boolean);
+    } else if (Array.isArray(rawAllowed)) {
+      allowed = rawAllowed.map(s => cleanStopName(s)).filter(Boolean);
     }
+
+    allowed.forEach(s => {
+      if (s && !orderedStops.includes(s)) orderedStops.push(s);
+    });
+
+    let destClean = cleanStopName(bus.dest);
+    if (destClean && !orderedStops.includes(destClean)) orderedStops.push(destClean);
+
+    // ১. প্রত্যক্ষ রুট স্টপেজ ক্রমানুসারে অনুসন্ধান (Direct Sequential Stop Match)
+    function findStopIndexInList(query, list) {
+      if (!query || !list || list.length === 0) return -1;
+      let exact = list.findIndex(s => s === query);
+      if (exact !== -1) return exact;
+      let partial = list.findIndex(s => s.startsWith(query) || query.startsWith(s) || s.includes(query) || query.includes(s));
+      return partial;
+    }
+
+    let fromIdx = findStopIndexInList(normFrom, orderedStops);
+    let toIdx = findStopIndexInList(normTo, orderedStops);
+
+    if (fromIdx !== -1 && toIdx !== -1 && fromIdx < toIdx) {
+      let fromDisplayName = orderedStops[fromIdx];
+      let toDisplayName = orderedStops[toIdx];
+
+      let depMins = timeToMinutes(bus.depTime);
+      let arrMins = timeToMinutes(bus.arrTime);
+      let totalStopsCount = Math.max(orderedStops.length - 1, 1);
+
+      let fMins = null;
+      let tMins = null;
+
+      if (depMins !== null) {
+        if (arrMins !== null) {
+          if (arrMins < depMins) arrMins += 24 * 60;
+          let totalTripMins = arrMins - depMins;
+          fMins = Math.round(depMins + (fromIdx / totalStopsCount) * totalTripMins);
+          tMins = Math.round(depMins + (toIdx / totalStopsCount) * totalTripMins);
+        } else {
+          fMins = depMins + (fromIdx * 4);
+          tMins = depMins + (toIdx * 4);
+        }
+      }
+
+      let fromTimeStr = (fromIdx === 0 && bus.depTime) ? bus.depTime : (fMins !== null ? formatMinutesToTime(fMins) : (bus.depTime || "--"));
+      let toTimeStr = (toIdx === orderedStops.length - 1 && bus.arrTime) ? bus.arrTime : (tMins !== null ? formatMinutesToTime(tMins) : (bus.arrTime || "--"));
+
+      return {
+        bus: bus,
+        fromDisplayName: fromDisplayName,
+        fromTimeStr: formatCleanTime(fromTimeStr),
+        toDisplayName: toDisplayName,
+        toTimeStr: formatCleanTime(toTimeStr),
+        sortMinutes: fMins !== null ? fMins : (depMins !== null ? depMins : 9999)
+      };
+    }
+
+    // ২. ভৌগোলিক প্রজেকশন যাচাই (যদি কোনো কারণে স্টপ টেক্সট সম্পূর্ণ না মেলে)
+    let allKnownStops = [];
+    if (masterStopsList && masterStopsList.length > 0) allKnownStops.push(...masterStopsList);
+    if (currentBusStopsList && currentBusStopsList.length > 0) allKnownStops.push(...currentBusStopsList);
 
     let busSrcCoords = resolvePlaceCoords(bus.source, allKnownStops);
     let busDestCoords = resolvePlaceCoords(bus.dest, allKnownStops);
     let userFromCoords = resolvePlaceCoords(normFrom, allKnownStops);
     let userToCoords = resolvePlaceCoords(normTo, allKnownStops);
 
-    if (!busSrcCoords || !busDestCoords || !userFromCoords || !userToCoords) {
-      return null;
-    }
+    if (busSrcCoords && busDestCoords && userFromCoords && userToCoords) {
+      let dLat = busDestCoords.lat - busSrcCoords.lat;
+      let dLon = busDestCoords.lon - busSrcCoords.lon;
+      let tripDistSq = (dLat * dLat) + (dLon * dLon);
 
-    function getPerpendicularDistanceKm(p, a, b) {
-      let dAB = getDistanceMeters(a.lat, a.lon, b.lat, b.lon);
-      if (dAB === 0) return getDistanceMeters(p.lat, p.lon, a.lat, a.lon) / 1000;
-      let dAP = getDistanceMeters(a.lat, a.lon, p.lat, p.lon);
-      let dBP = getDistanceMeters(b.lat, b.lon, p.lat, p.lon);
-      let s = (dAB + dAP + dBP) / 2;
-      let area = Math.sqrt(Math.max(0, s * (s - dAB) * (s - dAP) * (s - dBP)));
-      return ((2 * area) / dAB) / 1000;
-    }
+      if (tripDistSq > 0) {
+        let progFrom = (((userFromCoords.lat - busSrcCoords.lat) * dLat + (userFromCoords.lon - busSrcCoords.lon) * dLon) / tripDistSq);
+        let progTo = (((userToCoords.lat - busSrcCoords.lat) * dLat + (userToCoords.lon - busSrcCoords.lon) * dLon) / tripDistSq);
 
-    let distFromLine = getPerpendicularDistanceKm(userFromCoords, busSrcCoords, busDestCoords);
-    let distToLine = getPerpendicularDistanceKm(userToCoords, busSrcCoords, busDestCoords);
+        if (progFrom < progTo && progFrom >= -0.15 && progTo <= 1.15) {
+          let fTime = estimateStopTime(userFromCoords, busSrcCoords, busDestCoords, bus.depTime, bus.arrTime) || bus.depTime || "--";
+          let tTime = estimateStopTime(userToCoords, busSrcCoords, busDestCoords, bus.depTime, bus.arrTime) || bus.arrTime || "--";
+          let fMins = timeToMinutes(fTime) || 9999;
 
-    if (distFromLine > 15 || distToLine > 15) {
-      return null;
-    }
-
-    let rawAllowed = bus.selectedStops || bus.Selected_Stops || bus["SELECTED STOPS"] || [];
-    let allowed = [];
-    if (typeof rawAllowed === "string") {
-      allowed = rawAllowed.split(",").map(s => cleanStopName(s));
-    } else if (Array.isArray(rawAllowed)) {
-      allowed = rawAllowed.map(s => cleanStopName(s));
-    }
-
-    let validBusStops = [...allowed, cleanStopName(bus.source), cleanStopName(bus.dest)];
-
-    if (stops && stops.length > 0) {
-      stops.forEach(s => validBusStops.push(cleanStopName(s.stopName || s.name)));
-    }
-
-    let hasFrom = validBusStops.some(a => a && (a.includes(normFrom) || normFrom.includes(a)));
-    let hasTo = validBusStops.some(a => a && (a.includes(normTo) || normTo.includes(a)));
-
-    if (!hasFrom || !hasTo) {
-      return null;
-    }
-
-    let dLat = busDestCoords.lat - busSrcCoords.lat;
-    let dLon = busDestCoords.lon - busSrcCoords.lon;
-    let tripDistSq = (dLat * dLat) + (dLon * dLon);
-
-    let progFrom = (((userFromCoords.lat - busSrcCoords.lat) * dLat + (userFromCoords.lon - busSrcCoords.lon) * dLon) / tripDistSq);
-    let progTo = (((userToCoords.lat - busSrcCoords.lat) * dLat + (userToCoords.lon - busSrcCoords.lon) * dLon) / tripDistSq);
-
-    if (progFrom >= progTo || progFrom < -0.05 || progTo > 1.05) {
-      return null;
-    }
-
-    let fTime = estimateStopTime(userFromCoords, busSrcCoords, busDestCoords, bus.depTime, bus.arrTime);
-    let tTime = estimateStopTime(userToCoords, busSrcCoords, busDestCoords, bus.depTime, bus.arrTime);
-
-    let fMins = timeToMinutes(fTime);
-    let tMins = timeToMinutes(tTime);
-
-    if (!fTime || !tTime || fMins === null || tMins === null) return null;
-
-    if (tMins <= fMins) {
-      if (!(bus.arrTime && timeToMinutes(bus.arrTime) < timeToMinutes(bus.depTime))) {
-        return null;
+          return {
+            bus: bus,
+            fromDisplayName: normFrom,
+            fromTimeStr: formatCleanTime(fTime),
+            toDisplayName: normTo,
+            toTimeStr: formatCleanTime(tTime),
+            sortMinutes: fMins
+          };
+        }
       }
     }
-        
-    return {
-      bus: bus,
-      fromDisplayName: normFrom,
-      fromTimeStr: formatCleanTime(fTime),
-      toDisplayName: normTo,
-      toTimeStr: formatCleanTime(tTime),
-      sortMinutes: fMins
-    };
+
+    return null;
   }
 
   function selectBus(b, searchResultItem) {
@@ -3442,6 +3598,7 @@
       }
     }
 
+    updateDistanceAndTracking();
     fetchBusLive(busNo);
     trackingInterval = setInterval(() => fetchBusLive(busNo), 5000);
   }
@@ -4285,113 +4442,111 @@
       allowedStops = rawSelected.map(s => cleanStopName(s)).filter(Boolean);
     }
 
-    if (srcName && !allowedStops.includes(srcName)) allowedStops.unshift(srcName);
-    if (destName && !allowedStops.includes(destName)) allowedStops.push(destName);
-
-    let stopCandidates = [];
-    if (currentBusStopsList) stopCandidates.push(...currentBusStopsList);
-    if (masterStopsList) stopCandidates.push(...masterStopsList);
-
-    let srcCoords = resolvePlaceCoords(srcName, stopCandidates);
-    let destCoords = resolvePlaceCoords(destName, stopCandidates);
-
-    let fullStops = [];
-    let seenStopNames = new Set();
-
-    allowedStops.forEach(reqName => {
-      let matched = stopCandidates.find(ms => {
-        let clean = cleanStopName(ms.name || ms.stopName);
-        return clean === reqName;
-      });
-
-      if (!matched) {
-        matched = stopCandidates.find(ms => {
-          let clean = cleanStopName(ms.name || ms.stopName);
-          return clean.includes(reqName) || reqName.includes(clean);
-        });
-      }
-
-      if (matched) {
-        let cleanMatchedName = cleanStopName(matched.name || matched.stopName);
-        if (!seenStopNames.has(cleanMatchedName)) {
-          seenStopNames.add(cleanMatchedName);
-          fullStops.push(matched);
-        }
+    // বাসের সমস্ত স্টপের ক্রমানুসারে পূর্ণাঙ্গ তালিকা তৈরি করুন (Source -> Selected_Stops -> Dest)
+    let orderedRouteNames = [];
+    if (trackingBus.source) {
+      let cSrc = cleanStopName(trackingBus.source);
+      if (cSrc) orderedRouteNames.push(cSrc);
+    }
+    allowedStops.forEach(s => {
+      let c = cleanStopName(s);
+      if (c && !orderedRouteNames.includes(c)) {
+        orderedRouteNames.push(c);
       }
     });
-
-    if (fullStops.length === 0) return;
-
-    let validStops = sortStopsAlongTrip(fullStops, { source: srcName, dest: destName });
-    if (validStops.length === 0) return;
-
-    if (srcName) {
-      let sIdx = validStops.findIndex(s => {
-        let n = cleanStopName(s.name || s.stopName);
-        return n === srcName || (n.startsWith(srcName) && !n.includes("STATION"));
-      });
-      if (sIdx !== -1 && sIdx > 0) {
-        validStops = validStops.slice(sIdx);
+    if (trackingBus.dest) {
+      let cDest = cleanStopName(trackingBus.dest);
+      if (cDest && !orderedRouteNames.includes(cDest)) {
+        orderedRouteNames.push(cDest);
       }
     }
 
-    if (destName) {
-      let dIdx = validStops.findIndex(s => {
-        let n = cleanStopName(s.name || s.stopName);
-        return n === destName || (n.startsWith(destName) && !n.includes("STATION"));
-      });
-      if (dIdx !== -1) {
-        validStops = validStops.slice(0, dIdx + 1);
+    let stopCandidates = [];
+    if (currentBusStopsList && currentBusStopsList.length > 0) stopCandidates.push(...currentBusStopsList);
+    if (masterStopsList && masterStopsList.length > 0) stopCandidates.push(...masterStopsList);
+
+    let validStops = [];
+    let seen = new Set();
+
+    orderedRouteNames.forEach(reqName => {
+      let cleanReq = cleanStopName(reqName);
+      if (seen.has(cleanReq)) return;
+      seen.add(cleanReq);
+
+      let matched = resolvePlaceCoords(cleanReq, stopCandidates);
+      if (matched) {
+        validStops.push({
+          name: reqName,
+          stopName: reqName,
+          latitude: matched.lat,
+          lat: matched.lat,
+          longitude: matched.lon,
+          lon: matched.lon
+        });
+      } else {
+        // কো-অর্ডিনেট না থাকলেও টাইমলাইনে স্টপের নাম যুক্ত থাকবে
+        validStops.push({
+          name: reqName,
+          stopName: reqName,
+          latitude: null,
+          lat: null,
+          longitude: null,
+          lon: null
+        });
+      }
+    });
+
+    if (validStops.length === 0) return;
+
+    // যদি refLat না থাকে, রুটের প্রথম যে স্টপে কো-অর্ডিনেট আছে সেটি নেওয়া
+    if (!refLat || !refLon) {
+      let firstWithCoords = validStops.find(s => s.latitude && s.longitude);
+      if (firstWithCoords) {
+        refLat = firstWithCoords.latitude;
+        refLon = firstWithCoords.longitude;
       }
     }
 
     let currentStopIndex = 0;
-
-    for (let i = 0; i < validStops.length; i++) {
-      let sLat = Number(validStops[i].latitude || validStops[i].lat);
-      let sLon = Number(validStops[i].longitude || validStops[i].lon);
-      let d = getDistanceMeters(refLat, refLon, sLat, sLon);
-
-      if (d <= 50) {
-        currentStopIndex = i;
-        break;
-      }
-      
-      if (i < validStops.length - 1) {
-        let nextLat = Number(validStops[i+1].latitude || validStops[i+1].lat);
-        let nextLon = Number(validStops[i+1].longitude || validStops[i+1].lon);
-        let distToNext = getDistanceMeters(refLat, refLon, nextLat, nextLon);
-        
-        if (distToNext > 50) {
-          currentStopIndex = i;
-        } else {
-          currentStopIndex = i + 1;
-          break;
+    if (refLat && refLon) {
+      let minDist = Infinity;
+      validStops.forEach((s, idx) => {
+        let sLat = Number(s.latitude || s.lat);
+        let sLon = Number(s.longitude || s.lon);
+        if (!isNaN(sLat) && !isNaN(sLon) && sLat !== 0) {
+          let d = getDistanceMeters(refLat, refLon, sLat, sLon);
+          if (d < minDist) {
+            minDist = d;
+            currentStopIndex = idx;
+          }
         }
-      }
+      });
     }
 
     let nearest = { stop: validStops[currentStopIndex], index: currentStopIndex };
-      
     let baseStopName = nearest.stop.name || nearest.stop.stopName || "--";
     let curStopDisplay = baseStopName;
 
     let curStopLat = Number(nearest.stop.latitude || nearest.stop.lat);
     let curStopLon = Number(nearest.stop.longitude || nearest.stop.lon);
 
-    // ৮ নম্বর ত্রুটি সংশোধন: distPastMeters ভ্যারিয়েবলটি ফাংশনাল স্কোপে ঘোষণা
+    let isLiveBus = (busPos && busPos.lat);
     let distPastMeters = 9999;
-    if (!isNaN(curStopLat) && !isNaN(curStopLon) && curStopLat !== 0) {
+    if (refLat && refLon && !isNaN(curStopLat) && !isNaN(curStopLon) && curStopLat !== 0) {
       distPastMeters = Math.round(getDistanceMeters(refLat, refLon, curStopLat, curStopLon));
-      
-      if (distPastMeters > 50 && currentStopIndex < validStops.length - 1) {
+      if (distPastMeters > 50 && currentStopIndex < validStops.length - 1 && isLiveBus) {
         curStopDisplay = `${baseStopName} (${distPastMeters} মিটার পেরিয়ে গেছে)`;
       }
     }
 
-    document.getElementById("infoCurStop").innerText = curStopDisplay;
+    if (!isLiveBus) {
+      curStopDisplay = `${baseStopName} (অফলাইন)`;
+    }
 
-    renderStopsOnMapAndTimeline(validStops, nearest.index, refLat, refLon);
+    let curStopElem = document.getElementById("infoCurStop");
+    if (curStopElem) curStopElem.innerText = curStopDisplay;
+
+    renderStopsOnMapAndTimeline(validStops, nearest.index, isLiveBus ? busPos.lat : null, isLiveBus ? busPos.lon : null);
 
     let nextValidStop = null;
     for (let j = nearest.index + 1; j < validStops.length; j++) {

@@ -111,20 +111,20 @@ function handleGetBuses() {
 }
 
 // -------------------------------------------------------------
-// ২. সমস্ত মাস্টার স্টপ তালিকা আনা
+// ২. সমস্ত মাস্টার স্টপ তালিকা আনা ("Master_Stops" বা "BusStops" থেকে)
 // -------------------------------------------------------------
 function handleGetStopsList() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sheet = ss.getSheetByName("BusStops");
+  var sheet = ss.getSheetByName("Master_Stops") || ss.getSheetByName("BusStops");
   if (!sheet) return createJsonResponse({ ok: true, stops: [] });
 
   var rows = sheet.getDataRange().getValues();
   var stops = [];
   for (var i = 1; i < rows.length; i++) {
-    var name = String(rows[i][0] || "").trim().toUpperCase();
+    var name = String(rows[i][0] || "").replace(/[\u200B-\u200D\uFEFF]/g, "").trim().toUpperCase();
     var lat = Number(rows[i][1]);
     var lon = Number(rows[i][2]);
-    if (name && !isNaN(lat) && !isNaN(lon)) {
+    if (name && !isNaN(lat) && !isNaN(lon) && lat !== 0) {
       stops.push({ name: name, stopName: name, lat: lat, lon: lon, latitude: lat, longitude: lon });
     }
   }
@@ -169,9 +169,40 @@ function handleGetLive(busNo) {
       if (String(bRows[j][2] || "").trim().toUpperCase() === busNo) {
         var rawStops = bRows[j][10] || "";
         if (typeof rawStops === "string") {
-          selectedStops = rawStops.split(",").map(function(s) { return s.trim().toUpperCase(); }).filter(Boolean);
+          selectedStops = rawStops.split(",").map(function(s) { 
+            return s.replace(/[\u200B-\u200D\uFEFF]/g, "").trim().toUpperCase(); 
+          }).filter(Boolean);
         }
         break;
+      }
+    }
+  }
+
+  // বাসের স্টপগুলোর কো-অর্ডিনেট সহ তালিকা আনা
+  var stopsWithCoords = [];
+  var stopsSheet = ss.getSheetByName("Master_Stops") || ss.getSheetByName("BusStops");
+  if (stopsSheet && selectedStops.length > 0) {
+    var sRows = stopsSheet.getDataRange().getValues();
+    var stopsMap = {};
+    for (var k = 1; k < sRows.length; k++) {
+      var sName = String(sRows[k][0] || "").replace(/[\u200B-\u200D\uFEFF]/g, "").trim().toUpperCase();
+      var sLat = Number(sRows[k][1]);
+      var sLon = Number(sRows[k][2]);
+      if (sName && !isNaN(sLat) && !isNaN(sLon) && sLat !== 0) {
+        stopsMap[sName] = { lat: sLat, lon: sLon };
+      }
+    }
+    for (var m = 0; m < selectedStops.length; m++) {
+      var sItem = selectedStops[m];
+      if (stopsMap[sItem]) {
+        stopsWithCoords.push({
+          name: sItem,
+          stopName: sItem,
+          lat: stopsMap[sItem].lat,
+          latitude: stopsMap[sItem].lat,
+          lon: stopsMap[sItem].lon,
+          longitude: stopsMap[sItem].lon
+        });
       }
     }
   }
@@ -180,7 +211,7 @@ function handleGetLive(busNo) {
     ok: true,
     live: liveData,
     selectedStops: selectedStops,
-    stops: []
+    stops: stopsWithCoords
   });
 }
 
