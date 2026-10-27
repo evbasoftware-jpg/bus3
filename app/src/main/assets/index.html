@@ -2022,6 +2022,216 @@
   let arrivalAlertTimeout = null;
 
   // ==========================================
+  // ৩ নম্বর নির্দেশনা: ইংলিশ স্টপের সঠিক উচ্চারণ ও বাংলা রূপান্তর ডিকশনারি
+  // TTS যেন S-U-N-D-I-P-U-R অক্ষর করে না পড়ে, সম্পূর্ণ সঠিক বাংলা বা স্বাভাবিক শব্দে উচ্চারণ করে
+  // ==========================================
+  const BENGALI_STOP_DICTIONARY = {
+    // প্রধান শহর ও টার্মিনাল
+    "LABPUR": "লাভপুর",
+    "SURI": "সিউড়ি",
+    "BOLPUR": "বোলপুর",
+    "KIRNAHAR": "কীর্ণাহার",
+    "KIRNAHAR BUS STAND": "কীর্ণাহার বাস স্ট্যান্ড",
+    "BOLPUR BUS STAND": "বোলপুর বাস স্ট্যান্ড",
+    "SURI BUS STAND": "সিউড়ি বাস স্ট্যান্ড",
+    "LABPUR BUS STAND": "লাভপুর বাস স্ট্যান্ড",
+    "SAINTHIA": "সাঁইথিয়া",
+    "AHMEDPUR": "আহমদপুর",
+    "DUBRAJPUR": "দুবরাজপুর",
+    "ILLAMBAZAR": "ইলামবাজার",
+    "ILAMBAZAR": "ইলামবাজার",
+    "RAMPURHAT": "রামপুরহাট",
+    "NALHATI": "নলহাটি",
+    "MURARAI": "মুরারই",
+    "MALLARPUR": "মল্লারপুর",
+    "MAYURESWAR": "ময়ূরেশ্বর",
+    "PRANTIK": "প্রান্তিক",
+    "KANKALITALA": "কঙ্কালীতলা",
+    "NANOOR": "নানুর",
+    "GUSHKARA": "গুসকরা",
+    "BHEDIA": "ভেড়িয়া",
+    "BARDHAMAN": "বর্ধমান",
+    "BURDWAN": "বর্ধমান",
+    "DURGAPUR": "দুর্গাপুর",
+    "ASANSOL": "আসানসোল",
+    "KOLKATA": "কলকাতা",
+    "PURANDARPUR": "পুরন্দরপুর",
+    "KOTASUR": "কোটাসুর",
+    "TARAPITH": "তারাপীঠ",
+
+    // বীরভূম ও লাগোয়া রুটের সকল গুরুত্বপূর্ণ স্টপেজ
+    "SUNDIPUR": "সুন্দিপুর",
+    "CHOWHATTA": "চৌহাট্টা",
+    "HIRAPUR": "হীরাপুর",
+    "KUSUMGORIA": "কুসুমগড়িয়া",
+    "GORURHAT SASTHINAGAR": "গরুরহাট ষষ্ঠীনগর",
+    "GORURHAT": "গরুরহাট",
+    "SASTHINAGAR": "ষষ্ঠীনগর",
+    "BAMNIGRAM": "বামনিগ্রাম",
+    "UJJWALPUR": "উজ্জ্বলপুর",
+    "KADWA": "কাদোয়া",
+    "BORO PUKUR": "বড়পুকুর",
+    "BOROPUKUR": "বড়পুকুর",
+    "INDUS": "ইন্দাস",
+    "GHOSHPARA": "ঘোষপাড়া",
+    "BIPRATIKURI": "বিপ্রতিকুড়ি",
+    "CHOWRASTA": "চৌরাস্তা",
+    "JAMBU": "জাম্বু",
+    "JAMBUNI": "জামবুনী",
+    "BAHIRI": "বাহিরী",
+    "PICHHULDANGA": "পিছুলডাঙ্গা",
+    "DWARKA": "দ্বারকা",
+    "SINGHEE": "সিংঘী",
+    "PUNJABI MORE": "পাঞ্জাবি মোড়",
+    "TIN MATHA MORE": "তিন মাথা মোড়",
+    "STATION MORE": "স্টেশন মোড়",
+    "HOSPITAL MORE": "হাসপাতাল মোড়",
+    "COLLEGE MORE": "কলেজ মোড়",
+    "COURT MORE": "কোর্ট মোড়",
+    "BUS STAND": "বাস স্ট্যান্ড"
+  };
+
+  function transliterateEnglishToBengali(word) {
+    if (!word) return "";
+    let clean = word.toString().trim().toUpperCase();
+    if (/[\u0980-\u09FF]/.test(clean)) return clean; // যদি আগে থেকেই বাংলায় থাকে
+
+    if (BENGALI_STOP_DICTIONARY[clean]) return BENGALI_STOP_DICTIONARY[clean];
+
+    // একাধিক শব্দের সমন্বিত রূপান্তর
+    if (clean.includes(" ")) {
+      let parts = clean.split(/\s+/).map(p => BENGALI_STOP_DICTIONARY[p] || transliterateEnglishToBengali(p));
+      return parts.join(" ");
+    }
+
+    let w = clean;
+    // প্রচলিত প্রত্যয়সমূহ (Place suffixes)
+    const suffixes = [
+      [/PURAM$/i, "পুরম"], [/PUR$/i, "পুর"], [/NAGAR$/i, "নগর"],
+      [/PARA$/i, "পাড়া"], [/HAT$/i, "হাট"], [/GRAM$/i, "গ্রাম"],
+      [/DANGA$/i, "ডাঙ্গা"], [/DIHI$/i, "ডিহি"], [/PUKUR$/i, "পুকুর"],
+      [/GHAT$/i, "ঘাট"], [/MORE$/i, "মোড়"], [/KURI$/i, "কুড়ি"],
+      [/BARI$/i, "বাড়ি"], [/TALA$/i, "তলা"], [/BAZAR$/i, "বাজার"],
+      [/GANJ$/i, "গঞ্জ"], [/BAD$/i, "বাদ"], [/KALI$/i, "কালী"],
+      [/GORIA$/i, "গড়িয়া"], [/BANDH$/i, "বাঁধ"], [/STAND$/i, "স্ট্যান্ড"]
+    ];
+
+    let foundSuffix = "";
+    for (let [pat, repl] of suffixes) {
+      if (pat.test(w)) {
+        w = w.replace(pat, "");
+        foundSuffix = repl;
+        break;
+      }
+    }
+
+    const clusters = [
+      { en: "SHH", bn: "ষ" }, { en: "CHH", bn: "ছ" }, { en: "KH", bn: "খ" },
+      { en: "GH", bn: "ঘ" },  { en: "CH", bn: "চ" },  { en: "JH", bn: "ঝ" },
+      { en: "TH", bn: "থ" },  { en: "DH", bn: "ধ" },  { en: "PH", bn: "ফ" },
+      { en: "BH", bn: "ভ" },  { en: "SH", bn: "শ" },  { en: "NG", bn: "ঙ" },
+      { en: "NJ", bn: "ঞ্জ" }, { en: "ND", bn: "ন্দ" }, { en: "NT", bn: "ন্ত" },
+      { en: "MB", bn: "ম্ব" }, { en: "MP", bn: "ম্প" }, { en: "ST", bn: "স্ট" },
+      { en: "STR", bn: "স্ট্র" }, { en: "TR", bn: "ত্র" }, { en: "PR", bn: "প্র" },
+      { en: "KR", bn: "ক্র" }, { en: "BR", bn: "ব্র" }, { en: "DR", bn: "দ্র" },
+      { en: "GR", bn: "গ্র" }, { en: "TT", bn: "ট্ট" }, { en: "DD", bn: "ড্ড" }
+    ];
+
+    const singleConsonants = {
+      'K': 'ক', 'G': 'গ', 'C': 'ক', 'J': 'জ', 'Z': 'জ',
+      'T': 'ট', 'D': 'ড', 'N': 'ন', 'P': 'প', 'F': 'ফ',
+      'B': 'ব', 'V': 'ভ', 'M': 'ম', 'Y': 'য', 'R': 'র',
+      'L': 'ল', 'W': 'ওয়', 'S': 'স', 'H': 'হ'
+    };
+
+    const vowelIndep = {
+      'AA': 'আ', 'A': 'অ', 'I': 'ই', 'EE': 'ঈ', 'U': 'উ',
+      'OO': 'ঊ', 'E': 'এ', 'AI': 'ঐ', 'O': 'ও', 'AU': 'ঔ', 'OU': 'ঔ', 'OW': 'ঔ'
+    };
+
+    const vowelDep = {
+      'AA': 'া', 'A': 'া', 'I': 'ি', 'EE': 'ী', 'U': 'ু',
+      'OO': 'ূ', 'E': 'ে', 'AI': 'ৈ', 'O': 'ো', 'AU': 'ৌ', 'OU': 'ৌ', 'OW': 'ৌ'
+    };
+
+    let res = "";
+    let idx = 0;
+    let lastWasConsonant = false;
+
+    while (idx < w.length) {
+      let vMatch = null;
+      for (let vk of ['AA', 'EE', 'OO', 'AI', 'AU', 'OU', 'OW']) {
+        if (w.substr(idx, vk.length) === vk) {
+          vMatch = vk;
+          break;
+        }
+      }
+      if (!vMatch && ['A', 'I', 'U', 'E', 'O'].includes(w[idx])) {
+        vMatch = w[idx];
+      }
+
+      if (vMatch) {
+        res += lastWasConsonant ? (vowelDep[vMatch] || 'া') : (vowelIndep[vMatch] || 'অ');
+        idx += vMatch.length;
+        lastWasConsonant = false;
+        continue;
+      }
+
+      let cMatch = null;
+      for (let c of clusters) {
+        if (w.substr(idx, c.en.length) === c.en) {
+          cMatch = c;
+          break;
+        }
+      }
+
+      if (cMatch) {
+        res += cMatch.bn;
+        idx += cMatch.en.length;
+        lastWasConsonant = true;
+        continue;
+      }
+
+      let ch = w[idx];
+      if (singleConsonants[ch]) {
+        res += singleConsonants[ch];
+        lastWasConsonant = true;
+      } else {
+        res += ch;
+        lastWasConsonant = false;
+      }
+      idx++;
+    }
+
+    return (res + foundSuffix).trim();
+  }
+
+  function toTitleCaseWord(str) {
+    if (!str) return "";
+    return str.replace(/\b[A-Za-z]+\b/g, txt => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase());
+  }
+
+  // স্টপের নাম কণ্ঠ ঘোষণার জন্য প্রস্তুতকরণ
+  function getSpokenStopName(rawName, lang) {
+    if (!rawName) return "";
+    let clean = rawName.replace(/\(.*?\)/g, "").replace(/[🚏🚌📍🏁]/g, "").trim();
+    if (!clean || clean === "--") return "";
+
+    let curLang = lang || getCurrentAppLanguage() || "bn";
+
+    // বাংলা ভাষার জন্য: সম্পূর্ণ নির্ভুল বাংলা লিপিতে রূপান্তর করা
+    if (curLang === "bn" || curLang === "hi") {
+      if (/[\u0980-\u09FF]/.test(clean)) return clean;
+      let upper = clean.toUpperCase();
+      if (BENGALI_STOP_DICTIONARY[upper]) return BENGALI_STOP_DICTIONARY[upper];
+      return transliterateEnglishToBengali(clean);
+    }
+
+    // ইংরেজি ভাষার জন্য: ALL-CAPS থেকে স্বাভাবিক Title Case করা ("Sundipur") যাতে অক্ষর করে না পড়ে
+    return toTitleCaseWord(clean);
+  }
+
+  // ==========================================
   // পরিষ্কার ঘোষণা এবং স্টপ এলার্ট ফাংশনসমূহ (পরিষ্কার পুরুষ কণ্ঠ)
   // ==========================================
   function playVoiceAnnouncement(text, lang) {
@@ -2076,26 +2286,29 @@
         }
 
         // খুবই পরিষ্কার, বলিষ্ঠ ও গম্ভীর পুরুষের কণ্ঠের জন্য আদর্শ পিচ ও গতি
-        utter.pitch = 0.96; // পরিষ্কার বলিষ্ঠ পুরুষ কণ্ঠ
-        utter.rate = 0.93;  // স্পষ্ট উচ্চারণের জন্য আদর্শ গতি
+        utter.pitch = 0.96;
+        utter.rate = 0.93;
         window.speechSynthesis.speak(utter);
       } catch (_) {}
     }
   }
 
   function getArrivalAnnouncement(curStop, nextStop, isDest, lang) {
-    let cleanCur = curStop.replace(/\(.*?\)/g, "").trim();
-    let cleanNext = (nextStop && nextStop !== "--") ? nextStop.replace(/\(.*?\)/g, "").split("|")[0].trim() : "";
+    let rawCur = (curStop || "").replace(/\(.*?\)/g, "").trim();
+    let rawNext = (nextStop && nextStop !== "--") ? nextStop.replace(/\(.*?\)/g, "").split("|")[0].trim() : "";
+    let curLang = lang || getCurrentAppLanguage() || "bn";
+    let cleanCur = getSpokenStopName(rawCur, curLang);
+    let cleanNext = rawNext ? getSpokenStopName(rawNext, curLang) : "";
 
-    switch (lang) {
+    switch (curLang) {
       case "hi":
         return isDest 
           ? `हम गंतव्य ${cleanCur} पहुँच चुके हैं। यात्रा के लिए धन्यवाद!`
-          : (cleanNext ? `हम अभी ${cleanCur} स्टॉप पर पहुँच चुके हैं। अगला स्टॉप ${cleanNext} है।` : `हम अभी ${cleanCur} स्टॉप पर पहुँच चुके हैं।`);
+          : (cleanNext ? `वर्तमान स्टॉप ${cleanCur}। अगला स्टॉप ${cleanNext} है।` : `वर्तमान स्टॉप ${cleanCur} पहुँच चुके हैं।`);
       case "en":
         return isDest
           ? `We have arrived at destination ${cleanCur}. Thank you for traveling with us!`
-          : (cleanNext ? `We have arrived at ${cleanCur}. Next stop is ${cleanNext}.` : `We have arrived at ${cleanCur}.`);
+          : (cleanNext ? `Current stop ${cleanCur}. Next stop is ${cleanNext}.` : `Current stop ${cleanCur}.`);
       case "ta":
         return isDest
           ? `நாம் இலக்கு ${cleanCur} வந்துவிட்டோம்!`
@@ -2104,62 +2317,25 @@
         return isDest
           ? `మనం గమ్యస్థానం ${cleanCur} చేరుకున్నాము!`
           : (cleanNext ? `మనం ఇప్పుడు ${cleanCur} స్టాప్‌కు చేరుకున్నాము. తదుపరి స్టాప్ ${cleanNext}.` : `మనం ఇప్పుడు ${cleanCur} చేరుకున్నాము.`);
-      case "mr":
-        return isDest
-          ? `आपण गंतव्य ${cleanCur} येथे पोहोचलो आहोत!`
-          : (cleanNext ? `आपण आता ${cleanCur} थांब्यावर पोहोचलो आहोत. पुढील थांबा ${cleanNext}.` : `आपण आता ${cleanCur} थांब्यावर पोहोचलो आहोत.`);
-      case "gu":
-        return isDest
-          ? `આપણે ગંતવ્ય ${cleanCur} પહોંચી ગયા છીએ!`
-          : (cleanNext ? `આપણે હવે ${cleanCur} સ્ટોપ પર પહોંચી ગયા છીએ. આગળનું સ્ટોપ ${cleanNext}.` : `આપણે હવે ${cleanCur} સ્ટોપ પર પહોંચી ગયા છીએ.`);
-      case "kn":
-        return isDest
-          ? `ನಾವು ಗಮ್ಯಸ್ಥಾನ ${cleanCur} ತಲುಪಿದ್ದೇವೆ!`
-          : (cleanNext ? `ನಾವು ಈಗ ${cleanCur} ನಿಲ್ದಾಣಕ್ಕೆ ತಲುಪಿದ್ದೇವೆ. ಮುಂದಿನ ನಿಲ್ದಾಣ ${cleanNext}.` : `ನಾವು ಈಗ ${cleanCur} ನಿಲ್ದಾಣಕ್ಕೆ ತಲುಪಿದ್ದೇವೆ.`);
-      case "ml":
-        return isDest
-          ? `നമ്മൾ ലക്ഷ്യസ്ഥാനം ${cleanCur} എത്തിയിരിക്കുന്നു!`
-          : (cleanNext ? `നമ്മൾ ഇപ്പോൾ ${cleanCur} സ്റ്റോപ്പിൽ എത്തിയിരിക്കുന്നു. അടുത്ത സ്റ്റോപ്പ് ${cleanNext}.` : `നമ്മൾ ഇപ്പോൾ ${cleanCur} സ്റ്റോപ്പിൽ എത്തിയിരിക്കുന്നു.`);
-      case "pa":
-        return isDest
-          ? `ਅਸੀਂ ਮੰਜ਼ਿਲ ${cleanCur} ਪਹੁੰਚ ਗਏ ਹਾਂ!`
-          : (cleanNext ? `ਅਸੀਂ ਹੁਣ ${cleanCur} ਸਟਾਪ 'ਤੇ ਪਹੁੰਚ ਗਏ ਹਾਂ। ਅਗਲਾ ਸਟਾਪ ${cleanNext}।` : `ਅਸੀਂ ਹੁਣ ${cleanCur} ਸਟਾਪ 'ਤੇ ਪਹੁੰਚ ਗਏ ਹਾਂ।`);
-      case "or":
-        return isDest
-          ? `ଆମେ ଗନ୍ତବ୍ୟସ୍ଥଳ ${cleanCur}ରେ ପହଞ୍ଚିଛୁ!`
-          : (cleanNext ? `ଆମେ ଏବେ ${cleanCur} ଷ୍ଟପ୍‌ରେ ପହଞ୍ଚିଛୁ। ପରବର୍ତ୍ତୀ ଷ୍ଟପ୍ ${cleanNext}।` : `ଆମେ ଏବେ ${cleanCur} ଷ୍ଟପ୍‌ରେ ପହଞ୍ଚିଛୁ।`);
       default: // Bengali ("bn")
         return isDest
           ? `আমরা গন্তব্য ${cleanCur}-এ পৌঁছে গেছি। আমাদের সাথে ভ্রমণের জন্য ধন্যবাদ!`
-          : (cleanNext ? `আমরা এখন ${cleanCur} স্টপেজে পৌঁছে গেছি। পরবর্তী স্টপেজ ${cleanNext}।` : `আমরা এখন ${cleanCur} স্টপেজে পৌঁছে গেছি।`);
+          : (cleanNext ? `বর্তমান স্টপেজ ${cleanCur}। পরবর্তী স্টপেজ ${cleanNext}।` : `বর্তমান স্টপেজ ${cleanCur}।`);
     }
   }
 
   function getNextStopAnnouncement(nextStop, lang) {
-    let cleanNext = (nextStop && nextStop !== "--") ? nextStop.replace(/\(.*?\)/g, "").split("|")[0].trim() : "";
+    let rawNext = (nextStop && nextStop !== "--") ? nextStop.replace(/\(.*?\)/g, "").split("|")[0].trim() : "";
+    if (!rawNext) return "";
+    let curLang = lang || getCurrentAppLanguage() || "bn";
+    let cleanNext = getSpokenStopName(rawNext, curLang);
     if (!cleanNext) return "";
 
-    switch (lang) {
+    switch (curLang) {
       case "hi":
         return `अगला स्टॉप ${cleanNext} है।`;
       case "en":
         return `Next stop is ${cleanNext}.`;
-      case "ta":
-        return `அடுத்த நிறுத்தம் ${cleanNext}.`;
-      case "te":
-        return `తదుపరి స్టాప్ ${cleanNext}.`;
-      case "mr":
-        return `पुढील थांबा ${cleanNext}.`;
-      case "gu":
-        return `આગળનું સ્ટોપ ${cleanNext}.`;
-      case "kn":
-        return `ಮುಂದಿನ ನಿಲ್ದಾಣ ${cleanNext}.`;
-      case "ml":
-        return `അടുത്ത സ്റ്റോപ്പ് ${cleanNext}.`;
-      case "pa":
-        return `ਅਗਲਾ ਸਟਾਪ ${cleanNext}।`;
-      case "or":
-        return `ପରବର୍ତ୍ତୀ ଷ୍ଟପ୍ ${cleanNext}।`;
       default: // Bengali ("bn")
         return `পরবর্তী স্টপেজ ${cleanNext}।`;
     }
@@ -2173,22 +2349,34 @@
     if (!banner) return;
 
     let lang = getCurrentAppLanguage();
-    let cleanCur = curStop.replace(/\(.*?\)/g, "").trim();
+    let cleanCur = (curStop || "").replace(/\(.*?\)/g, "").trim();
     let cleanNext = (nextStop && nextStop !== "--") ? nextStop.replace(/\(.*?\)/g, "").split("|")[0].trim() : "";
+
+    let bnCur = getSpokenStopName(cleanCur, "bn");
+    let bnNext = cleanNext ? getSpokenStopName(cleanNext, "bn") : "";
+
+    let curDisplay = cleanCur;
+    if (bnCur && bnCur !== cleanCur && !cleanCur.includes(bnCur)) {
+      curDisplay = `${cleanCur} (${bnCur})`;
+    }
+    let nextDisplay = cleanNext;
+    if (bnNext && bnNext !== cleanNext && !cleanNext.includes(bnNext)) {
+      nextDisplay = `${cleanNext} (${bnNext})`;
+    }
 
     if (isDest) {
       if (titleElem) titleElem.innerText = (lang === "hi" ? "🎉 गंतव्य आगमन" : (lang === "en" ? "🎉 Destination Arrived" : "🎉 গন্তব্যে পৌঁছে গেছেন!"));
-      if (textElem) textElem.innerHTML = `আপনি গন্তব্য <b>${cleanCur}</b>-এ পৌঁছে গেছেন!`;
+      if (textElem) textElem.innerHTML = `আপনি গন্তব্য <b>${curDisplay}</b>-এ পৌঁছে গেছেন!`;
       if (nextElem) {
         nextElem.innerText = (lang === "hi" ? "यात्रा पूरी हुई" : (lang === "en" ? "Trip completed" : "যাত্রা সমাপ্ত"));
         nextElem.style.display = "inline-block";
       }
     } else {
       if (titleElem) titleElem.innerText = (lang === "hi" ? "🔔 স্টপ আগমন" : (lang === "en" ? "🔔 Stop Arrival" : "🔔 স্টপেজে পৌঁছানোর বার্তা"));
-      if (textElem) textElem.innerHTML = `আপনি এখন <b>${cleanCur}</b> স্টপেজে পৌঁছে গেছেন।`;
+      if (textElem) textElem.innerHTML = `আপনি এখন <b>${curDisplay}</b> স্টপেজে পৌঁছে গেছেন।`;
       if (nextElem) {
         if (cleanNext) {
-          nextElem.innerText = `⏩ ${(lang === "hi" ? "अगला स्टॉप" : (lang === "en" ? "Next Stop" : "পরবর্তী স্টপেজ"))}: ${cleanNext}`;
+          nextElem.innerText = `⏩ ${(lang === "hi" ? "अगला स्टॉप" : (lang === "en" ? "Next Stop" : "পরবর্তী স্টপেজ"))}: ${nextDisplay}`;
           nextElem.style.display = "inline-block";
         } else {
           nextElem.style.display = "none";
@@ -3796,7 +3984,8 @@
       statusText.innerText = `🚌 বাসের নাম: ${fullName} • লাইভ ট্র্যাকিং চলছে`;
     }
 
-    playVoiceAnnouncement(lang === "hi" ? `बस ${bName} की लाइव ट्रैकिंग शुरू हो गई है।` : (lang === "en" ? `Live tracking started for bus ${bName}.` : `বাস ${bName} লাইভ ট্র্যাকিং শুরু হয়েছে।`), lang);
+    let spokenBusName = getSpokenStopName(bName, lang);
+    playVoiceAnnouncement(lang === "hi" ? `बस ${spokenBusName} की लाइव ट्रैकिंग शुरू हो गई है।` : (lang === "en" ? `Live tracking started for bus ${spokenBusName}.` : `বাস ${spokenBusName} লাইভ ট্র্যাকিং শুরু হয়েছে।`), lang);
 
     if (window.AndroidBridge) {
       if (window.AndroidBridge.startBackgroundTrackingWithDetails) {
@@ -4745,41 +4934,134 @@
       }
     }
 
-    let currentStopIndex = 0;
-    if (refLat && refLon) {
-      let minDist = Infinity;
-      validStops.forEach((s, idx) => {
-        let sLat = Number(s.latitude || s.lat);
-        let sLon = Number(s.longitude || s.lon);
-        if (!isNaN(sLat) && !isNaN(sLon) && sLat !== 0) {
-          let d = getDistanceMeters(refLat, refLon, sLat, sLon);
-          if (d < minDist) {
-            minDist = d;
-            currentStopIndex = idx;
-          }
-        }
-      });
-    }
+    // ১ নম্বর নির্দেশনা সংশোধন: সেগমেন্ট ভিত্তিক রুট ট্র্যাকিং
+    // স্টপেজে পৌঁছানোর পূর্বে কখনো 'পেরিয়ে গেছে' দেখাবে না। যে স্টপ পার হয়েছে কেবল তার জন্য দূরত্ব দেখাবে।
+    let stopsWithCoords = [];
+    validStops.forEach((s, idx) => {
+      let sLat = Number(s.latitude || s.lat);
+      let sLon = Number(s.longitude || s.lon);
+      if (!isNaN(sLat) && !isNaN(sLon) && sLat !== 0) {
+        stopsWithCoords.push({
+          stop: s,
+          routeIndex: idx,
+          lat: sLat,
+          lon: sLon
+        });
+      }
+    });
 
-    let nearest = { stop: validStops[currentStopIndex], index: currentStopIndex };
-    let baseStopName = nearest.stop.name || nearest.stop.stopName || "--";
-    let curStopDisplay = baseStopName;
-
-    let curStopLat = Number(nearest.stop.latitude || nearest.stop.lat);
-    let curStopLon = Number(nearest.stop.longitude || nearest.stop.lon);
+    let closestStop = null;
+    let minStopDist = Infinity;
+    stopsWithCoords.forEach(item => {
+      let d = getDistanceMeters(refLat, refLon, item.lat, item.lon);
+      if (d < minStopDist) {
+        minStopDist = d;
+        closestStop = item;
+      }
+    });
 
     let isLiveBus = (busPos && busPos.lat);
-    let distPastMeters = 9999;
-    if (refLat && refLon && !isNaN(curStopLat) && !isNaN(curStopLon) && curStopLat !== 0) {
-      distPastMeters = Math.round(getDistanceMeters(refLat, refLon, curStopLat, curStopLon));
-      if (distPastMeters > 50 && currentStopIndex < validStops.length - 1 && isLiveBus) {
-        curStopDisplay = `${baseStopName} (${distPastMeters} মিটার পেরিয়ে গেছে)`;
+    let isAtStop = (closestStop && minStopDist <= 50);
+
+    let activeStopIndex = 0;
+    let baseStopName = "--";
+    let curStopDisplay = "--";
+    let distPastMeters = 0;
+    let curStopLat = null;
+    let curStopLon = null;
+
+    if (isAtStop) {
+      // ১) বাসটি কোনো স্টপেজের ৫০ মিটারের মধ্যে রয়েছে (স্টপেজে পৌঁছে গেছে)
+      activeStopIndex = closestStop.routeIndex;
+      baseStopName = closestStop.stop.name || closestStop.stop.stopName || "--";
+      curStopLat = closestStop.lat;
+      curStopLon = closestStop.lon;
+      distPastMeters = 0;
+      let isDest = (activeStopIndex >= validStops.length - 1) || (destName && cleanStopName(baseStopName) === destName);
+      curStopDisplay = isDest ? `${baseStopName} (পৌঁছে গেছেন)` : baseStopName;
+    } else if (stopsWithCoords.length >= 2) {
+      // ২) বাসটি দুটি স্টপেজের মাঝে চলছে। সেগমেন্ট প্রজেকশন দিয়ে নিখুঁতভাবে শনাক্ত করা
+      function projectOnSegment(pLat, pLon, aLat, aLon, bLat, bLon) {
+        let cosLat = Math.cos(aLat * Math.PI / 180);
+        let dx = (bLon - aLon) * cosLat;
+        let dy = bLat - aLat;
+        let lenSq = dx * dx + dy * dy;
+        if (lenSq === 0) {
+          return { t: 0, distMeters: getDistanceMeters(pLat, pLon, aLat, aLon) };
+        }
+        let px = (pLon - aLon) * cosLat;
+        let py = pLat - aLat;
+        let t = (px * dx + py * dy) / lenSq;
+        let clampedT = Math.max(0, Math.min(1, t));
+        let projLat = aLat + clampedT * (bLat - aLat);
+        let projLon = aLon + clampedT * (bLon - aLon);
+        let distMeters = getDistanceMeters(pLat, pLon, projLat, projLon);
+        return { t, clampedT, distMeters };
       }
+
+      let bestSegmentIdx = 0;
+      let minSegDist = Infinity;
+      let bestT = 0;
+
+      for (let k = 0; k < stopsWithCoords.length - 1; k++) {
+        let segA = stopsWithCoords[k];
+        let segB = stopsWithCoords[k + 1];
+        let proj = projectOnSegment(refLat, refLon, segA.lat, segA.lon, segB.lat, segB.lon);
+        let penalty = (proj.t >= 0 && proj.t <= 1) ? 0 : 60;
+        let score = proj.distMeters + penalty;
+        if (score < minSegDist) {
+          minSegDist = score;
+          bestSegmentIdx = k;
+          bestT = proj.t;
+        }
+      }
+
+      let segA = stopsWithCoords[bestSegmentIdx];
+      let segB = stopsWithCoords[bestSegmentIdx + 1];
+
+      if (bestT < 0 && bestSegmentIdx === 0) {
+        // বাস রুটের প্রথম স্টপেজে পৌঁছানোর পূর্বে
+        activeStopIndex = segA.routeIndex;
+        baseStopName = segA.stop.name || segA.stop.stopName || "--";
+        curStopLat = segA.lat;
+        curStopLon = segA.lon;
+        distPastMeters = 0;
+        curStopDisplay = `${baseStopName} (আসছে)`;
+      } else if (bestT > 1 && bestSegmentIdx === stopsWithCoords.length - 2) {
+        // বাস রুটের শেষ গন্তব্য পেরিয়ে গেছে
+        activeStopIndex = segB.routeIndex;
+        baseStopName = segB.stop.name || segB.stop.stopName || "--";
+        curStopLat = segB.lat;
+        curStopLon = segB.lon;
+        distPastMeters = Math.round(getDistanceMeters(refLat, refLon, segB.lat, segB.lon));
+        curStopDisplay = `${baseStopName} (${distPastMeters} মিটার পেরিয়ে গেছে)`;
+      } else {
+        // স্বাভাবিক অবস্থা: বাস segA পেরিয়ে segB-এর দিকে অগ্রসর হচ্ছে
+        // বর্তমান স্টপেজ হবে segA (যে স্টপ বাস প্রকৃতপক্ষে পার হয়েছে)
+        activeStopIndex = segA.routeIndex;
+        baseStopName = segA.stop.name || segA.stop.stopName || "--";
+        curStopLat = segA.lat;
+        curStopLon = segA.lon;
+        distPastMeters = Math.round(getDistanceMeters(refLat, refLon, segA.lat, segA.lon));
+        if (distPastMeters > 50 && isLiveBus) {
+          curStopDisplay = `${baseStopName} (${distPastMeters} মিটার পেরিয়ে গেছে)`;
+        } else {
+          curStopDisplay = baseStopName;
+        }
+      }
+    } else {
+      let fallbackStop = closestStop ? closestStop.stop : validStops[0];
+      activeStopIndex = closestStop ? closestStop.routeIndex : 0;
+      baseStopName = fallbackStop.name || fallbackStop.stopName || "--";
+      distPastMeters = Math.round(minStopDist);
+      curStopDisplay = baseStopName;
     }
 
     if (!isLiveBus) {
       curStopDisplay = `${baseStopName} (অফলাইন)`;
     }
+
+    let nearest = { stop: validStops[activeStopIndex], index: activeStopIndex };
 
     let curStopElem = document.getElementById("infoCurStop");
     if (curStopElem) curStopElem.innerText = curStopDisplay;
@@ -4869,28 +5151,28 @@
     }
 
     // ==========================================
-    // ৮ নম্বর ত্রুটি সংশোধন: প্রতিটি স্টপেজে পৌঁছানোর ম্যাসেজ ও কণ্ঠ ঘোষণা
+    // ২ নম্বর নির্দেশনা সংশোধন: প্রতিটি স্টপেজের ৫০ মিটারের কাছে এলে আগমন ঘোষণা
     // ==========================================
     try {
       let cleanCurStop = cleanStopName(baseStopName);
       let isDestination = (nearest.index >= validStops.length - 1) || (destName && cleanCurStop === destName);
 
-      // স্টপে পৌঁছানোর মুহূর্ত শনাক্তকরণ (দূরত্ব ১৮০ মিটারের কম হলে যাতে দ্রুতগতির বাসেও ঘোষণা মিস না হয়)
-      if (distPastMeters <= 180 && cleanCurStop && lastAnnouncedArrivalStop !== cleanCurStop) {
+      // প্রতিটি স্টপেজের ৫০ মিটার কাছে এলে বলবে "বর্তমান স্টপেজ [স্টপ নাম]"
+      if (isAtStop && minStopDist <= 50 && cleanCurStop && lastAnnouncedArrivalStop !== cleanCurStop) {
         lastAnnouncedArrivalStop = cleanCurStop;
         
         // স্ক্রিনে স্টপে পৌঁছানোর নোটিশ ব্যানার
         showArrivalAlertBanner(baseStopName, nextStopName, isDestination);
         
-        // নির্বাচিত অ্যাপের ভাষায় স্পষ্ট স্টপ আগমন ঘোষণা
+        // নির্বাচিত অ্যাপের ভাষায় স্পষ্ট স্টপ আগমন ঘোষণা (বাংলায় স্পষ্ট উচ্চারণ)
         let curLang = getCurrentAppLanguage();
         let arrivalSpeech = getArrivalAnnouncement(baseStopName, nextStopName, isDestination, curLang);
         playVoiceAnnouncement(arrivalSpeech, curLang);
       }
 
-      // পরবর্তী স্টপেজের নাম ঘোষণা (বর্তমান স্টপ পেরিয়ে ১০০ মিটার অতিক্রম করলে)
+      // পরবর্তী স্টপেজের নাম ঘোষণা (বর্তমান স্টপ ছেড়ে ৭০ মিটার অতিক্রম করলে)
       let cleanNext = cleanStopName(nextStopName);
-      if (cleanNext && cleanNext !== "--" && distPastMeters > 90 && lastAnnouncedNextStop !== cleanNext) {
+      if (cleanNext && cleanNext !== "--" && !isAtStop && distPastMeters > 70 && lastAnnouncedNextStop !== cleanNext) {
         lastAnnouncedNextStop = cleanNext;
         let curLang = getCurrentAppLanguage();
         let nextSpeech = getNextStopAnnouncement(nextStopName, curLang);
@@ -5019,7 +5301,8 @@
     }, 1200);
 
     let curLang = getCurrentAppLanguage();
-    let msg = `সতর্কবার্তা! আপনার গন্তব্য ${destName} আর মাত্র ${dist} মিটার দূরে। নামার প্রস্তুতি নিন।`;
+    let spokenDest = getSpokenStopName(destName, curLang);
+    let msg = `সতর্কবার্তা! আপনার গন্তব্য ${spokenDest} আর মাত্র ${dist} মিটার দূরে। নামার প্রস্তুতি নিন।`;
     playVoiceAnnouncement(msg, curLang);
   }
 

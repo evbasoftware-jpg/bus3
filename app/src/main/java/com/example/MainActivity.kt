@@ -450,8 +450,19 @@ class MainActivity : ComponentActivity() {
     } catch (_: Exception) {}
   }
 
+  private fun formatTextForTts(text: String): String {
+    // Convert ALL-CAPS Latin words to Title Case (e.g., SUNDIPUR -> Sundipur)
+    // so Android TextToSpeech engine speaks them as whole words instead of spelling individual letters.
+    val regex = Regex("\\b[A-Z]{2,}\\b")
+    return regex.replace(text) { matchResult ->
+      val word = matchResult.value
+      word.lowercase().replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
+    }
+  }
+
   fun speakVoiceAnnouncement(text: String, langCode: String) {
     if (text.isBlank()) return
+    val preparedText = formatTextForTts(text)
     runOnUiThread {
       try {
         val tts = textToSpeech
@@ -461,7 +472,7 @@ class MainActivity : ComponentActivity() {
             putFloat(TextToSpeech.Engine.KEY_PARAM_VOLUME, 1.0f)
             putInt(TextToSpeech.Engine.KEY_PARAM_STREAM, AudioManager.STREAM_MUSIC)
           }
-          tts.speak(text, TextToSpeech.QUEUE_FLUSH, params, "TTS_ANNOUNCE_${System.currentTimeMillis()}")
+          tts.speak(preparedText, TextToSpeech.QUEUE_FLUSH, params, "TTS_ANNOUNCE_${System.currentTimeMillis()}")
         }
       } catch (_: Exception) {}
     }
