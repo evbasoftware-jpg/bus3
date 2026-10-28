@@ -14,6 +14,7 @@ import android.location.LocationListener
 import android.location.LocationManager
 import android.os.Build
 import android.os.IBinder
+import android.os.Looper
 import android.os.PowerManager
 import android.widget.RemoteViews
 import androidx.core.app.NotificationCompat
@@ -197,17 +198,19 @@ class BusTrackingService : Service() {
         if (lm.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
           lm.requestLocationUpdates(
             LocationManager.GPS_PROVIDER,
-            3000L,
-            2f,
-            locationListener
+            2000L,
+            0f,
+            locationListener,
+            Looper.getMainLooper()
           )
         }
         if (lm.isProviderEnabled(LocationManager.NETWORK_PROVIDER)) {
           lm.requestLocationUpdates(
             LocationManager.NETWORK_PROVIDER,
-            4000L,
-            5f,
-            locationListener
+            3000L,
+            0f,
+            locationListener,
+            Looper.getMainLooper()
           )
         }
       }
@@ -366,6 +369,23 @@ class BusTrackingService : Service() {
             val speed = liveObj.optDouble("speed", 0.0).toFloat()
             if (speed >= 0f) {
               lastSpeedKmh = speed
+            }
+            val cur = liveObj.optString("currentStop", "")
+            if (cur.isNotBlank() && cur != "--") {
+              currentStopText = cur
+            }
+            val next = liveObj.optString("nextStop", "")
+            if (next.isNotBlank() && next != "--") {
+              nextStopText = next
+            }
+            val busLat = liveObj.optDouble("lat", 0.0)
+            val busLon = liveObj.optDouble("lon", 0.0)
+            if (busLat != 0.0 && busLon != 0.0) {
+              val busLoc = Location("").apply {
+                latitude = busLat
+                longitude = busLon
+              }
+              updateDynamicDistancesFromGps(busLoc, lastSpeedKmh)
             }
           }
           refreshNotification()

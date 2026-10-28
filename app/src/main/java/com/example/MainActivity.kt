@@ -27,6 +27,14 @@ import android.webkit.JsResult
 import android.webkit.WebChromeClient
 import android.webkit.WebSettings
 import java.net.URLEncoder
+import java.io.File
+import java.net.HttpURLConnection
+import java.net.URL
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import android.webkit.RenderProcessGoneDetail
 import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
@@ -36,6 +44,7 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.imePadding
@@ -45,6 +54,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.app.ActivityCompat
 import com.example.ui.theme.MyApplicationTheme
@@ -150,13 +160,24 @@ class MainActivity : ComponentActivity() {
             finish()
           }
         }
-        Box(modifier = Modifier.fillMaxSize().statusBarsPadding().imePadding()) {
-          webView?.let { wv ->
-            AndroidView(
-              factory = { wv },
-              modifier = Modifier.fillMaxSize()
-            )
-          }
+        Box(
+          modifier = Modifier
+            .fillMaxSize()
+            .background(Color.White)
+            .statusBarsPadding()
+            .imePadding()
+        ) {
+          AndroidView(
+            factory = { _ ->
+              val wv = webView ?: initWebView()
+              (wv.parent as? ViewGroup)?.removeView(wv)
+              wv
+            },
+            update = { wv ->
+              wv.onResume()
+            },
+            modifier = Modifier.fillMaxSize()
+          )
         }
       }
     }
@@ -228,8 +249,18 @@ class MainActivity : ComponentActivity() {
   }
 
   @SuppressLint("SetJavaScriptEnabled")
-  private fun initWebView() {
+  private fun initWebView(): WebView {
+    val existing = webView
+    if (existing != null) {
+      try {
+        (existing.parent as? ViewGroup)?.removeView(existing)
+        existing.destroy()
+      } catch (_: Exception) {}
+      webView = null
+    }
+
     val wv = WebView(this)
+    wv.setBackgroundColor(android.graphics.Color.WHITE)
     wv.layoutParams = ViewGroup.LayoutParams(
       ViewGroup.LayoutParams.MATCH_PARENT,
       ViewGroup.LayoutParams.MATCH_PARENT
@@ -246,6 +277,7 @@ class MainActivity : ComponentActivity() {
       cacheMode = WebSettings.LOAD_DEFAULT
       useWideViewPort = true
       loadWithOverviewMode = true
+      mediaPlaybackRequiresUserGesture = false
     }
 
     wv.addJavascriptInterface(WebAppInterface(this), "AndroidBridge")
@@ -327,6 +359,18 @@ class MainActivity : ComponentActivity() {
     }
 
     wv.webViewClient = object : WebViewClient() {
+      override fun onRenderProcessGone(view: WebView?, detail: RenderProcessGoneDetail?): Boolean {
+        try {
+          (view?.parent as? ViewGroup)?.removeView(view)
+          view?.destroy()
+        } catch (_: Exception) {}
+        webView = null
+        runOnUiThread {
+          initWebView()
+        }
+        return true
+      }
+
       override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
         val url = request?.url?.toString() ?: return false
         return handleCustomUri(url)
@@ -359,6 +403,23 @@ class MainActivity : ComponentActivity() {
 
     wv.loadUrl("file:///android_asset/index.html")
     this.webView = wv
+    return wv
+  }
+
+  override fun onResume() {
+    super.onResume()
+    try {
+      webView?.onResume()
+      webView?.resumeTimers()
+      startLocationUpdates()
+    } catch (_: Exception) {}
+  }
+
+  override fun onPause() {
+    super.onPause()
+    try {
+      webView?.onPause()
+    } catch (_: Exception) {}
   }
 
   private fun getLocaleForLanguage(langCode: String): Locale {
@@ -396,6 +457,7 @@ class MainActivity : ComponentActivity() {
         }
       }
 
+      var isFemaleSelected = false
       if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
         val availableVoices = tts.voices
         if (!availableVoices.isNullOrEmpty()) {
@@ -412,7 +474,7 @@ class MainActivity : ComponentActivity() {
           fun isExplicitlyFemale(v: Voice): Boolean {
             val n = v.name.lowercase()
             if (n.contains("female") || n.contains("woman") || n.contains("girl") ||
-                n.contains("bif") || n.contains("baf") || n.contains("bnf") ||
+                n.contains("bdf") || n.contains("bnf") || n.contains("bif") || n.contains("baf") ||
                 n.contains("hif") || n.contains("hid") || n.contains("hic") ||
                 n.contains("-fem") || n.contains("_fem") || n.contains("fem_") ||
                 n.contains("swara") || n.contains("aditi") || n.contains("kavya") ||
@@ -454,21 +516,36 @@ class MainActivity : ComponentActivity() {
 
           if (selectedVoice != null) {
             tts.voice = selectedVoice
+            isFemaleSelected = isExplicitlyFemale(selectedVoice)
           }
         }
       }
 
-      // মিষ্টি ও সুরেলা নারী কণ্ঠের জন্য পিচ ও গতি (Sweet Female Singer Voice Tone)
-      tts.setPitch(1.22f)
-      tts.setSpeechRate(0.92f)
+      // মিষ্টি নারী কণ্ঠ পাওয়া গেলে মধুর পিচ ও রেট, অন্যথায় সাধারণ স্বাভাবিক পিচ যাতে রোবটিক পুরুষ না শোনায়
+      if (isFemaleSelected) {
+        tts.setPitch(1.18f)
+        tts.setSpeechRate(0.92f)
+      } else {
+        tts.setPitch(1.02f)
+        tts.setSpeechRate(0.95f)
+      }
     } catch (_: Exception) {}
   }
 
   private fun formatTextForTts(text: String): String {
-    // Convert ALL-CAPS Latin words to Title Case (e.g., SUNDIPUR -> Sundipur)
-    // so Android TextToSpeech engine speaks them as whole words instead of spelling individual letters.
+    var out = text
+    // BDO OFFICE এবং অন্যান্য পরিচিত সংক্ষিপ্ত রূপ ও স্টপের সঠিক বাংলা উচ্চারণ
+    out = out.replace(Regex("(?i)\\bBDO\\s+OFFICE\\b"), "বিডিও অফিস")
+    out = out.replace(Regex("(?i)\\bBDO\\b"), "বিডিও")
+    out = out.replace(Regex("(?i)\\bOFFICE\\b"), "অফিস")
+    out = out.replace(Regex("(?i)\\bSDO\\s+OFFICE\\b"), "এসডিও অফিস")
+    out = out.replace(Regex("(?i)\\bSDO\\b"), "এসডিও")
+    out = out.replace(Regex("(?i)\\bAHMADPUR\\b"), "আহমদপুর")
+    out = out.replace(Regex("(?i)\\bAHMEDPUR\\b"), "আহমদপুর")
+
+    // Convert remaining ALL-CAPS Latin words to Title Case (e.g., SUNDIPUR -> Sundipur)
     val regex = Regex("\\b[A-Z]{2,}\\b")
-    return regex.replace(text) { matchResult ->
+    return regex.replace(out) { matchResult ->
       val word = matchResult.value
       word.lowercase().replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
     }
@@ -480,7 +557,7 @@ class MainActivity : ComponentActivity() {
     val curLang = if (langCode.isBlank()) "bn" else langCode
 
     runOnUiThread {
-      // ১. ইন্টারনেট সক্রিয় থাকলে গুগলের হাই-ডেফিনিশন মিষ্টি নারী কণ্ঠ অনলাইন অডিও (ওয়েব পেজের মতই সুরেলা মিষ্টি কণ্ঠ)
+      // ১. ইন্টারনেট সক্রিয় থাকলে গুগলের ক্লাউড হাই-ডেফিনিশন মিষ্টি নারী কণ্ঠ অনলাইন অডিও (ওয়েব পেজের মতই সুরেলা মিষ্টি কণ্ঠ)
       if (isNetworkAvailable() && preparedText.length < 250) {
         playGoogleOnlineFemaleVoice(preparedText, curLang) { success ->
           if (!success) {
@@ -503,44 +580,69 @@ class MainActivity : ComponentActivity() {
       audioPlayer = null
     } catch (_: Exception) {}
 
-    try {
-      val encodedText = URLEncoder.encode(text, "UTF-8")
-      val urlStr = "https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=$langCode&q=$encodedText"
-      val player = MediaPlayer()
-      audioPlayer = player
-      val headers = mapOf("User-Agent" to "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36")
-      player.setAudioAttributes(
-        AudioAttributes.Builder()
-          .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
-          .setUsage(AudioAttributes.USAGE_ASSISTANCE_NAVIGATION_GUIDANCE)
-          .build()
-      )
-      player.setDataSource(applicationContext, Uri.parse(urlStr), headers)
-      player.setOnPreparedListener { mp ->
-        try {
-          mp.start()
-          onComplete(true)
-        } catch (_: Exception) {
+    CoroutineScope(Dispatchers.IO).launch {
+      try {
+        val encodedText = URLEncoder.encode(text, "UTF-8")
+        val urlStr = "https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=$langCode&q=$encodedText"
+        val url = URL(urlStr)
+        val conn = url.openConnection() as HttpURLConnection
+        conn.setRequestProperty(
+          "User-Agent",
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+        )
+        conn.setRequestProperty("Referer", "https://translate.google.com/")
+        conn.connectTimeout = 4000
+        conn.readTimeout = 4000
+
+        if (conn.responseCode == 200) {
+          val tempFile = File.createTempFile("tts_female_", ".mp3", cacheDir)
+          conn.inputStream.use { input ->
+            tempFile.outputStream().use { output ->
+              input.copyTo(output)
+            }
+          }
+
+          withContext(Dispatchers.Main) {
+            try {
+              val player = MediaPlayer()
+              audioPlayer = player
+              player.setAudioAttributes(
+                AudioAttributes.Builder()
+                  .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+                  .setUsage(AudioAttributes.USAGE_ASSISTANCE_NAVIGATION_GUIDANCE)
+                  .build()
+              )
+              player.setDataSource(tempFile.absolutePath)
+              player.setOnCompletionListener { mp ->
+                try { mp.release() } catch (_: Exception) {}
+                if (audioPlayer == mp) audioPlayer = null
+                tempFile.delete()
+              }
+              player.setOnErrorListener { mp, _, _ ->
+                try { mp.release() } catch (_: Exception) {}
+                if (audioPlayer == mp) audioPlayer = null
+                tempFile.delete()
+                onComplete(false)
+                true
+              }
+              player.prepare()
+              player.start()
+              onComplete(true)
+            } catch (_: Exception) {
+              tempFile.delete()
+              onComplete(false)
+            }
+          }
+        } else {
+          withContext(Dispatchers.Main) {
+            onComplete(false)
+          }
+        }
+      } catch (_: Exception) {
+        withContext(Dispatchers.Main) {
           onComplete(false)
         }
       }
-      player.setOnErrorListener { mp, _, _ ->
-        try {
-          mp.release()
-        } catch (_: Exception) {}
-        if (audioPlayer == mp) audioPlayer = null
-        onComplete(false)
-        true
-      }
-      player.setOnCompletionListener { mp ->
-        try {
-          mp.release()
-        } catch (_: Exception) {}
-        if (audioPlayer == mp) audioPlayer = null
-      }
-      player.prepareAsync()
-    } catch (_: Exception) {
-      onComplete(false)
     }
   }
 
