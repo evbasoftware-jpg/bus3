@@ -2263,31 +2263,31 @@
           matchingVoices = voices;
         }
 
-        // সুস্পষ্ট পরিষ্কার পুরুষ কণ্ঠ সনাক্তকরণ
-        let maleVoice = matchingVoices.find(v => {
+        // মিষ্টি, সুরেলা ও স্পষ্ট নারী কণ্ঠ (Female singer voice style) সনাক্তকরণ
+        let femaleVoice = matchingVoices.find(v => {
           let n = (v.name || "").toLowerCase();
           return (
-            (n.includes("male") && !n.includes("female")) ||
-            n.includes("man") || n.includes("david") || n.includes("george") ||
-            n.includes("mark") || n.includes("ravi") || n.includes("ajay") ||
-            n.includes("hemant") || n.includes("amit") || n.includes("deepak")
+            n.includes("female") || n.includes("woman") || n.includes("girl") ||
+            n.includes("zira") || n.includes("kavya") || n.includes("aditi") ||
+            n.includes("lekha") || n.includes("sangeeta") || n.includes("swara") ||
+            n.includes("kalpana") || n.includes("priya") || n.includes("ananya")
           );
         });
 
-        if (!maleVoice) {
-          maleVoice = matchingVoices.find(v => {
+        if (!femaleVoice) {
+          femaleVoice = matchingVoices.find(v => {
             let n = (v.name || "").toLowerCase();
-            return !n.includes("female") && !n.includes("woman") && !n.includes("girl") && !n.includes("zira") && !n.includes("kavya");
+            return !n.includes("male") && !n.includes("man") && !n.includes("boy") && !n.includes("david") && !n.includes("ravi");
           }) || matchingVoices[0];
         }
 
-        if (maleVoice) {
-          utter.voice = maleVoice;
+        if (femaleVoice) {
+          utter.voice = femaleVoice;
         }
 
-        // খুবই পরিষ্কার, বলিষ্ঠ ও গম্ভীর পুরুষের কণ্ঠের জন্য আদর্শ পিচ ও গতি
-        utter.pitch = 0.96;
-        utter.rate = 0.93;
+        // মিষ্টি, সুরেলা ও নম্র নারী কণ্ঠের জন্য আদর্শ পিচ ও গতি (Female singer voice tone)
+        utter.pitch = 1.18;
+        utter.rate = 0.92;
         window.speechSynthesis.speak(utter);
       } catch (_) {}
     }
@@ -5101,53 +5101,151 @@
     let destEta = "";
     let totalDistanceMeters = 0;
 
-    if (destStopElem && destName) {
-      let targetDestIndex = validStops.length - 1;
+    let targetDestName = cleanStopName(
+      (trackingBus && (trackingBus.searchTo || trackingBus.toDisplayName)) ||
+      (document.getElementById("searchTo") ? document.getElementById("searchTo").value.trim() : "") ||
+      (trackingBus ? (trackingBus.dest || trackingBus.originalDest) : "")
+    );
 
-      if (targetDestIndex > nearest.index) {
+    let targetDestIndex = -1;
+    if (targetDestName && validStops.length > 0) {
+      // ১. হুবহু নাম মিল খোঁজা
+      for (let i = validStops.length - 1; i >= 0; i--) {
+        let sClean = cleanStopName(validStops[i].name || validStops[i].stopName);
+        if (sClean === targetDestName) {
+          targetDestIndex = i;
+          break;
+        }
+      }
+      // ২. আংশিক/টোকেন মিল খোঁজা (যেমন LABPUR matches LABPUR NEW BUS STAND)
+      if (targetDestIndex === -1) {
+        for (let i = validStops.length - 1; i >= 0; i--) {
+          let sClean = cleanStopName(validStops[i].name || validStops[i].stopName);
+          if (typeof isStopEqual === "function" && isStopEqual(sClean, targetDestName)) {
+            targetDestIndex = i;
+            break;
+          }
+        }
+      }
+    }
+    if (targetDestIndex === -1) {
+      targetDestIndex = validStops.length - 1;
+    }
+
+    let targetDestStop = validStops[targetDestIndex];
+    let destLat = targetDestStop ? Number(targetDestStop.latitude || targetDestStop.lat) : NaN;
+    let destLon = targetDestStop ? Number(targetDestStop.longitude || targetDestStop.lon) : NaN;
+
+    if ((isNaN(destLat) || isNaN(destLon) || destLat === 0) && targetDestName) {
+      let resolved = resolvePlaceCoords(targetDestName, stopCandidates);
+      if (resolved) {
+        destLat = resolved.lat;
+        destLon = resolved.lon;
+      }
+    }
+
+    if (destStopElem && targetDestName) {
+      if (nearest.index > targetDestIndex) {
+        // বাস গন্তব্য স্টপ অতিক্রম করে গেছে
+        totalDistanceMeters = 0;
+      } else if (nearest.index === targetDestIndex) {
+        // বাসটি গন্তব্য স্টপেজের কাছে বা পৌঁছে গেছে
+        if (!isNaN(destLat) && !isNaN(destLon) && destLat !== 0 && refLat && refLon) {
+          totalDistanceMeters = getDistanceMeters(refLat, refLon, destLat, destLon);
+        } else {
+          totalDistanceMeters = 0;
+        }
+      } else {
+        // গন্তব্যের দিকে অগ্রসর হচ্ছে: বর্তমান অবস্থান থেকে ক্রমানুসারে পরবর্তী স্টপগুলো হয়ে গন্তব্য পর্যন্ত যোগ
+        let routeDist = 0;
         let prevLat = refLat;
         let prevLon = refLon;
+        let hasValidSegment = false;
+
         for (let k = nearest.index + 1; k <= targetDestIndex; k++) {
           let stopLat = Number(validStops[k].latitude || validStops[k].lat);
           let stopLon = Number(validStops[k].longitude || validStops[k].lon);
           if (!isNaN(stopLat) && !isNaN(stopLon) && stopLat !== 0) {
-            totalDistanceMeters += getDistanceMeters(prevLat, prevLon, stopLat, stopLon);
+            routeDist += getDistanceMeters(prevLat, prevLon, stopLat, stopLon);
             prevLat = stopLat;
             prevLon = stopLon;
+            hasValidSegment = true;
           }
         }
-      } else if (destCoords) {
-        totalDistanceMeters = getDistanceMeters(refLat, refLon, destCoords.lat, destCoords.lon);
+
+        if (!hasValidSegment && !isNaN(destLat) && !isNaN(destLon) && destLat !== 0) {
+          routeDist = getDistanceMeters(refLat, refLon, destLat, destLon) * 1.12;
+        }
+
+        // সরাসরি দূরত্বের চেয়ে কম না হওয়া এবং অপ্রয়োজনীয় জিগ-জ্যাগ রোধ
+        if (!isNaN(destLat) && !isNaN(destLon) && destLat !== 0 && refLat && refLon) {
+          let directM = getDistanceMeters(refLat, refLon, destLat, destLon);
+          if (routeDist < directM) {
+            routeDist = directM;
+          } else if (routeDist > directM * 1.35) {
+            routeDist = directM * 1.15;
+          }
+        }
+
+        totalDistanceMeters = routeDist;
       }
 
-      let distDestKm = (totalDistanceMeters / 1000) * 1.08; 
+      let distDestKm = (totalDistanceMeters / 1000);
       distDestFormatted = formatDistanceWithMeters(distDestKm);
       destEta = calculateETAString(distDestKm, speed);
-      
-      destStopElem.innerText = `${destName.toUpperCase()} | ${distDestFormatted} | ETA: ${destEta}`;
+
+      let lang = getCurrentAppLanguage();
+      if (totalDistanceMeters <= 50) {
+        let arrivedText = lang === "en" ? "Arrived" : (lang === "hi" ? "पहुँच गया" : "পৌঁছে গেছেন");
+        destStopElem.innerText = `${targetDestName.toUpperCase()} | ${distDestFormatted} | ${arrivedText}`;
+      } else {
+        destStopElem.innerText = `${targetDestName.toUpperCase()} | ${distDestFormatted} | ETA: ${destEta}`;
+      }
     } else if (destStopElem) {
       destStopElem.innerText = "--";
     }
 
     // ১ নম্বর ফিচার: গন্তব্যের ৫০০ মিটার পূর্বে ওয়েক-আপ অ্যালার্ট (Wake-up Alarm)
-    checkDestinationWakeAlarm(totalDistanceMeters, destName);
+    checkDestinationWakeAlarm(totalDistanceMeters, targetDestName);
 
-    // নোটিফিকেশনে রিয়েলটাইম বাস বিবরণী পাঠানো
-    if (window.AndroidBridge && window.AndroidBridge.updateNotificationDetails) {
+    // নোটিফিকেশনে রিয়েলটাইম বাস বিবরণী ও কো-অর্ডিনেট পাঠানো (যাতে স্ক্রিন বন্ধ বা ব্যাকগ্রাউন্ডেও ক্রমাগত দূরত্ব কমে)
+    if (window.AndroidBridge) {
       let bNum = trackingBus ? (trackingBus.number || trackingBus.busNumber || "") : "";
       let bName = trackingBus ? (trackingBus.name || trackingBus.busName || "") : "";
       let nextStr = nextValidStop ? `${nextStopName} (${distNextFormatted} • ETA: ${nextEta})` : (curStopDisplay ? "গন্তব্যের কাছাকাছি" : "--");
-      let destStr = destName ? (distDestFormatted ? `${destName.toUpperCase()} (${distDestFormatted} • ETA: ${destEta})` : destName.toUpperCase()) : "--";
+      let destStr = targetDestName ? (distDestFormatted ? `${targetDestName.toUpperCase()} (${distDestFormatted} • ETA: ${destEta})` : targetDestName.toUpperCase()) : "--";
       let lang = getCurrentAppLanguage();
 
-      window.AndroidBridge.updateNotificationDetails(
-        bNum,
-        bName,
-        curStopDisplay || "--",
-        nextStr,
-        destStr,
-        lang
-      );
+      let nextLatVal = nextValidStop ? Number(nextValidStop.latitude || nextValidStop.lat) : 0;
+      let nextLonVal = nextValidStop ? Number(nextValidStop.longitude || nextValidStop.lon) : 0;
+      let destLatVal = !isNaN(destLat) ? destLat : 0;
+      let destLonVal = !isNaN(destLon) ? destLon : 0;
+
+      if (window.AndroidBridge.updateNotificationWithCoords) {
+        window.AndroidBridge.updateNotificationWithCoords(
+          bNum,
+          bName,
+          curStopDisplay || "--",
+          nextStr,
+          destStr,
+          lang,
+          nextStopName || "",
+          nextLatVal,
+          nextLonVal,
+          targetDestName || "",
+          destLatVal,
+          destLonVal
+        );
+      } else if (window.AndroidBridge.updateNotificationDetails) {
+        window.AndroidBridge.updateNotificationDetails(
+          bNum,
+          bName,
+          curStopDisplay || "--",
+          nextStr,
+          destStr,
+          lang
+        );
+      }
     }
 
     // ==========================================
@@ -5155,7 +5253,7 @@
     // ==========================================
     try {
       let cleanCurStop = cleanStopName(baseStopName);
-      let isDestination = (nearest.index >= validStops.length - 1) || (destName && cleanCurStop === destName);
+      let isDestination = (nearest.index >= targetDestIndex) || (targetDestName && cleanCurStop === targetDestName);
 
       // প্রতিটি স্টপেজের ৫০ মিটার কাছে এলে বলবে "বর্তমান স্টপেজ [স্টপ নাম]"
       if (isAtStop && minStopDist <= 50 && cleanCurStop && lastAnnouncedArrivalStop !== cleanCurStop) {

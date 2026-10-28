@@ -374,7 +374,6 @@ class MainActivity : ComponentActivity() {
         }
       }
 
-      var isConfirmedMale = false
       if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
         val availableVoices = tts.voices
         if (!availableVoices.isNullOrEmpty()) {
@@ -388,65 +387,63 @@ class MainActivity : ComponentActivity() {
             availableVoices.toList()
           }
 
-          // স্কোরিং অ্যালগরিদম দিয়ে খুবই পরিষ্কার ও গম্ভীর পুরুষের কণ্ঠ নির্বাচন
+          // মিষ্টি, সুরেলা ও স্পষ্ট নারী কণ্ঠ (Female singer voice style) নির্বাচন
           val scoredVoices = matchingLocaleVoices.map { voice ->
             val name = voice.name.lowercase()
             val baseName = name.removeSuffix("-local").removeSuffix("-network")
             val variant = baseName.substringAfter("-x-", "")
             var score = 0
-            var confirmed = false
 
-            // ১. সুস্পষ্ট পুরুষ কণ্ঠের কি-ওয়ার্ড
+            // ১. সুস্পষ্ট নারী কণ্ঠের কি-ওয়ার্ড
+            if (name.contains("female") || name.contains("woman") || name.contains("girl") ||
+                name.contains("-fem") || name.contains("_fem") || name.contains("fem_") ||
+                name.contains("kavya") || name.contains("aditi") || name.contains("lekha") ||
+                name.contains("sangeeta") || name.contains("swara") || name.contains("zira")) {
+              score += 250
+            }
+            if (voice.features.any { 
+              val f = it.lowercase()
+              f.contains("female") || f.contains("woman")
+            }) {
+              score += 250
+            }
+
+            // ২. গুগল টিটিএস (Google TTS) মহিলা ভ্যারিয়েন্ট প্যাটার্ন (যেমন bnf, bnd, hie, hic, ene, dfz ইত্যাদি)
+            if (variant.isNotEmpty()) {
+              val lastChar = variant.last()
+              if (lastChar == 'f' || lastChar == 'd' || lastChar == 'a' || lastChar == 'c') {
+                score += 150
+              } else if (lastChar == 'b' || lastChar == 'e') {
+                score -= 150
+              }
+            }
+
+            // ৩. পুরুষ কণ্ঠের কি-ওয়ার্ড থাকলে স্কোর কমানো
             if ((name.contains("male") && !name.contains("female")) ||
                 name.contains("man") || name.contains("boy") ||
                 name.contains("-m-") || name.contains("_m") ||
                 name.endsWith("_m") || name.endsWith("-m")) {
-              score += 200
-              confirmed = true
-            }
-            if (voice.features.any { it.lowercase().contains("male") && !it.lowercase().contains("female") }) {
-              score += 200
-              confirmed = true
-            }
-
-            // ২. গুগল টিটিএস (Google TTS) ভ্যারিয়েন্ট প্যাটার্ন
-            if (variant.isNotEmpty()) {
-              val lastChar = variant.last()
-              if (lastChar == 'b' || lastChar == 'e') {
-                score += 150
-                confirmed = true
-              } else if (lastChar == 'c') {
-                score += 50
-              } else if (lastChar == 'f' || lastChar == 'd' || lastChar == 'a') {
-                score -= 200
-              }
-            }
-
-            // ৩. মহিলা কণ্ঠের কি-ওয়ার্ড থাকলে স্কোর কমানো
-            if (name.contains("female") || name.contains("woman") || name.contains("girl") ||
-                name.contains("-fem") || name.contains("_fem") || name.contains("fem_")) {
               score -= 300
             }
 
             // ৪. কোয়ালিটি প্রেফারেন্স
             if (voice.quality >= Voice.QUALITY_HIGH) {
-              score += 20
+              score += 30
             }
 
-            Triple(voice, score, confirmed)
+            Pair(voice, score)
           }.sortedByDescending { it.second }
 
           val bestCandidate = scoredVoices.firstOrNull()
           if (bestCandidate != null && bestCandidate.second > -100) {
             tts.voice = bestCandidate.first
-            isConfirmedMale = bestCandidate.third
           }
         }
       }
 
-      // খুবই পরিষ্কার ও গম্ভীর পুরুষের কণ্ঠের জন্য আদর্শ পিচ ও স্পিচ রেট:
-      tts.setPitch(0.96f)
-      tts.setSpeechRate(0.93f)
+      // মিষ্টি ও সুরেলা নারী কণ্ঠের জন্য পিচ ও গতি (Female singer voice tone)
+      tts.setPitch(1.18f)
+      tts.setSpeechRate(0.92f)
     } catch (_: Exception) {}
   }
 
@@ -484,7 +481,13 @@ class MainActivity : ComponentActivity() {
     currentStop: String,
     nextStop: String,
     destInfo: String,
-    langCode: String
+    langCode: String,
+    nextName: String = "",
+    nextLat: Double = 0.0,
+    nextLon: Double = 0.0,
+    destName: String = "",
+    destLat: Double = 0.0,
+    destLon: Double = 0.0
   ) {
     checkAndRequestNotificationPermission()
     try {
@@ -496,6 +499,12 @@ class MainActivity : ComponentActivity() {
         putExtra(BusTrackingService.EXTRA_NEXT_STOP, nextStop)
         putExtra(BusTrackingService.EXTRA_DEST_DIST_ETA, destInfo)
         putExtra(BusTrackingService.EXTRA_LANG_CODE, langCode)
+        if (nextName.isNotBlank()) putExtra(BusTrackingService.EXTRA_NEXT_NAME, nextName)
+        if (nextLat != 0.0) putExtra(BusTrackingService.EXTRA_NEXT_LAT, nextLat)
+        if (nextLon != 0.0) putExtra(BusTrackingService.EXTRA_NEXT_LON, nextLon)
+        if (destName.isNotBlank()) putExtra(BusTrackingService.EXTRA_DEST_NAME, destName)
+        if (destLat != 0.0) putExtra(BusTrackingService.EXTRA_DEST_LAT, destLat)
+        if (destLon != 0.0) putExtra(BusTrackingService.EXTRA_DEST_LON, destLon)
       }
       if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
         startForegroundService(intent)
@@ -511,7 +520,13 @@ class MainActivity : ComponentActivity() {
     currentStop: String,
     nextStop: String,
     destInfo: String,
-    langCode: String
+    langCode: String,
+    nextName: String = "",
+    nextLat: Double = 0.0,
+    nextLon: Double = 0.0,
+    destName: String = "",
+    destLat: Double = 0.0,
+    destLon: Double = 0.0
   ) {
     checkAndRequestNotificationPermission()
     try {
@@ -523,6 +538,12 @@ class MainActivity : ComponentActivity() {
         putExtra(BusTrackingService.EXTRA_NEXT_STOP, nextStop)
         putExtra(BusTrackingService.EXTRA_DEST_DIST_ETA, destInfo)
         putExtra(BusTrackingService.EXTRA_LANG_CODE, langCode)
+        if (nextName.isNotBlank()) putExtra(BusTrackingService.EXTRA_NEXT_NAME, nextName)
+        if (nextLat != 0.0) putExtra(BusTrackingService.EXTRA_NEXT_LAT, nextLat)
+        if (nextLon != 0.0) putExtra(BusTrackingService.EXTRA_NEXT_LON, nextLon)
+        if (destName.isNotBlank()) putExtra(BusTrackingService.EXTRA_DEST_NAME, destName)
+        if (destLat != 0.0) putExtra(BusTrackingService.EXTRA_DEST_LAT, destLat)
+        if (destLon != 0.0) putExtra(BusTrackingService.EXTRA_DEST_LON, destLon)
       }
       if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
         startForegroundService(intent)
@@ -594,6 +615,27 @@ class WebAppInterface(private val activity: MainActivity) {
     langCode: String
   ) {
     activity.updateTrackingNotification(busNumber, busName, currentStop, nextStop, destInfo, langCode)
+  }
+
+  @JavascriptInterface
+  fun updateNotificationWithCoords(
+    busNumber: String,
+    busName: String,
+    currentStop: String,
+    nextStop: String,
+    destInfo: String,
+    langCode: String,
+    nextName: String,
+    nextLat: Double,
+    nextLon: Double,
+    destName: String,
+    destLat: Double,
+    destLon: Double
+  ) {
+    activity.updateTrackingNotification(
+      busNumber, busName, currentStop, nextStop, destInfo, langCode,
+      nextName, nextLat, nextLon, destName, destLat, destLon
+    )
   }
 
   @JavascriptInterface

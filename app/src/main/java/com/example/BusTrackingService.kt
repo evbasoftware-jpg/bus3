@@ -46,6 +46,13 @@ class BusTrackingService : Service() {
     const val EXTRA_DEST_DIST_ETA = "extra_dest_dist_eta"
     const val EXTRA_LANG_CODE = "extra_lang_code"
 
+    const val EXTRA_DEST_NAME = "extra_dest_name"
+    const val EXTRA_DEST_LAT = "extra_dest_lat"
+    const val EXTRA_DEST_LON = "extra_dest_lon"
+    const val EXTRA_NEXT_NAME = "extra_next_name"
+    const val EXTRA_NEXT_LAT = "extra_next_lat"
+    const val EXTRA_NEXT_LON = "extra_next_lon"
+
     const val CHANNEL_ID = "bus_live_tracking_channel"
     const val NOTIFICATION_ID = 1001
 
@@ -80,6 +87,13 @@ class BusTrackingService : Service() {
   private var nextStopText: String = "--"
   private var destDistEtaText: String = "--"
   private var currentLangCode: String = "bn"
+
+  private var destName: String = ""
+  private var destLat: Double = 0.0
+  private var destLon: Double = 0.0
+  private var nextName: String = ""
+  private var nextLat: Double = 0.0
+  private var nextLon: Double = 0.0
 
   private val locationListener = object : LocationListener {
     override fun onLocationChanged(location: Location) {
@@ -124,12 +138,26 @@ class BusTrackingService : Service() {
       val destInfo = intent.getStringExtra(EXTRA_DEST_DIST_ETA) ?: ""
       val lang = intent.getStringExtra(EXTRA_LANG_CODE) ?: ""
 
+      val dName = intent.getStringExtra(EXTRA_DEST_NAME) ?: ""
+      val dLat = intent.getDoubleExtra(EXTRA_DEST_LAT, 0.0)
+      val dLon = intent.getDoubleExtra(EXTRA_DEST_LON, 0.0)
+      val nName = intent.getStringExtra(EXTRA_NEXT_NAME) ?: ""
+      val nLat = intent.getDoubleExtra(EXTRA_NEXT_LAT, 0.0)
+      val nLon = intent.getDoubleExtra(EXTRA_NEXT_LON, 0.0)
+
       if (busNumber.isNotBlank()) activeBusNumber = busNumber
       if (busName.isNotBlank()) activeBusName = busName
       if (curStop.isNotBlank()) currentStopText = curStop
       if (nextStop.isNotBlank()) nextStopText = nextStop
       if (destInfo.isNotBlank()) destDistEtaText = destInfo
       if (lang.isNotBlank()) currentLangCode = lang
+
+      if (dName.isNotBlank()) destName = dName
+      if (dLat != 0.0) destLat = dLat
+      if (dLon != 0.0) destLon = dLon
+      if (nName.isNotBlank()) nextName = nName
+      if (nLat != 0.0) nextLat = nLat
+      if (nLon != 0.0) nextLon = nLon
 
       if (!isRunning) {
         isRunning = true
@@ -186,11 +214,85 @@ class BusTrackingService : Service() {
     } catch (_: SecurityException) {}
   }
 
+  private fun updateDynamicDistancesFromGps(location: Location, speedKmh: Float) {
+    val effSpeed = if (speedKmh > 5f) speedKmh else (if (lastSpeedKmh > 5f) lastSpeedKmh else 28f)
+
+    if (destLat != 0.0 && destLon != 0.0) {
+      val destLoc = Location("").apply {
+        latitude = destLat
+        longitude = destLon
+      }
+      val directMeters = location.distanceTo(destLoc)
+      val roadDistKm = (directMeters * 1.12f) / 1000f
+      val totalMeters = (roadDistKm * 1000).toInt()
+      val hours = roadDistKm / effSpeed
+      val mins = Math.round(hours * 60)
+
+      val etaStr = if (directMeters < 50f) {
+        when (currentLangCode.lowercase()) {
+          "en" -> "Arrived"
+          "hi" -> "पहुँच गया"
+          else -> "পৌঁছে গেছে"
+        }
+      } else if (mins < 1) {
+        "< 1 MIN"
+      } else if (mins < 60) {
+        "$mins MINS"
+      } else {
+        "${mins / 60} HR ${mins % 60} MINS"
+      }
+
+      val distStr = if (roadDistKm < 1f) {
+        "${totalMeters} M"
+      } else {
+        String.format(Locale.US, "%.1f KM (%d M)", roadDistKm, totalMeters)
+      }
+
+      val targetLabel = if (destName.isNotBlank()) destName.uppercase() else "DEST"
+      destDistEtaText = "$targetLabel ($distStr • ETA: $etaStr)"
+    }
+
+    if (nextLat != 0.0 && nextLon != 0.0) {
+      val nextLoc = Location("").apply {
+        latitude = nextLat
+        longitude = nextLon
+      }
+      val directMeters = location.distanceTo(nextLoc)
+      val nextKm = directMeters / 1000f
+      val hours = nextKm / effSpeed
+      val mins = Math.round(hours * 60)
+
+      val nextEtaStr = if (directMeters < 50f) {
+        when (currentLangCode.lowercase()) {
+          "en" -> "Arrived"
+          "hi" -> "पहुँच गया"
+          else -> "পৌঁছে গেছে"
+        }
+      } else if (mins < 1) {
+        "< 1 MIN"
+      } else {
+        "$mins MINS"
+      }
+
+      val distStr = if (nextKm < 1f) {
+        "${directMeters.toInt()} M"
+      } else {
+        String.format(Locale.US, "%.1f KM (%d M)", nextKm, directMeters.toInt())
+      }
+
+      val targetNext = if (nextName.isNotBlank()) nextName else "NEXT"
+      nextStopText = "$targetNext ($distStr • ETA: $nextEtaStr)"
+    }
+  }
+
   private fun handleNewLocation(location: Location, speedKmh: Float) {
     lastSpeedKmh = speedKmh
 
     // Notify in-app UI if open
     onLocationReceived?.invoke(location, speedKmh)
+
+    // Dynamic destination and next stop distance recalculation from real GPS
+    updateDynamicDistancesFromGps(location, speedKmh)
 
     // Rate-limit server upload to once every 4-5 seconds (কেবলমাত্র চালক/কন্ডাক্টর মোড চালু থাকলে)
     val now = System.currentTimeMillis()
@@ -527,6 +629,12 @@ class BusTrackingService : Service() {
     currentStopText = "--"
     nextStopText = "--"
     destDistEtaText = "--"
+    destName = ""
+    destLat = 0.0
+    destLon = 0.0
+    nextName = ""
+    nextLat = 0.0
+    nextLon = 0.0
 
     try {
       backgroundPollingJob?.cancel()
