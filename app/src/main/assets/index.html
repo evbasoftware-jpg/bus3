@@ -2232,13 +2232,13 @@
   }
 
   // ==========================================
-  // পরিষ্কার ঘোষণা এবং স্টপ এলার্ট ফাংশনসমূহ (পরিষ্কার পুরুষ কণ্ঠ)
+  // মিষ্টি ও সুরেলা নারী কণ্ঠের ঘোষণা এবং স্টপ এলার্ট (Sweet Female Singer Announcement)
   // ==========================================
   function playVoiceAnnouncement(text, lang) {
     if (!voiceAnnouncementEnabled || !text) return;
     let curLang = lang || getCurrentAppLanguage() || "bn";
 
-    // ১. অ্যান্ড্রয়েড নেটিভ Text-To-Speech (খুবই পরিষ্কার পুরুষ কণ্ঠ)
+    // ১. অ্যান্ড্রয়েড নেটিভ ব্রিজ (গুগল হাই-ডেফিনিশন মিষ্টি নারী কণ্ঠ ও নেটিভ ফিমেল TTS)
     if (window.AndroidBridge && window.AndroidBridge.speakAnnouncement) {
       window.AndroidBridge.speakAnnouncement(text, curLang);
       return;

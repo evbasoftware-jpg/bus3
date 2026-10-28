@@ -9,7 +9,12 @@ import android.content.pm.PackageManager
 import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
+import android.media.AudioAttributes
 import android.media.AudioManager
+import android.media.MediaPlayer
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.speech.tts.TextToSpeech
@@ -21,7 +26,7 @@ import android.webkit.JsPromptResult
 import android.webkit.JsResult
 import android.webkit.WebChromeClient
 import android.webkit.WebSettings
-import android.net.Uri
+import java.net.URLEncoder
 import android.webkit.WebResourceRequest
 import android.webkit.WebView
 import android.webkit.WebViewClient
@@ -49,6 +54,7 @@ class MainActivity : ComponentActivity() {
 
   private var textToSpeech: TextToSpeech? = null
   private var isTtsInitialized = false
+  private var audioPlayer: MediaPlayer? = null
   private var locationManager: LocationManager? = null
   private var webView: WebView? = null
   private var pendingGeolocationCallback: GeolocationPermissions.Callback? = null
@@ -157,12 +163,21 @@ class MainActivity : ComponentActivity() {
   }
 
   private fun initTextToSpeech() {
-    textToSpeech = TextToSpeech(applicationContext) { status ->
+    val googleEnginePackage = "com.google.android.tts"
+    textToSpeech = TextToSpeech(applicationContext, { status ->
       if (status == TextToSpeech.SUCCESS) {
         isTtsInitialized = true
         setupTtsVoice("bn")
+      } else {
+        // Fallback to default engine if Google TTS fails
+        textToSpeech = TextToSpeech(applicationContext) { fallbackStatus ->
+          if (fallbackStatus == TextToSpeech.SUCCESS) {
+            isTtsInitialized = true
+            setupTtsVoice("bn")
+          }
+        }
       }
-    }
+    }, googleEnginePackage)
   }
 
   private fun initLocation() {
@@ -363,6 +378,13 @@ class MainActivity : ComponentActivity() {
     }
   }
 
+  private fun isNetworkAvailable(): Boolean {
+    val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager ?: return false
+    val network = cm.activeNetwork ?: return false
+    val caps = cm.getNetworkCapabilities(network) ?: return false
+    return caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+  }
+
   fun setupTtsVoice(langCode: String) {
     val tts = textToSpeech ?: return
     val targetLocale = getLocaleForLanguage(langCode)
@@ -387,62 +409,57 @@ class MainActivity : ComponentActivity() {
             availableVoices.toList()
           }
 
-          // মিষ্টি, সুরেলা ও স্পষ্ট নারী কণ্ঠ (Female singer voice style) নির্বাচন
-          val scoredVoices = matchingLocaleVoices.map { voice ->
-            val name = voice.name.lowercase()
-            val baseName = name.removeSuffix("-local").removeSuffix("-network")
-            val variant = baseName.substringAfter("-x-", "")
-            var score = 0
-
-            // ১. সুস্পষ্ট নারী কণ্ঠের কি-ওয়ার্ড
-            if (name.contains("female") || name.contains("woman") || name.contains("girl") ||
-                name.contains("-fem") || name.contains("_fem") || name.contains("fem_") ||
-                name.contains("kavya") || name.contains("aditi") || name.contains("lekha") ||
-                name.contains("sangeeta") || name.contains("swara") || name.contains("zira")) {
-              score += 250
+          fun isExplicitlyFemale(v: Voice): Boolean {
+            val n = v.name.lowercase()
+            if (n.contains("female") || n.contains("woman") || n.contains("girl") ||
+                n.contains("bif") || n.contains("baf") || n.contains("bnf") ||
+                n.contains("hif") || n.contains("hid") || n.contains("hic") ||
+                n.contains("-fem") || n.contains("_fem") || n.contains("fem_") ||
+                n.contains("swara") || n.contains("aditi") || n.contains("kavya") ||
+                n.contains("lekha") || n.contains("sangeeta") || n.contains("priya") ||
+                n.contains("zira")) return true
+            return v.features.any {
+              val fl = it.lowercase()
+              fl.contains("female") || fl.contains("gender=female")
             }
-            if (voice.features.any { 
-              val f = it.lowercase()
-              f.contains("female") || f.contains("woman")
-            }) {
-              score += 250
+          }
+
+          fun isExplicitlyMale(v: Voice): Boolean {
+            val n = v.name.lowercase()
+            if ((n.contains("male") && !n.contains("female")) ||
+                n.contains("man") || n.contains("boy") ||
+                n.contains("-bin-") || n.contains("-ban-") || n.contains("bin-") || n.contains("ban-") ||
+                n.endsWith("-bin") || n.endsWith("-ban") || n.endsWith("_bin") || n.endsWith("_ban") ||
+                n.contains("hin-") || n.contains("-hin-") ||
+                n.contains("-m-") || n.contains("_m") || n.endsWith("-m") || n.endsWith("_m")) return true
+            return v.features.any {
+              val fl = it.lowercase()
+              fl.contains("gender=male") || fl == "male"
             }
+          }
 
-            // ২. গুগল টিটিএস (Google TTS) মহিলা ভ্যারিয়েন্ট প্যাটার্ন (যেমন bnf, bnd, hie, hic, ene, dfz ইত্যাদি)
-            if (variant.isNotEmpty()) {
-              val lastChar = variant.last()
-              if (lastChar == 'f' || lastChar == 'd' || lastChar == 'a' || lastChar == 'c') {
-                score += 150
-              } else if (lastChar == 'b' || lastChar == 'e') {
-                score -= 150
-              }
-            }
+          // ১. প্রথম পছন্দ: সুস্পষ্ট নারী কণ্ঠ যা পুরুষ নয়
+          val femaleVoices = matchingLocaleVoices.filter { isExplicitlyFemale(it) && !isExplicitlyMale(it) }
+          val selectedVoice = if (femaleVoices.isNotEmpty()) {
+            femaleVoices.sortedWith(
+              compareByDescending<Voice> { it.isNetworkConnectionRequired || it.name.contains("network") }
+                .thenByDescending { it.quality }
+            ).firstOrNull()
+          } else {
+            // ২. দ্বিতীয় পছন্দ: যে ভয়েসে কোনো পুরুষ নির্দেশক নেই
+            matchingLocaleVoices.filter { !isExplicitlyMale(it) }
+              .sortedByDescending { it.quality }
+              .firstOrNull()
+          }
 
-            // ৩. পুরুষ কণ্ঠের কি-ওয়ার্ড থাকলে স্কোর কমানো
-            if ((name.contains("male") && !name.contains("female")) ||
-                name.contains("man") || name.contains("boy") ||
-                name.contains("-m-") || name.contains("_m") ||
-                name.endsWith("_m") || name.endsWith("-m")) {
-              score -= 300
-            }
-
-            // ৪. কোয়ালিটি প্রেফারেন্স
-            if (voice.quality >= Voice.QUALITY_HIGH) {
-              score += 30
-            }
-
-            Pair(voice, score)
-          }.sortedByDescending { it.second }
-
-          val bestCandidate = scoredVoices.firstOrNull()
-          if (bestCandidate != null && bestCandidate.second > -100) {
-            tts.voice = bestCandidate.first
+          if (selectedVoice != null) {
+            tts.voice = selectedVoice
           }
         }
       }
 
-      // মিষ্টি ও সুরেলা নারী কণ্ঠের জন্য পিচ ও গতি (Female singer voice tone)
-      tts.setPitch(1.18f)
+      // মিষ্টি ও সুরেলা নারী কণ্ঠের জন্য পিচ ও গতি (Sweet Female Singer Voice Tone)
+      tts.setPitch(1.22f)
       tts.setSpeechRate(0.92f)
     } catch (_: Exception) {}
   }
@@ -460,19 +477,83 @@ class MainActivity : ComponentActivity() {
   fun speakVoiceAnnouncement(text: String, langCode: String) {
     if (text.isBlank()) return
     val preparedText = formatTextForTts(text)
+    val curLang = if (langCode.isBlank()) "bn" else langCode
+
     runOnUiThread {
-      try {
-        val tts = textToSpeech
-        if (tts != null) {
-          setupTtsVoice(langCode)
-          val params = Bundle().apply {
-            putFloat(TextToSpeech.Engine.KEY_PARAM_VOLUME, 1.0f)
-            putInt(TextToSpeech.Engine.KEY_PARAM_STREAM, AudioManager.STREAM_MUSIC)
+      // ১. ইন্টারনেট সক্রিয় থাকলে গুগলের হাই-ডেফিনিশন মিষ্টি নারী কণ্ঠ অনলাইন অডিও (ওয়েব পেজের মতই সুরেলা মিষ্টি কণ্ঠ)
+      if (isNetworkAvailable() && preparedText.length < 250) {
+        playGoogleOnlineFemaleVoice(preparedText, curLang) { success ->
+          if (!success) {
+            // অনলাইন অডিও ব্যর্থ হলে তাৎক্ষণিক ডিভাইসের নেটিভ TTS ব্যাকআপ
+            speakViaNativeTts(preparedText, curLang)
           }
-          tts.speak(preparedText, TextToSpeech.QUEUE_FLUSH, params, "TTS_ANNOUNCE_${System.currentTimeMillis()}")
         }
-      } catch (_: Exception) {}
+        return@runOnUiThread
+      }
+
+      // ২. ইন্টারনেট না থাকলে ডিভাইসের নেটিভ TTS ব্যাকআপ
+      speakViaNativeTts(preparedText, curLang)
     }
+  }
+
+  private fun playGoogleOnlineFemaleVoice(text: String, langCode: String, onComplete: (Boolean) -> Unit) {
+    try {
+      audioPlayer?.stop()
+      audioPlayer?.release()
+      audioPlayer = null
+    } catch (_: Exception) {}
+
+    try {
+      val encodedText = URLEncoder.encode(text, "UTF-8")
+      val urlStr = "https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=$langCode&q=$encodedText"
+      val player = MediaPlayer()
+      audioPlayer = player
+      val headers = mapOf("User-Agent" to "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36")
+      player.setAudioAttributes(
+        AudioAttributes.Builder()
+          .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+          .setUsage(AudioAttributes.USAGE_ASSISTANCE_NAVIGATION_GUIDANCE)
+          .build()
+      )
+      player.setDataSource(applicationContext, Uri.parse(urlStr), headers)
+      player.setOnPreparedListener { mp ->
+        try {
+          mp.start()
+          onComplete(true)
+        } catch (_: Exception) {
+          onComplete(false)
+        }
+      }
+      player.setOnErrorListener { mp, _, _ ->
+        try {
+          mp.release()
+        } catch (_: Exception) {}
+        if (audioPlayer == mp) audioPlayer = null
+        onComplete(false)
+        true
+      }
+      player.setOnCompletionListener { mp ->
+        try {
+          mp.release()
+        } catch (_: Exception) {}
+        if (audioPlayer == mp) audioPlayer = null
+      }
+      player.prepareAsync()
+    } catch (_: Exception) {
+      onComplete(false)
+    }
+  }
+
+  private fun speakViaNativeTts(preparedText: String, langCode: String) {
+    try {
+      val tts = textToSpeech ?: return
+      setupTtsVoice(langCode)
+      val params = Bundle().apply {
+        putFloat(TextToSpeech.Engine.KEY_PARAM_VOLUME, 1.0f)
+        putInt(TextToSpeech.Engine.KEY_PARAM_STREAM, AudioManager.STREAM_MUSIC)
+      }
+      tts.speak(preparedText, TextToSpeech.QUEUE_FLUSH, params, "TTS_ANNOUNCE_${System.currentTimeMillis()}")
+    } catch (_: Exception) {}
   }
 
   fun startTrackingService(
@@ -564,6 +645,11 @@ class MainActivity : ComponentActivity() {
 
   override fun onDestroy() {
     super.onDestroy()
+    try {
+      audioPlayer?.stop()
+      audioPlayer?.release()
+      audioPlayer = null
+    } catch (_: Exception) {}
     try {
       textToSpeech?.stop()
       textToSpeech?.shutdown()
