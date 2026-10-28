@@ -2256,26 +2256,61 @@
 
   // ==========================================
   // মিষ্টি ও সুরেলা নারী কণ্ঠের ঘোষণা এবং স্টপ এলার্ট (Sweet Female Singer Announcement)
+  // ধারাবাহিক কিউ (Sequential Queue): একটি ঘোষণা সম্পূর্ণ শেষ হলে তবেই পরবর্তী ঘোষণা শুরু হবে
   // ==========================================
+  let voiceQueue = [];
+  let isAnnouncementPlaying = false;
+  let voiceSafetyTimeout = null;
+
   function playVoiceAnnouncement(text, lang) {
     if (!voiceAnnouncementEnabled || !text) return;
+    let cleanText = text.trim();
+    if (!cleanText) return;
     let curLang = lang || getCurrentAppLanguage() || "bn";
+
+    // কিউতে যোগ করুন যাতে ঘোষণাগুলো একটার পর একটা ধারাবাহিকভাবে বাজে
+    voiceQueue.push({ text: cleanText, lang: curLang });
+    processVoiceQueue();
+  }
+
+  function processVoiceQueue() {
+    if (isAnnouncementPlaying || voiceQueue.length === 0) return;
+
+    let item = voiceQueue.shift();
+    isAnnouncementPlaying = true;
+
+    function finishAndNext() {
+      if (voiceSafetyTimeout) {
+        clearTimeout(voiceSafetyTimeout);
+        voiceSafetyTimeout = null;
+      }
+      // একটি ঘোষণা সম্পূর্ণ শেষ হওয়ার পর ৭০০ মিলিসেকেন্ড স্বাভাবিক মধুর বিরতি দিয়ে পরবর্তী ঘোষণা
+      setTimeout(() => {
+        isAnnouncementPlaying = false;
+        processVoiceQueue();
+      }, 700);
+    }
+
+    // ব্যাকআপ সময়সীমা (যদি কোনো কারণে ব্রাউজার onend ফায়ার না করে)
+    let estimatedDuration = Math.max(3000, item.text.length * 85 + 1500);
+    voiceSafetyTimeout = setTimeout(() => {
+      finishAndNext();
+    }, estimatedDuration);
 
     // ১. ওয়েব স্পিচ সিন্থেসিস (ব্রাউজার ও অ্যাপের ওয়েবভিউ উভয় স্থানেই মিষ্টি সুরেলা নারী কণ্ঠ প্রদান করে)
     if ('speechSynthesis' in window) {
       try {
-        window.speechSynthesis.cancel();
-        let utter = new SpeechSynthesisUtterance(text);
+        let utter = new SpeechSynthesisUtterance(item.text);
         let localeMap = {
           "bn": "bn-IN", "hi": "hi-IN", "en": "en-IN",
           "ta": "ta-IN", "te": "te-IN", "mr": "mr-IN",
           "gu": "gu-IN", "kn": "kn-IN", "ml": "ml-IN",
           "pa": "pa-IN", "or": "or-IN"
         };
-        utter.lang = localeMap[curLang] || "bn-IN";
+        utter.lang = localeMap[item.lang] || "bn-IN";
         
         let voices = window.speechSynthesis.getVoices();
-        let matchingVoices = voices.filter(v => v.lang && v.lang.replace('_', '-').toLowerCase().startsWith(curLang));
+        let matchingVoices = voices.filter(v => v.lang && v.lang.replace('_', '-').toLowerCase().startsWith(item.lang));
         if (matchingVoices.length === 0) {
           matchingVoices = voices;
         }
@@ -2307,13 +2342,21 @@
         utter.pitch = 1.18;
         utter.rate = 0.92;
 
-        let hasSpoken = false;
-        utter.onstart = function() {
-          hasSpoken = true;
+        let hasEnded = false;
+        utter.onend = function() {
+          if (!hasEnded) {
+            hasEnded = true;
+            finishAndNext();
+          }
         };
+
         utter.onerror = function() {
-          if (!hasSpoken && window.AndroidBridge && window.AndroidBridge.speakAnnouncement) {
-            window.AndroidBridge.speakAnnouncement(text, curLang);
+          if (!hasEnded) {
+            hasEnded = true;
+            if (window.AndroidBridge && window.AndroidBridge.speakAnnouncement) {
+              window.AndroidBridge.speakAnnouncement(item.text, item.lang);
+            }
+            finishAndNext();
           }
         };
 
@@ -2326,7 +2369,12 @@
 
     // ২. ফলব্যাক: অ্যান্ড্রয়েড নেটিভ ব্রিজ (অনলাইন হাই-ডেফিনিশন গুগল ফিমেল ভয়েস ও নেটিভ TTS)
     if (window.AndroidBridge && window.AndroidBridge.speakAnnouncement) {
-      window.AndroidBridge.speakAnnouncement(text, curLang);
+      window.AndroidBridge.speakAnnouncement(item.text, item.lang);
+      setTimeout(() => {
+        finishAndNext();
+      }, estimatedDuration - 500);
+    } else {
+      finishAndNext();
     }
   }
 
@@ -2448,7 +2496,13 @@
       playVoiceAnnouncement(lang === "hi" ? "घोषणा चालू कर दी गई है।" : (lang === "en" ? "Voice announcements enabled." : "ঘোষণা চালু করা হয়েছে।"), lang);
     } else {
       if (btn) btn.classList.add("disabled");
-      if (text) text.innerText = (lang === "hi" ? "ঘोषणा: बंद" : (lang === "en" ? "Announcements: OFF" : "ঘোষণা: বন্ধ"));
+      voiceQueue = [];
+      isAnnouncementPlaying = false;
+      if (voiceSafetyTimeout) {
+        clearTimeout(voiceSafetyTimeout);
+        voiceSafetyTimeout = null;
+      }
+      if (text) text.innerText = (lang === "hi" ? "ঘোষणा: बंद" : (lang === "en" ? "Announcements: OFF" : "ঘোষণা: বন্ধ"));
       if ('speechSynthesis' in window) {
         try { window.speechSynthesis.cancel(); } catch(_) {}
       }
@@ -3846,6 +3900,17 @@
     activeApproachingStop = null;
     lastAnnouncedArrivalStop = null;
     lastAnnouncedNextStop = null;
+
+    // নতুন বাস নির্বাচনের পূর্বে পূর্ববর্তী ঘোষণা কিউ সম্পূর্ণ পরিষ্কার করুন
+    voiceQueue = [];
+    isAnnouncementPlaying = false;
+    if (voiceSafetyTimeout) {
+      clearTimeout(voiceSafetyTimeout);
+      voiceSafetyTimeout = null;
+    }
+    if ('speechSynthesis' in window) {
+      try { window.speechSynthesis.cancel(); } catch(_) {}
+    }
     
     // ক্লোন তৈরি করে সংরক্ষণ করুন যাতে গ্লোবাল ক্যাটালগ বিনষ্ট না হয়
     trackingBus = Object.assign({}, b);

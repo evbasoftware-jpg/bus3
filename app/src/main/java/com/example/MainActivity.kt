@@ -551,26 +551,48 @@ class MainActivity : ComponentActivity() {
     }
   }
 
+  private val nativeSpeechQueue = java.util.concurrent.ConcurrentLinkedQueue<Pair<String, String>>()
+  private var isNativeAnnouncing = false
+
   fun speakVoiceAnnouncement(text: String, langCode: String) {
     if (text.isBlank()) return
     val preparedText = formatTextForTts(text)
     val curLang = if (langCode.isBlank()) "bn" else langCode
 
     runOnUiThread {
-      // ১. ইন্টারনেট সক্রিয় থাকলে গুগলের ক্লাউড হাই-ডেফিনিশন মিষ্টি নারী কণ্ঠ অনলাইন অডিও (ওয়েব পেজের মতই সুরেলা মিষ্টি কণ্ঠ)
-      if (isNetworkAvailable() && preparedText.length < 250) {
-        playGoogleOnlineFemaleVoice(preparedText, curLang) { success ->
-          if (!success) {
-            // অনলাইন অডিও ব্যর্থ হলে তাৎক্ষণিক ডিভাইসের নেটিভ TTS ব্যাকআপ
-            speakViaNativeTts(preparedText, curLang)
-          }
-        }
-        return@runOnUiThread
-      }
-
-      // ২. ইন্টারনেট না থাকলে ডিভাইসের নেটিভ TTS ব্যাকআপ
-      speakViaNativeTts(preparedText, curLang)
+      nativeSpeechQueue.add(Pair(preparedText, curLang))
+      processNextNativeSpeech()
     }
+  }
+
+  private fun processNextNativeSpeech() {
+    if (isNativeAnnouncing || nativeSpeechQueue.isEmpty()) return
+    val item = nativeSpeechQueue.poll() ?: return
+    isNativeAnnouncing = true
+    val preparedText = item.first
+    val curLang = item.second
+
+    val onDoneCallback: () -> Unit = {
+      runOnUiThread {
+        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+          isNativeAnnouncing = false
+          processNextNativeSpeech()
+        }, 700L)
+      }
+    }
+
+    if (isNetworkAvailable() && preparedText.length < 250) {
+      playGoogleOnlineFemaleVoice(preparedText, curLang) { success ->
+        if (!success) {
+          speakViaNativeTts(preparedText, curLang, onDoneCallback)
+        } else {
+          onDoneCallback()
+        }
+      }
+      return
+    }
+
+    speakViaNativeTts(preparedText, curLang, onDoneCallback)
   }
 
   private fun playGoogleOnlineFemaleVoice(text: String, langCode: String, onComplete: (Boolean) -> Unit) {
@@ -617,6 +639,7 @@ class MainActivity : ComponentActivity() {
                 try { mp.release() } catch (_: Exception) {}
                 if (audioPlayer == mp) audioPlayer = null
                 tempFile.delete()
+                onComplete(true)
               }
               player.setOnErrorListener { mp, _, _ ->
                 try { mp.release() } catch (_: Exception) {}
@@ -627,7 +650,6 @@ class MainActivity : ComponentActivity() {
               }
               player.prepare()
               player.start()
-              onComplete(true)
             } catch (_: Exception) {
               tempFile.delete()
               onComplete(false)
@@ -646,16 +668,32 @@ class MainActivity : ComponentActivity() {
     }
   }
 
-  private fun speakViaNativeTts(preparedText: String, langCode: String) {
+  private fun speakViaNativeTts(preparedText: String, langCode: String, onDone: () -> Unit) {
     try {
-      val tts = textToSpeech ?: return
+      val tts = textToSpeech ?: run {
+        onDone()
+        return
+      }
       setupTtsVoice(langCode)
       val params = Bundle().apply {
         putFloat(TextToSpeech.Engine.KEY_PARAM_VOLUME, 1.0f)
         putInt(TextToSpeech.Engine.KEY_PARAM_STREAM, AudioManager.STREAM_MUSIC)
       }
-      tts.speak(preparedText, TextToSpeech.QUEUE_FLUSH, params, "TTS_ANNOUNCE_${System.currentTimeMillis()}")
-    } catch (_: Exception) {}
+      val utteranceId = "TTS_ANNOUNCE_${System.currentTimeMillis()}"
+      tts.setOnUtteranceProgressListener(object : android.speech.tts.UtteranceProgressListener() {
+        override fun onStart(utteranceId: String?) {}
+        override fun onDone(utteranceId: String?) {
+          onDone()
+        }
+        @Deprecated("Deprecated in Java")
+        override fun onError(utteranceId: String?) {
+          onDone()
+        }
+      })
+      tts.speak(preparedText, TextToSpeech.QUEUE_ADD, params, utteranceId)
+    } catch (_: Exception) {
+      onDone()
+    }
   }
 
   fun startTrackingService(
