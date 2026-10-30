@@ -290,6 +290,23 @@
     }
 
     #currentLocationBox { text-align: center; font-size: 17px; font-weight: bold; color: #de12b2; background: #ffedfb; padding: 12px; border-radius: 8px; margin: 12px 0; }
+    .dynamic-img-container {
+      display: none;
+      width: 100%;
+      text-align: center;
+      margin: 0;
+      padding: 0;
+      border: none !important;
+      outline: none !important;
+      background: transparent !important;
+      box-shadow: none !important;
+    }
+    .dynamic-banner-img {
+      border: none !important;
+      outline: none !important;
+      background: transparent !important;
+      box-shadow: none !important;
+    }
     .card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-top: 10px; }
     .card { background: #f8f9fa; border: 1px solid #ddd; padding: 10px; border-radius: 8px; font-size: 13px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
     .card b { color: #1565c0; }
@@ -1240,15 +1257,14 @@
 </div>
 
 <div class="container">
-  <!-- শুভ পূজার ব্যানার (GitHub ডায়নামিক আপডেট এবং লোকাল ফলব্যাক সহ) -->
-  <div class="festival-banner-container" style="text-align: center; padding: 6px; margin-bottom: 8px;">
-    <img id="festivalBannerImg"
-         src="https://raw.githubusercontent.com/evbasoftware-jpg/bus3/main/app/src/main/assets/festival_banner.png" 
-         onerror="this.onerror=null; this.src='file:///android_asset/lakshmi_puja_banner.png';" 
-         class="festival-banner-img" 
-         style="width: 100%; max-height: 165px; object-fit: contain; border-radius: 10px; display: block; margin: 0 auto; box-shadow: 0 4px 14px rgba(0,0,0,0.12); background: #ffffff;">
-    <div id="festivalBannerText" style="font-size: 15px; font-weight: 800; color: #b71c1c; margin-top: 6px;">
-    </div>
+  <!-- ১ নং ছবি: img1.png (বাস লাইভ লোকেশন এর উপরে থাকবে) -->
+  <div id="container_img1" class="dynamic-img-container" style="display: none; width: 100%; text-align: center; margin: 0; padding: 0; border: none; outline: none; background: transparent;">
+    <img id="dynamic_img1"
+         alt=""
+         onerror="handleDynamicImgError(this)" 
+         onload="handleDynamicImgSuccess(this)" 
+         class="dynamic-banner-img" 
+         style="width: 100%; max-height: 165px; object-fit: contain; border-radius: 10px; display: none; margin: 0 auto; border: none; outline: none; background: transparent; box-shadow: none;">
   </div>
 
   <h2>🚌 বাস লাইভ লোকেশন (ভারত)</h2>
@@ -1387,11 +1403,25 @@
   <div id="currentLocationBox">বাসের বর্তমান অবস্থান: কোনো বাস নির্বাচিত হয়নি</div>
 
   <div class="card-grid">
+    <!-- ২ নং ছবি: img2.png (বর্তমান স্টপেজ এর উপরে থাকবে) -->
+    <div id="container_img2" class="dynamic-img-container" style="display: none; grid-column: 1 / -1; width: 100%; text-align: center; margin: 0; padding: 0; border: none; outline: none; background: transparent;">
+      <img id="dynamic_img2" alt="" onerror="handleDynamicImgError(this)" onload="handleDynamicImgSuccess(this)" class="dynamic-banner-img" style="width: 100%; max-height: 165px; object-fit: contain; border-radius: 10px; display: none; margin: 0 auto; border: none; outline: none; background: transparent; box-shadow: none;">
+    </div>
     <div class="card card-cur-stop"><b>📍 বর্তমান স্টপেজ:</b> <span id="infoCurStop">--</span></div>
     <div class="card card-next-stop"><b>⏩ পরবর্তী স্টপেজ:</b> <span id="infoNextStop">--</span></div>
     <div class="card card-dest-stop"><b>🎯 গন্তব্য:</b> <span id="infoDestStop">--</span></div>
+
+    <!-- ৩ নং ছবি: img3.png (বাসের গতিবেগ এর উপরে থাকবে) -->
+    <div id="container_img3" class="dynamic-img-container" style="display: none; grid-column: 1 / -1; width: 100%; text-align: center; margin: 0; padding: 0; border: none; outline: none; background: transparent;">
+      <img id="dynamic_img3" alt="" onerror="handleDynamicImgError(this)" onload="handleDynamicImgSuccess(this)" class="dynamic-banner-img" style="width: 100%; max-height: 165px; object-fit: contain; border-radius: 10px; display: none; margin: 0 auto; border: none; outline: none; background: transparent; box-shadow: none;">
+    </div>
     <div class="card"><b>⚡ বাসের গতিবেগ:</b> <span id="infoSpeed">--</span></div>
     <div class="card"><b>👥 বাসের ভিড়ের মাত্রা:</b> <span id="infoCrowdLevel">🟢 কম ভিড় (খালি আসন আছে)</span></div>
+
+    <!-- ৪ নং ছবি: img4.png (ওয়েক-আপ এলার্ট এর উপরে থাকবে) -->
+    <div id="container_img4" class="dynamic-img-container" style="display: none; grid-column: 1 / -1; width: 100%; text-align: center; margin: 0; padding: 0; border: none; outline: none; background: transparent;">
+      <img id="dynamic_img4" alt="" onerror="handleDynamicImgError(this)" onload="handleDynamicImgSuccess(this)" class="dynamic-banner-img" style="width: 100%; max-height: 165px; object-fit: contain; border-radius: 10px; display: none; margin: 0 auto; border: none; outline: none; background: transparent; box-shadow: none;">
+    </div>
     <div class="card"><b>⏰ গন্তব্য অ্যালার্ট:</b> <span id="infoAlarmStatus">৫০০মি সক্রিয় 🔔</span></div>
     <div class="card"><b>📡 ব্যবহারকারীর GPS:</b> <span id="infoUserGPS">--</span></div>
     <div class="card"><b>📶 GPS সংকেত:</b> <span id="infoConfidence">--</span></div>
@@ -3285,8 +3315,17 @@
 
   window.addEventListener("DOMContentLoaded", async () => {
     loadDatalistSuggestions();
-    syncRemoteFestivalBanner();
+    syncRemoteDynamicImages();
   });
+
+  window.onAppResumeState = function() {
+    try {
+      if (typeof window.clearOldSpeechQueues === "function") {
+        window.clearOldSpeechQueues();
+      }
+      syncRemoteDynamicImages();
+    } catch (_) {}
+  };
 
   const SPREADSHEET_ID = "1BG2_yeNhcvTzamezXwqbYlVvnsnPvCjB5MQ4cek6_YI";
 
@@ -3420,6 +3459,114 @@
     return globalBusesCatalog;
   }
 
+  // স্টপ ম্যাচিং হেল্পার (হুবহু মিল অথবা পূর্ণাঙ্গ শব্দ/টোকেন মিল)
+  function isStopEqual(q, s) {
+    if (!q || !s) return false;
+    let a = cleanStopName(q);
+    let b = cleanStopName(s);
+    if (a === b) return true;
+    if (a.startsWith(b + " ") || a.endsWith(" " + b) || a.includes(" " + b + " ")) return true;
+    if (b.startsWith(a + " ") || b.endsWith(" " + a) || b.includes(" " + a + " ")) return true;
+    return false;
+  }
+
+  // প্রত্যক্ষ রুট স্টপেজ ক্রমানুসারে অনুসন্ধান (Direct Sequential Stop Match)
+  function findStopIndexInList(query, list) {
+    if (!query || !list || list.length === 0) return -1;
+    let q = cleanStopName(query);
+    if (!q) return -1;
+
+    // ১. হুবহু মিল (Exact Match)
+    let exact = list.findIndex(s => cleanStopName(s) === q);
+    if (exact !== -1) return exact;
+
+    // ২. শব্দ/টোকেন মিল (যেমন "SURI BUS STAND" এর সাথে "SURI")
+    let partial = list.findIndex(s => isStopEqual(q, s));
+    return partial;
+  }
+
+  // বাসের পূর্ণাঙ্গ স্টপ তালিকা (Source -> Selected_Stops -> Dest)
+  function getFullStopsListForBus(bus) {
+    if (!bus) return [];
+    let list = [];
+    let srcClean = cleanStopName(bus.source);
+    if (srcClean) list.push(srcClean);
+
+    let rawAllowed = bus.selectedStops || bus.Selected_Stops || bus["SELECTED STOPS"] || [];
+    let allowed = [];
+    if (typeof rawAllowed === "string") {
+      allowed = rawAllowed.split(",").map(s => cleanStopName(s)).filter(Boolean);
+    } else if (Array.isArray(rawAllowed)) {
+      allowed = rawAllowed.map(s => cleanStopName(s)).filter(Boolean);
+    }
+
+    allowed.forEach(s => {
+      let c = cleanStopName(s);
+      if (c && !list.includes(c)) {
+        list.push(c);
+      }
+    });
+
+    let destClean = cleanStopName(bus.dest);
+    if (destClean && !list.includes(destClean)) {
+      list.push(destClean);
+    }
+    return list;
+  }
+
+  // বাসের আপ (UP) বনাম ডাউন (DOWN) ট্রিপ সঠিকভাবে বাছাই করা (From ও To অনুযায়ী)
+  function findBestMatchingBusRow(busNumOrName, fromInput, toInput) {
+    if (!globalBusesCatalog || globalBusesCatalog.length === 0) return null;
+    let q = String(busNumOrName || '').trim().toUpperCase();
+    if (!q) return null;
+
+    let cleanQ = q.replace(/[^A-Z0-9]/g, '');
+    let candidates = globalBusesCatalog.filter(b => {
+      let bNum = String(b.number || '').trim().toUpperCase();
+      let bName = String(b.name || '').trim().toUpperCase();
+      let bClean = bNum.replace(/[^A-Z0-9]/g, '');
+      return bNum === q || bName === q || (cleanQ.length > 0 && bClean === cleanQ) ||
+             (q.length >= 3 && (bNum.includes(q) || bName.includes(q)));
+    });
+
+    if (candidates.length === 0) return null;
+    if (candidates.length === 1) return candidates[0];
+
+    let nFrom = cleanStopName(fromInput);
+    let nTo = cleanStopName(toInput);
+
+    if (nFrom && nTo) {
+      for (let cand of candidates) {
+        let stops = getFullStopsListForBus(cand);
+        let fIdx = findStopIndexInList(nFrom, stops);
+        let tIdx = findStopIndexInList(nTo, stops);
+        if (fIdx !== -1 && tIdx !== -1 && fIdx < tIdx) {
+          return cand; // From -> To অভিমুখে নিখুঁত ম্যাচ
+        }
+      }
+    }
+
+    if (nTo) {
+      for (let cand of candidates) {
+        let dClean = cleanStopName(cand.dest);
+        if (dClean === nTo || isStopEqual(nTo, dClean)) {
+          return cand;
+        }
+      }
+    }
+
+    if (nFrom) {
+      for (let cand of candidates) {
+        let sClean = cleanStopName(cand.source);
+        if (sClean === nFrom || isStopEqual(nFrom, sClean)) {
+          return cand;
+        }
+      }
+    }
+
+    return candidates[0];
+  }
+
   function searchBusesInCatalog(query) {
     if (!query) return [];
     let q = query.trim().toUpperCase();
@@ -3440,7 +3587,8 @@
       let bNum = String(b.number || '').trim().toUpperCase();
       let bName = String(b.name || '').trim().toUpperCase();
       let bCleanNum = bNum.replace(/[^A-Z0-9]/g, '');
-      let key = `${bNum}_${bName}`;
+      // UP এবং DOWN উভয়ের রুট আলাদা রাখার জন্য key-তে source ও dest যুক্ত করুন
+      let key = `${bNum}_${bName}_${b.source || ''}_${b.dest || ''}`;
       if (seen.has(key)) continue;
 
       let score = 0;
@@ -3895,13 +4043,10 @@
       };
   }
 
-  function selectBus(b, searchResultItem) {
-    promptDismissedStops.clear();
-    activeApproachingStop = null;
-    lastAnnouncedArrivalStop = null;
-    lastAnnouncedNextStop = null;
+  let announcedArrivalStopsSet = new Set();
+  let announcedNextStopsSet = new Set();
 
-    // নতুন বাস নির্বাচনের পূর্বে পূর্ববর্তী ঘোষণা কিউ সম্পূর্ণ পরিষ্কার করুন
+  window.clearOldSpeechQueues = function() {
     voiceQueue = [];
     isAnnouncementPlaying = false;
     if (voiceSafetyTimeout) {
@@ -3911,29 +4056,58 @@
     if ('speechSynthesis' in window) {
       try { window.speechSynthesis.cancel(); } catch(_) {}
     }
-    
+    if (window.AndroidBridge && window.AndroidBridge.clearSpeechQueue) {
+      try { window.AndroidBridge.clearSpeechQueue(); } catch(_) {}
+    }
+  };
+
+  document.addEventListener("visibilitychange", function() {
+    if (document.hidden) {
+      window.clearOldSpeechQueues();
+    }
+  });
+
+  window.addEventListener("focus", function() {
+    window.clearOldSpeechQueues();
+  });
+
+  function selectBus(b, searchResultItem) {
+    promptDismissedStops.clear();
+    activeApproachingStop = null;
+    lastAnnouncedArrivalStop = null;
+    lastAnnouncedNextStop = null;
+    announcedArrivalStopsSet.clear();
+    announcedNextStopsSet.clear();
+
+    // নতুন বাস নির্বাচনের পূর্বে পূর্ববর্তী ঘোষণা কিউ সম্পূর্ণ পরিষ্কার করুন
+    window.clearOldSpeechQueues();
+
+    let sFrom = searchResultItem ? searchResultItem.fromDisplayName : (document.getElementById("searchFrom") ? document.getElementById("searchFrom").value.trim() : "");
+    let sTo = searchResultItem ? searchResultItem.toDisplayName : (document.getElementById("searchTo") ? document.getElementById("searchTo").value.trim() : "");
+
+    // ১ নম্বর নির্দেশনা: একই বাসের UP এবং DOWN উভয়ের ক্ষেত্রে From ও To দেখে সঠিক দিক বাছাই করা
+    let bestBusRow = findBestMatchingBusRow(b.number || b.name, sFrom, sTo) || b;
+
     // ক্লোন তৈরি করে সংরক্ষণ করুন যাতে গ্লোবাল ক্যাটালগ বিনষ্ট না হয়
-    trackingBus = Object.assign({}, b);
-    trackingBus.originalSource = b.source;
-    trackingBus.originalDest = b.dest;
-    trackingBus.originalDepTime = b.depTime;
-    trackingBus.originalArrTime = b.arrTime;
+    trackingBus = Object.assign({}, bestBusRow);
+    trackingBus.originalSource = bestBusRow.source;
+    trackingBus.originalDest = bestBusRow.dest;
+    trackingBus.originalDepTime = bestBusRow.depTime;
+    trackingBus.originalArrTime = bestBusRow.arrTime;
 
     if (searchResultItem) {
-      trackingBus.searchFrom = searchResultItem.fromDisplayName || b.source;
-      trackingBus.searchTo = searchResultItem.toDisplayName || b.dest;
+      trackingBus.searchFrom = searchResultItem.fromDisplayName || bestBusRow.source;
+      trackingBus.searchTo = searchResultItem.toDisplayName || bestBusRow.dest;
       trackingBus.searchFromTime = searchResultItem.fromTimeStr;
       trackingBus.searchToTime = searchResultItem.toTimeStr;
       trackingBus.fromTimeStr = searchResultItem.fromTimeStr;
       trackingBus.toTimeStr = searchResultItem.toTimeStr;
     } else {
-      let sFrom = document.getElementById("searchFrom") ? document.getElementById("searchFrom").value.trim() : "";
-      let sTo = document.getElementById("searchTo") ? document.getElementById("searchTo").value.trim() : "";
       if (sFrom) trackingBus.searchFrom = sFrom;
       if (sTo) trackingBus.searchTo = sTo;
     }
     
-    let stopsRaw = b.selectedStops || b.Selected_Stops || b["SELECTED STOPS"] || [];
+    let stopsRaw = bestBusRow.selectedStops || bestBusRow.Selected_Stops || bestBusRow["SELECTED STOPS"] || [];
     if (typeof stopsRaw === "string") {
       trackingBus.selectedStops = stopsRaw.split(",").map(s => cleanStopName(s));
     } else if (Array.isArray(stopsRaw)) {
@@ -3942,39 +4116,39 @@
       trackingBus.selectedStops = [];
     }
 
-    document.getElementById("busTrackInput").value = `${b.number} - ${b.name}`;
+    document.getElementById("busTrackInput").value = `${bestBusRow.number} - ${bestBusRow.name}`;
     document.getElementById("busList").innerHTML = "";
 
     let statusText = document.getElementById("mapStatusText");
     if (statusText) {
-      let fullName = (b.name && b.number) ? `${b.name} (${b.number})` : (b.name || b.number);
+      let fullName = (bestBusRow.name && bestBusRow.number) ? `${bestBusRow.name} (${bestBusRow.number})` : (bestBusRow.name || bestBusRow.number);
       statusText.innerText = `🚌 বাসের নাম: ${fullName} • লাইভ ট্র্যাকিং চলছে`;
     }
     try { map.invalidateSize(); } catch(_) {}
 
     let stopBtnText = document.getElementById("addStopBtnText");
-    stopBtnText.innerText = `এই জায়গাটি ${b.name} - ${b.number} বাসের স্টপেজ হিসাবে যুক্ত করুন`;
+    stopBtnText.innerText = `এই জায়গাটি ${bestBusRow.name} - ${bestBusRow.number} বাসের স্টপেজ হিসাবে যুক্ত করুন`;
 
     let lang = getCurrentAppLanguage();
-    let initialCurStop = b.source ? b.source.toUpperCase() : "সিগন্যাল খোঁজা হচ্ছে...";
+    let initialCurStop = bestBusRow.source ? bestBusRow.source.toUpperCase() : "সিগন্যাল খোঁজা হচ্ছে...";
     let initialNextStop = (trackingBus.selectedStops && trackingBus.selectedStops.length > 0) ? trackingBus.selectedStops[0] : "--";
-    let initialDest = b.dest ? b.dest.toUpperCase() : "--";
+    let initialDest = bestBusRow.dest ? bestBusRow.dest.toUpperCase() : "--";
 
     // ব্যাকগ্রাউন্ড সার্ভিস চালু এবং তাৎক্ষণিক বিবরণী প্রেরণ
     if (window.AndroidBridge && window.AndroidBridge.startBackgroundTrackingWithDetails) {
       window.AndroidBridge.startBackgroundTrackingWithDetails(
-        b.number,
-        b.name || "",
+        bestBusRow.number,
+        bestBusRow.name || "",
         initialCurStop,
         initialNextStop,
         initialDest,
         lang
       );
     } else if (window.AndroidBridge && window.AndroidBridge.onBusSelected) {
-      window.AndroidBridge.onBusSelected(b.number, b.name || "");
+      window.AndroidBridge.onBusSelected(bestBusRow.number, bestBusRow.name || "");
     }
 
-    trackBus(b.number);
+    trackBus(bestBusRow.number);
   }
   
   const busTrackInputEl = document.getElementById("busTrackInput");
@@ -4000,17 +4174,13 @@
       } else if (val.length >= 2) {
         clearTimeout(debounceTimer);
         debounceTimer = setTimeout(() => {
-          let matches = searchBusesInCatalog(val);
-          if (matches.length > 0) {
-            let exactMatch = matches.find(b => 
-              String(b.number).trim().toUpperCase() === val.toUpperCase() || 
-              String(b.name).trim().toUpperCase() === val.toUpperCase()
-            );
-            if (exactMatch) {
-              selectBus(exactMatch);
-              let suggestionsBox = document.getElementById("busTrackSuggestions");
-              if (suggestionsBox) suggestionsBox.classList.add("hidden");
-            }
+          let sFrom = document.getElementById("searchFrom") ? document.getElementById("searchFrom").value.trim() : "";
+          let sTo = document.getElementById("searchTo") ? document.getElementById("searchTo").value.trim() : "";
+          let best = findBestMatchingBusRow(val, sFrom, sTo);
+          if (best) {
+            selectBus(best);
+            let suggestionsBox = document.getElementById("busTrackSuggestions");
+            if (suggestionsBox) suggestionsBox.classList.add("hidden");
           }
         }, 600);
       }
@@ -4028,9 +4198,11 @@
     busTrackInputEl.addEventListener("keydown", e => {
       if (e.key === "Enter") {
         let val = busTrackInputEl.value.trim();
-        let matches = searchBusesInCatalog(val);
-        if (matches.length > 0) {
-          selectBus(matches[0]);
+        let sFrom = document.getElementById("searchFrom") ? document.getElementById("searchFrom").value.trim() : "";
+        let sTo = document.getElementById("searchTo") ? document.getElementById("searchTo").value.trim() : "";
+        let best = findBestMatchingBusRow(val, sFrom, sTo);
+        if (best) {
+          selectBus(best);
           let suggestionsBox = document.getElementById("busTrackSuggestions");
           if (suggestionsBox) suggestionsBox.classList.add("hidden");
         }
@@ -4049,14 +4221,22 @@
   function trackBus(busNo) {
     if (trackingInterval) clearInterval(trackingInterval);
 
-    // যদি সরাসরি বাস নম্বর দিয়ে ট্র্যাকিং শুরু হয়, গ্লোবাল ক্যাটালগ থেকে তথ্য পূরণ করুন
-    if ((!trackingBus || trackingBus.number != busNo) && globalBusesCatalog.length > 0) {
-      let matched = globalBusesCatalog.find(b => 
-        String(b.number).trim().toUpperCase() === String(busNo).trim().toUpperCase() ||
-        String(b.name).trim().toUpperCase() === String(busNo).trim().toUpperCase()
-      );
+    let sFrom = (trackingBus && trackingBus.searchFrom) || (document.getElementById("searchFrom") ? document.getElementById("searchFrom").value.trim() : "");
+    let sTo = (trackingBus && trackingBus.searchTo) || (document.getElementById("searchTo") ? document.getElementById("searchTo").value.trim() : "");
+
+    // যদি সরাসরি বাস নম্বর দিয়ে ট্র্যাকিং শুরু হয়, গ্লোবাল ক্যাটালগ থেকে সঠিক অভিমুখে তথ্য পূরণ করুন
+    if (globalBusesCatalog.length > 0) {
+      let matched = findBestMatchingBusRow(busNo, sFrom, sTo);
       if (matched) {
-        trackingBus = Object.assign({}, matched);
+        if (!trackingBus || trackingBus.number != busNo || (!trackingBus.searchFrom && sFrom)) {
+          trackingBus = Object.assign({}, matched);
+          if (sFrom) trackingBus.searchFrom = sFrom;
+          if (sTo) trackingBus.searchTo = sTo;
+        } else {
+          if (!trackingBus.selectedStops || trackingBus.selectedStops.length === 0) {
+            trackingBus.selectedStops = matched.selectedStops;
+          }
+        }
         let stopsRaw = matched.selectedStops || matched.Selected_Stops || matched["SELECTED STOPS"] || [];
         if (typeof stopsRaw === "string") {
           trackingBus.selectedStops = stopsRaw.split(",").map(s => cleanStopName(s));
@@ -4079,6 +4259,8 @@
     hasTriggeredWakeAlarm = false;
     lastAnnouncedArrivalStop = null;
     lastAnnouncedNextStop = null;
+    announcedArrivalStopsSet.clear();
+    announcedNextStopsSet.clear();
 
     let statusText = document.getElementById("mapStatusText");
     if (statusText) {
@@ -4121,7 +4303,9 @@
       }
 
       if (trackingBus && (!trackingBus.name || !trackingBus.dest) && globalBusesCatalog.length > 0) {
-        let matched = globalBusesCatalog.find(b => b.number == busNo || b.number === busNo);
+        let sFrom = trackingBus.searchFrom || (document.getElementById("searchFrom") ? document.getElementById("searchFrom").value.trim() : "");
+        let sTo = trackingBus.searchTo || (document.getElementById("searchTo") ? document.getElementById("searchTo").value.trim() : "");
+        let matched = findBestMatchingBusRow(busNo, sFrom, sTo);
         if (matched) {
           if (!trackingBus.name) trackingBus.name = matched.name;
           if (!trackingBus.source) trackingBus.source = matched.source;
@@ -4955,34 +5139,22 @@
   function evaluateStoppagesAndEta(distKmBusUser, speed, refLat, refLon) {
     if (!trackingBus) return;
 
-    let srcName = cleanStopName(document.getElementById("searchFrom").value.trim() || trackingBus.source);
-    let destName = cleanStopName(document.getElementById("searchTo").value.trim() || trackingBus.dest);
-
-    let rawSelected = trackingBus.selectedStops || trackingBus.Selected_Stops || trackingBus["SELECTED STOPS"] || [];
-    let allowedStops = [];
-    if (typeof rawSelected === "string") {
-      allowedStops = rawSelected.split(",").map(s => cleanStopName(s)).filter(Boolean);
-    } else if (Array.isArray(rawSelected)) {
-      allowedStops = rawSelected.map(s => cleanStopName(s)).filter(Boolean);
-    }
+    let srcName = cleanStopName((trackingBus && (trackingBus.searchFrom || trackingBus.fromDisplayName)) || (document.getElementById("searchFrom") ? document.getElementById("searchFrom").value.trim() : "") || (trackingBus && trackingBus.source));
+    let destName = cleanStopName((trackingBus && (trackingBus.searchTo || trackingBus.toDisplayName)) || (document.getElementById("searchTo") ? document.getElementById("searchTo").value.trim() : "") || (trackingBus && trackingBus.dest));
 
     // বাসের সমস্ত স্টপের ক্রমানুসারে পূর্ণাঙ্গ তালিকা তৈরি করুন (Source -> Selected_Stops -> Dest)
-    let orderedRouteNames = [];
-    if (trackingBus.source) {
-      let cSrc = cleanStopName(trackingBus.source);
-      if (cSrc) orderedRouteNames.push(cSrc);
-    }
-    allowedStops.forEach(s => {
-      let c = cleanStopName(s);
-      if (c && !orderedRouteNames.includes(c)) {
-        orderedRouteNames.push(c);
-      }
-    });
-    if (trackingBus.dest) {
-      let cDest = cleanStopName(trackingBus.dest);
-      if (cDest && !orderedRouteNames.includes(cDest)) {
-        orderedRouteNames.push(cDest);
-      }
+    let orderedRouteNames = getFullStopsListForBus(trackingBus);
+
+    // ১ নম্বর নির্দেশনা: From এবং To দেখে সিদ্ধান্ত নেওয়া বাস কোন দিকে যাচ্ছে (UP নাকি DOWN)
+    let fIdx = -1;
+    let tIdx = -1;
+    if (srcName) fIdx = findStopIndexInList(srcName, orderedRouteNames);
+    if (destName) tIdx = findStopIndexInList(destName, orderedRouteNames);
+
+    // যদি From এবং To উভয়ের অবস্থান পাওয়া যায় এবং From এর অবস্থান To এর পরে থাকে (অর্থাৎ ব্যবহারকারী উল্টো দিকে/ডাউন দিকে যাচ্ছেন)
+    // তবে পুরো স্টপ সিকোয়েন্সকে রিভার্স করে দেওয়া যাতে যাত্রা শুরুর স্টপ আগে এবং গন্তব্যের স্টপ পরে থাকে
+    if (fIdx !== -1 && tIdx !== -1 && fIdx > tIdx) {
+      orderedRouteNames.reverse();
     }
 
     let stopCandidates = [];
@@ -5021,11 +5193,6 @@
     });
 
     if (validStops.length === 0) return;
-
-    // ১ নম্বর নির্দেশনা: ম্যাপের মত স্টপেজগুলো পরপর সাজিয়ে দিন (Sequential Route Order)
-    if (validStops.length > 1) {
-      validStops = sortStopsAlongTrip(validStops, trackingBus);
-    }
 
     // যদি refLat না থাকে, রুটের প্রথম যে স্টপে কো-অর্ডিনেট আছে সেটি নেওয়া
     if (!refLat || !refLon) {
@@ -5351,16 +5518,26 @@
     }
 
     // ==========================================
-    // ২ নম্বর নির্দেশনা সংশোধন: প্রতিটি স্টপেজের ৫০ মিটারের কাছে এলে আগমন ঘোষণা
+    // ২ নম্বর নির্দেশনা সংশোধন: প্রতিটি স্টপেজের ৫০ মিটারের কাছে এলে আগমন ঘোষণা (কোনো পুরানো স্টপ রিপিট হবে না)
     // ==========================================
     try {
       let cleanCurStop = cleanStopName(baseStopName);
       let isDestination = (nearest.index >= targetDestIndex) || (targetDestName && cleanCurStop === targetDestName);
 
       // প্রতিটি স্টপেজের ৫০ মিটার কাছে এলে বলবে "বর্তমান স্টপেজ [স্টপ নাম]"
-      if (isAtStop && minStopDist <= 50 && cleanCurStop && lastAnnouncedArrivalStop !== cleanCurStop) {
+      // ২ নম্বর নির্দেশনা: কোনো পুরানো স্টপেজ বারবার রিপিট হবে না, প্রতিটি স্টপ কেবল একবারই ঘোষণা হবে
+      if (isAtStop && minStopDist <= 50 && cleanCurStop && !announcedArrivalStopsSet.has(cleanCurStop)) {
+        announcedArrivalStopsSet.add(cleanCurStop);
         lastAnnouncedArrivalStop = cleanCurStop;
         
+        // বর্তমান স্টপ সহ পেছনের সকল স্টপকে ঘোষিত হিসেবে চিহ্নিত করা যাতে ফোন কল শেষে ফিরে এলেও আগের স্টপ না বাজে
+        for (let k = 0; k <= activeStopIndex; k++) {
+          if (validStops[k]) {
+            let pName = cleanStopName(validStops[k].name || validStops[k].stopName);
+            if (pName) announcedArrivalStopsSet.add(pName);
+          }
+        }
+
         // স্ক্রিনে স্টপে পৌঁছানোর নোটিশ ব্যানার
         showArrivalAlertBanner(baseStopName, nextStopName, isDestination);
         
@@ -5370,15 +5547,16 @@
         playVoiceAnnouncement(arrivalSpeech, curLang);
       }
 
-      // পরবর্তী স্টপেজের নাম ঘোষণা (বর্তমান স্টপ ছেড়ে ৭০ মিটার অতিক্রম করলে)
+      // পরবর্তী স্টপেজের নাম ঘোষণা (বর্তমান স্টপ ছেড়ে ৭০ মিটার অতিক্রম করলে, কেবল একবার)
       let cleanNext = cleanStopName(nextStopName);
-      if (cleanNext && cleanNext !== "--" && !isAtStop && distPastMeters > 70 && lastAnnouncedNextStop !== cleanNext) {
+      if (cleanNext && cleanNext !== "--" && !isAtStop && distPastMeters > 70 && !announcedNextStopsSet.has(cleanNext)) {
+        announcedNextStopsSet.add(cleanNext);
         lastAnnouncedNextStop = cleanNext;
         let curLang = getCurrentAppLanguage();
         let nextSpeech = getNextStopAnnouncement(nextStopName, curLang);
         setTimeout(() => {
           playVoiceAnnouncement(nextSpeech, curLang);
-        }, 2200);
+        }, 1200);
       }
     } catch (_) {}
   }
@@ -5974,24 +6152,81 @@ https://aionline.in.net`;
   }
 
   // ==========================================
-  // ৯) GitHub এ ছবি পরিবর্তন করলে সবার ফোনে স্বয়ংক্রিয়ভাবে আপডেট হওয়ার ব্যবস্থা
+  // ৩ ও ৪ নম্বর নির্দেশনা: ৪টি ডায়নামিক ছবি (img1, img2, img3, img4) এবং কোনো ছবি ডিলিট হলে দাগহীনভাবে লুকানো
   // ==========================================
-  function syncRemoteFestivalBanner() {
-    try {
-      let bannerImg = document.getElementById("festivalBannerImg");
-      if (!bannerImg) return;
-      // ব্যবহারকারীর GitHub রিপোজিটরি raw URL (ক্যাশ এড়াতে টাইমস্ট্যাম্প সহ)
-      let remoteGithubUrl = "https://raw.githubusercontent.com/evbasoftware-jpg/bus3/main/app/src/main/assets/festival_banner.png?v=" + new Date().getTime();
-      let testImg = new Image();
-      testImg.onload = function() {
-        bannerImg.src = remoteGithubUrl;
+  function handleDynamicImgError(img) {
+    if (!img) return;
+    img.style.display = "none";
+    img.removeAttribute("src");
+    let p = img.parentElement;
+    if (p) {
+      p.style.display = "none";
+      p.style.margin = "0";
+      p.style.padding = "0";
+      p.style.height = "0";
+    }
+  }
+
+  function handleDynamicImgSuccess(img) {
+    if (!img) return;
+    if (img.naturalWidth > 0 && img.naturalHeight > 0) {
+      img.style.display = "block";
+      let p = img.parentElement;
+      if (p) {
+        p.style.display = "block";
+        p.style.margin = "6px 0 10px 0";
+      }
+    } else {
+      handleDynamicImgError(img);
+    }
+  }
+
+  function syncRemoteDynamicImages() {
+    ['img1', 'img2', 'img3', 'img4'].forEach(name => {
+      let container = document.getElementById("container_" + name);
+      let imgElem = document.getElementById("dynamic_" + name);
+      if (!imgElem) return;
+
+      let githubUrl = "https://raw.githubusercontent.com/evbasoftware-jpg/bus3/main/app/src/main/assets/" + name + ".png?v=" + new Date().getTime();
+      let localUrl = "file:///android_asset/" + name + ".png";
+
+      let testGithub = new Image();
+      testGithub.onload = function() {
+        if (testGithub.naturalWidth > 0) {
+          imgElem.src = githubUrl;
+          imgElem.style.display = "block";
+          if (container) {
+            container.style.display = "block";
+            container.style.margin = "6px 0 10px 0";
+          }
+        } else {
+          checkLocal();
+        }
       };
-      testImg.onerror = function() {
-        // অফলাইন বা নেটওয়ার্ক না থাকলে অ্যাপের বিল্ট-ইন লক্ষ্মী মায়ের ছবি দেখাবে
-        bannerImg.src = "file:///android_asset/lakshmi_puja_banner.png";
-      };
-      testImg.src = remoteGithubUrl;
-    } catch (_) {}
+      testGithub.onerror = checkLocal;
+
+      function checkLocal() {
+        let testLocal = new Image();
+        testLocal.onload = function() {
+          if (testLocal.naturalWidth > 0) {
+            imgElem.src = localUrl;
+            imgElem.style.display = "block";
+            if (container) {
+              container.style.display = "block";
+              container.style.margin = "6px 0 10px 0";
+            }
+          } else {
+            handleDynamicImgError(imgElem);
+          }
+        };
+        testLocal.onerror = function() {
+          handleDynamicImgError(imgElem);
+        };
+        testLocal.src = localUrl;
+      }
+
+      testGithub.src = githubUrl;
+    });
   }
 
   // ==========================================

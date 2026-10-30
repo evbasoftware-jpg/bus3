@@ -408,15 +408,20 @@ class MainActivity : ComponentActivity() {
 
   override fun onResume() {
     super.onResume()
+    clearSpeechQueueAndStop()
     try {
       webView?.onResume()
       webView?.resumeTimers()
       startLocationUpdates()
+      webView?.post {
+        webView?.evaluateJavascript("if (typeof onAppResumeState === 'function') { onAppResumeState(); }", null)
+      }
     } catch (_: Exception) {}
   }
 
   override fun onPause() {
     super.onPause()
+    clearSpeechQueueAndStop()
     try {
       webView?.onPause()
     } catch (_: Exception) {}
@@ -783,6 +788,21 @@ class MainActivity : ComponentActivity() {
     } catch (_: Exception) {}
   }
 
+  fun clearSpeechQueueAndStop() {
+    runOnUiThread {
+      nativeSpeechQueue.clear()
+      isNativeAnnouncing = false
+      try {
+        audioPlayer?.stop()
+        audioPlayer?.release()
+        audioPlayer = null
+      } catch (_: Exception) {}
+      try {
+        textToSpeech?.stop()
+      } catch (_: Exception) {}
+    }
+  }
+
   override fun onDestroy() {
     super.onDestroy()
     try {
@@ -804,6 +824,11 @@ class MainActivity : ComponentActivity() {
 }
 
 class WebAppInterface(private val activity: MainActivity) {
+  @JavascriptInterface
+  fun clearSpeechQueue() {
+    activity.clearSpeechQueueAndStop()
+  }
+
   @JavascriptInterface
   fun speakAnnouncement(text: String, langCode: String) {
     activity.speakVoiceAnnouncement(text, langCode)
