@@ -4070,35 +4070,47 @@
       }
 
       let allAvailable = [...(masterStopsList || []), ...(currentBusStopsList || [])];
-      let srcCoords = resolvePlaceCoords(bus.source, allAvailable);
-      let destCoords = resolvePlaceCoords(bus.dest, allAvailable);
-      let fromCoords = resolvePlaceCoords(fromDisplayName, allAvailable);
-      let toCoords = resolvePlaceCoords(toDisplayName, allAvailable);
+      let stopCoordsList = orderedStops.map(s => resolvePlaceCoords(s, allAvailable));
 
-      function getCorridorFraction(targetCoords, targetIdx) {
-        if (targetIdx === 0) return 0;
+      // বাসের সম্পূর্ণ যাত্রাপথের প্রতিটি স্টপের ক্রমযোজিত সড়ক দূরত্ব (Cumulative Route Distance) হিসাব
+      let cumDist = [0];
+      let lastKnownCoord = stopCoordsList[0] || null;
+      let knownDistances = [];
+
+      for (let i = 1; i < orderedStops.length; i++) {
+        let curCoord = stopCoordsList[i];
+        if (curCoord && lastKnownCoord) {
+          let segDist = getDistanceMeters(lastKnownCoord.lat, lastKnownCoord.lon, curCoord.lat, curCoord.lon) * 1.25; // গ্রামীণ সড়কপথের বাঁক গুণক
+          cumDist.push(cumDist[cumDist.length - 1] + segDist);
+          knownDistances.push(segDist);
+          lastKnownCoord = curCoord;
+        } else if (curCoord) {
+          cumDist.push(cumDist[cumDist.length - 1] + 3500);
+          lastKnownCoord = curCoord;
+        } else {
+          let avgDist = (knownDistances.length > 0) ? (knownDistances.reduce((a, b) => a + b, 0) / knownDistances.length) : 3500;
+          if (avgDist > 9000) avgDist = 4500;
+          cumDist.push(cumDist[cumDist.length - 1] + Math.max(avgDist, 2000));
+        }
+      }
+
+      let totalRouteDistance = cumDist[cumDist.length - 1] || 1;
+
+      function getRouteFraction(targetIdx) {
+        if (targetIdx <= 0) return 0;
         if (targetIdx >= orderedStops.length - 1) return 1;
-        if (srcCoords && destCoords && targetCoords) {
-          let cosLat = Math.cos(srcCoords.lat * Math.PI / 180);
-          let dx = (destCoords.lon - srcCoords.lon) * cosLat;
-          let dy = destCoords.lat - srcCoords.lat;
-          let lenSq = dx * dx + dy * dy;
-          if (lenSq > 0) {
-            let px = (targetCoords.lon - srcCoords.lon) * cosLat;
-            let py = targetCoords.lat - srcCoords.lat;
-            let t = (px * dx + py * dy) / lenSq;
-            return Math.max(0, Math.min(1, t));
-          }
+        if (totalRouteDistance > 0 && cumDist[targetIdx] !== undefined) {
+          return Math.max(0, Math.min(1, cumDist[targetIdx] / totalRouteDistance));
         }
         return targetIdx / totalStopsCount;
       }
 
       if (fMins === null) {
-        let fracFrom = getCorridorFraction(fromCoords, fromIdx);
+        let fracFrom = getRouteFraction(fromIdx);
         fMins = Math.round(depMins + fracFrom * totalTripMins);
       }
       if (tMins === null) {
-        let fracTo = getCorridorFraction(toCoords, toIdx);
+        let fracTo = getRouteFraction(toIdx);
         tMins = Math.round(depMins + fracTo * totalTripMins);
       }
     }
@@ -4219,6 +4231,14 @@
     } else if (trackingBus.selectedStops && trackingBus.selectedStops.length > 0) {
       initialNextStop = trackingBus.selectedStops[0];
     }
+
+    // অ্যাপের UI কার্ডে তাৎক্ষণিক তথ্য প্রদর্শন
+    let curElem = document.getElementById("infoCurStop");
+    let nextElem = document.getElementById("infoNextStop");
+    let destElem = document.getElementById("infoDestStop");
+    if (curElem) curElem.innerText = initialCurStop;
+    if (nextElem) nextElem.innerText = initialNextStop;
+    if (destElem) destElem.innerText = initialDest;
 
     // ব্যাকগ্রাউন্ড সার্ভিস চালু এবং তাৎক্ষণিক বিবরণী প্রেরণ
     if (window.AndroidBridge && window.AndroidBridge.startBackgroundTrackingWithDetails) {
@@ -4347,6 +4367,14 @@
     let initialCurStop = (fIdx !== -1) ? allStops[fIdx] : (sFrom ? sFrom.toUpperCase() : ((trackingBus && trackingBus.source) ? trackingBus.source.toUpperCase() : "সিগন্যাল খোঁজা হচ্ছে..."));
     let initialDest = (tIdx !== -1) ? allStops[tIdx] : (sTo ? sTo.toUpperCase() : ((trackingBus && trackingBus.dest) ? trackingBus.dest.toUpperCase() : "--"));
     let initialNextStop = (fIdx !== -1 && fIdx + 1 < allStops.length) ? allStops[fIdx + 1] : ((allStops.length > 1) ? allStops[1] : "--");
+
+    // অ্যাপের UI কার্ডে তাৎক্ষণিক তথ্য প্রদর্শন
+    let curElem = document.getElementById("infoCurStop");
+    let nextElem = document.getElementById("infoNextStop");
+    let destElem = document.getElementById("infoDestStop");
+    if (curElem) curElem.innerText = initialCurStop;
+    if (nextElem) nextElem.innerText = initialNextStop;
+    if (destElem) destElem.innerText = initialDest;
 
     hasTriggeredWakeAlarm = false;
     lastAnnouncedArrivalStop = null;
@@ -5433,17 +5461,9 @@
 
     renderStopsOnMapAndTimeline(validStops, nearest.index, isLiveBus ? busPos.lat : null, isLiveBus ? busPos.lon : null);
 
-    let nextValidStop = null;
-    for (let j = nearest.index + 1; j < validStops.length; j++) {
-      let candidate = validStops[j];
-      let candName = cleanStopName(candidate.name || candidate.stopName);
-      let isAllowed = allowedStops.length === 0 || allowedStops.some(a => a.includes(candName) || candName.includes(a));
-      if (isAllowed) {
-        nextValidStop = candidate;
-        break;
-      }
-    }
+    let nextValidStop = (nearest.index + 1 < validStops.length) ? validStops[nearest.index + 1] : null;
 
+    let nextStopElem = document.getElementById("infoNextStop");
     let nextStopName = "--";
     let distNextFormatted = "";
     let nextEta = "";
@@ -5452,13 +5472,17 @@
       nextStopName = nextValidStop.name || nextValidStop.stopName || "--";
       let nLat = Number(nextValidStop.latitude || nextValidStop.lat);
       let nLon = Number(nextValidStop.longitude || nextValidStop.lon);
-      let distNextKm = (getDistanceMeters(refLat, refLon, nLat, nLon) / 1000);
-      distNextFormatted = formatDistanceWithMeters(distNextKm);
-      nextEta = calculateETAString(distNextKm, speed);
-      
-      document.getElementById("infoNextStop").innerText = `${nextStopName} | ${distNextFormatted} | ETA: ${nextEta}`;
+      if (!isNaN(nLat) && !isNaN(nLon) && nLat !== 0 && refLat && refLon) {
+        let distNextKm = (getDistanceMeters(refLat, refLon, nLat, nLon) / 1000);
+        distNextFormatted = formatDistanceWithMeters(distNextKm);
+        nextEta = calculateETAString(distNextKm, speed);
+        if (nextStopElem) nextStopElem.innerText = `${nextStopName} | ${distNextFormatted} | ETA: ${nextEta}`;
+      } else {
+        if (nextStopElem) nextStopElem.innerText = nextStopName;
+      }
     } else {
-      document.getElementById("infoNextStop").innerText = `গন্তব্যের কাছাকাছি`;
+      let isArrived = (nearest.index >= validStops.length - 1);
+      if (nextStopElem) nextStopElem.innerText = isArrived ? "গন্তব্যে পৌঁছে গেছেন" : "গন্তব্যের কাছাকাছি";
     }
 
     let destStopElem = document.getElementById("infoDestStop");
@@ -5567,7 +5591,8 @@
         destStopElem.innerText = `${targetDestName.toUpperCase()} | ${distDestFormatted} | ETA: ${destEta}`;
       }
     } else if (destStopElem) {
-      destStopElem.innerText = "--";
+      let fallbackDest = targetDestName || (trackingBus && (trackingBus.searchTo || trackingBus.toDisplayName || trackingBus.dest)) || "--";
+      destStopElem.innerText = fallbackDest.toUpperCase();
     }
 
     // ১ নম্বর ফিচার: গন্তব্যের ৫০০ মিটার পূর্বে ওয়েক-আপ অ্যালার্ট (Wake-up Alarm)
