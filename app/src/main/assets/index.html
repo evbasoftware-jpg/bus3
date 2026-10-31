@@ -1152,8 +1152,8 @@
       margin-top: 2px;
     }
     .btn-call-direct {
-      background: #16a34a;
-      color: #ffffff;
+      background: cyan;
+      color: blue;
       border: none;
       border-radius: 8px;
       padding: 8px 14px;
@@ -1410,23 +1410,18 @@
     <div class="card card-cur-stop"><b>📍 বর্তমান স্টপেজ:</b> <span id="infoCurStop">--</span></div>
     <div class="card card-next-stop"><b>⏩ পরবর্তী স্টপেজ:</b> <span id="infoNextStop">--</span></div>
     <div class="card card-dest-stop"><b>🎯 গন্তব্য:</b> <span id="infoDestStop">--</span></div>
-
-    <!-- ৩ নং ছবি: img3.png (বাসের গতিবেগ এর উপরে থাকবে) -->
-    <div id="container_img3" class="dynamic-img-container" style="display: none; grid-column: 1 / -1; width: 100%; text-align: center; margin: 0; padding: 0; border: none; outline: none; background: transparent;">
-      <img id="dynamic_img3" alt="" onerror="handleDynamicImgError(this)" onload="handleDynamicImgSuccess(this)" class="dynamic-banner-img" style="width: 100%; max-height: 165px; object-fit: contain; border-radius: 10px; display: none; margin: 0 auto; border: none; outline: none; background: transparent; box-shadow: none;">
-    </div>
     <div class="card"><b>⚡ বাসের গতিবেগ:</b> <span id="infoSpeed">--</span></div>
     <div class="card"><b>👥 বাসের ভিড়ের মাত্রা:</b> <span id="infoCrowdLevel">🟢 কম ভিড় (খালি আসন আছে)</span></div>
-
-    <!-- ৪ নং ছবি: img4.png (ওয়েক-আপ এলার্ট এর উপরে থাকবে) -->
-    <div id="container_img4" class="dynamic-img-container" style="display: none; grid-column: 1 / -1; width: 100%; text-align: center; margin: 0; padding: 0; border: none; outline: none; background: transparent;">
-      <img id="dynamic_img4" alt="" onerror="handleDynamicImgError(this)" onload="handleDynamicImgSuccess(this)" class="dynamic-banner-img" style="width: 100%; max-height: 165px; object-fit: contain; border-radius: 10px; display: none; margin: 0 auto; border: none; outline: none; background: transparent; box-shadow: none;">
-    </div>
     <div class="card"><b>⏰ গন্তব্য অ্যালার্ট:</b> <span id="infoAlarmStatus">৫০০মি সক্রিয় 🔔</span></div>
     <div class="card"><b>📡 ব্যবহারকারীর GPS:</b> <span id="infoUserGPS">--</span></div>
     <div class="card"><b>📶 GPS সংকেত:</b> <span id="infoConfidence">--</span></div>
   </div>
-
+  
+  <!-- ৩ নং ছবি: img3.png (বাসের গতিবেগ এর উপরে থাকবে) -->
+    <div id="container_img3" class="dynamic-img-container" style="display: none; grid-column: 1 / -1; width: 100%; text-align: center; margin: 0; padding: 0; border: none; outline: none; background: transparent;">
+      <img id="dynamic_img3" alt="" onerror="handleDynamicImgError(this)" onload="handleDynamicImgSuccess(this)" class="dynamic-banner-img" style="width: 100%; max-height: 165px; object-fit: contain; border-radius: 10px; display: none; margin: 0 auto; border: none; outline: none; background: transparent; box-shadow: none;">
+    </div>
+  
   <!-- লাইভ ম্যাপ সেকশন (দুই আঙুল দিয়ে সহজে জুম ও প্যান করা যাবে) -->
   <div class="live-map-wrapper" id="liveMapWrapper">
     <div id="map"></div>
@@ -1450,7 +1445,7 @@
     </svg>
     <span id="mapAddStopBtnText">ম্যাপে ক্লিক করে সরাসরি নতুন স্টপ যোগ করুন (অফলাইন মোড)</span>
   </button>
-
+    
   <!-- ব্যবহারকারীর নির্দেশনা: ৬টি ফিচার ম্যাপের নিচে একদম লাস্টে যুক্ত করা হলো -->
   <div class="features-quick-grid">
     <button type="button" class="feature-action-btn btn-wake-alarm" onclick="openWakeAlarmModal()" title="গন্তব্যের ৫০০ মিটার পূর্বে ওয়েক-আপ অ্যালার্ট">
@@ -1840,7 +1835,7 @@
 <div id="nameModal" class="modal-overlay hidden">
   <div class="modal-card">
     <h4>📍 স্টপেজের নাম</h4>
-    <p>বাস স্টপের নাম লিখুন (ইংরেজিতে):</p>
+    <p>বাস স্টপের নাম লিখুন:</p>
     <input type="text" id="manualStopName" placeholder="যেমন: CHOWHATTA">
     <div class="modal-actions">
       <button class="btn btn-cancel" onclick="closeModals()">Cancel</button>
@@ -1860,6 +1855,11 @@
   </div>
 </div>
 
+  <!-- ৪ নং ছবি: img4.png (ওয়েক-আপ এলার্ট এর উপরে থাকবে) -->
+    <div id="container_img4" class="dynamic-img-container" style="display: none; grid-column: 1 / -1; width: 100%; text-align: center; margin: 0; padding: 0; border: none; outline: none; background: transparent;">
+      <img id="dynamic_img4" alt="" onerror="handleDynamicImgError(this)" onload="handleDynamicImgSuccess(this)" class="dynamic-banner-img" style="width: 100%; max-height: 165px; object-fit: contain; border-radius: 10px; display: none; margin: 0 auto; border: none; outline: none; background: transparent; box-shadow: none;">
+    </div>
+  
 <script type="text/javascript">
   function googleTranslateElementInit() {
     try {
