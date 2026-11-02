@@ -1882,15 +1882,80 @@
         <input type="hidden" id="busOffSelect" value="" />
       </div>
 
-      <div style="margin-bottom:10px;">
-        <label style="font-size:12.5px;font-weight:bold;color:#991b1b;display:block;margin-bottom:4px;">২) বন্ধের ধরন নির্বাচন করুন:</label>
-        <select id="busOffType" style="width:100%;padding:10px;border-radius:8px;border:1.5px solid #cbd5e1;font-size:13.5px;background:#fff;font-weight:600;" onchange="onBusOffTypeChanged()">
-          <option value="today">🚫 আজকের জন্য বন্ধ (Closed Today)</option>
-          <option value="trip_time">⏰ নির্দিষ্ট সময়ের ট্রিপ বন্ধ (Specific Trip Cancelled)</option>
-          <option value="specific_day">📅 নির্দিষ্ট দিন বন্ধ (Closed on Day/Date)</option>
-          <option value="temporary">⚠️ সাময়িকভাবে পরিষেবা স্থগিত (Temporary Suspended)</option>
-          <option value="reopen">✅ পুনরায় চালু / পরিষেবা স্বাভাবিক (Re-open / Clear)</option>
-        </select>
+      <!-- ২) বন্ধের ধরন নির্বাচন করুন: কাস্টম মোবাইল ফ্রেন্ডলি ড্রপডাউন -->
+      <div style="margin-bottom:12px; position:relative;">
+        <label style="font-size:12.5px;font-weight:bold;color:#991b1b;display:block;margin-bottom:6px;">২) বন্ধের ধরন নির্বাচন করুন:</label>
+        
+        <!-- হিডেন ইনপুট যা জাভাস্ক্রিপ্ট মান সংরক্ষণ করে -->
+        <input type="hidden" id="busOffType" value="today" />
+
+        <!-- ড্রপডাউন ট্রিগার বাটন -->
+        <button type="button" id="busOffTypeTrigger" onclick="toggleCustomBusOffDropdown(event)" 
+                style="width:100%;padding:12px 14px;border-radius:10px;border:1.5px solid #cbd5e1;font-size:13.5px;background:#ffffff;font-weight:700;display:flex;align-items:center;justify-content:space-between;cursor:pointer;box-sizing:border-box;box-shadow:0 1px 3px rgba(0,0,0,0.06);text-align:left;">
+          <span id="busOffTypeTriggerText" style="display:flex;align-items:center;gap:8px;color:#0f172a;">
+            <span style="font-size:16px;">🚫</span>
+            <span>আজকের জন্য বন্ধ (Closed Today)</span>
+          </span>
+          <span id="busOffTypeArrow" style="font-size:12px;color:#64748b;transition:transform 0.2s;">▼</span>
+        </button>
+
+        <!-- ড্রপডাউন অপশন মেনু -->
+        <div id="busOffTypeDropdownMenu" style="display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;background:#ffffff;border:1.5px solid #cbd5e1;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,0.22);z-index:99999;overflow:hidden;">
+          <div onclick="selectCustomBusOffType('today', '🚫', 'আজকের জন্য বন্ধ (Closed Today)')" style="padding:11px 14px;border-bottom:1px solid #f1f5f9;cursor:pointer;display:flex;align-items:center;justify-content:space-between;">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <span style="font-size:16px;">🚫</span>
+              <div>
+                <div style="font-size:13px;font-weight:bold;color:#0f172a;">আজকের জন্য বন্ধ</div>
+                <div style="font-size:11px;color:#64748b;">Closed Today</div>
+              </div>
+            </div>
+            <span class="type-check" id="check_today" style="color:#16a34a;font-weight:bold;font-size:15px;">✓</span>
+          </div>
+
+          <div onclick="selectCustomBusOffType('trip_time', '⏰', 'নির্দিষ্ট সময়ের ট্রিপ বন্ধ (Trip Cancelled)')" style="padding:11px 14px;border-bottom:1px solid #f1f5f9;cursor:pointer;display:flex;align-items:center;justify-content:space-between;">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <span style="font-size:16px;">⏰</span>
+              <div>
+                <div style="font-size:13px;font-weight:bold;color:#0f172a;">নির্দিষ্ট সময়ের ট্রিপ বন্ধ</div>
+                <div style="font-size:11px;color:#64748b;">Specific Trip Cancelled</div>
+              </div>
+            </div>
+            <span class="type-check" id="check_trip_time" style="color:#16a34a;font-weight:bold;font-size:15px;display:none;">✓</span>
+          </div>
+
+          <div onclick="selectCustomBusOffType('specific_day', '📅', 'নির্দিষ্ট দিন বা তারিখ বন্ধ (Closed Day/Date)')" style="padding:11px 14px;border-bottom:1px solid #f1f5f9;cursor:pointer;display:flex;align-items:center;justify-content:space-between;">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <span style="font-size:16px;">📅</span>
+              <div>
+                <div style="font-size:13px;font-weight:bold;color:#0f172a;">নির্দিষ্ট দিন বন্ধ</div>
+                <div style="font-size:11px;color:#64748b;">Closed on Day / Date</div>
+              </div>
+            </div>
+            <span class="type-check" id="check_specific_day" style="color:#16a34a;font-weight:bold;font-size:15px;display:none;">✓</span>
+          </div>
+
+          <div onclick="selectCustomBusOffType('temporary', '⚠️', 'সাময়িকভাবে পরিষেবা স্থগিত (Temporary Suspended)')" style="padding:11px 14px;border-bottom:1px solid #f1f5f9;cursor:pointer;display:flex;align-items:center;justify-content:space-between;">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <span style="font-size:16px;">⚠️</span>
+              <div>
+                <div style="font-size:13px;font-weight:bold;color:#0f172a;">সাময়িকভাবে পরিষেবা স্থগিত</div>
+                <div style="font-size:11px;color:#64748b;">Temporary Suspended</div>
+              </div>
+            </div>
+            <span class="type-check" id="check_temporary" style="color:#16a34a;font-weight:bold;font-size:15px;display:none;">✓</span>
+          </div>
+
+          <div onclick="selectCustomBusOffType('reopen', '✅', 'পুনরায় চালু / পরিষেবা স্বাভাবিক (Re-open / Clear)')" style="padding:11px 14px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <span style="font-size:16px;">✅</span>
+              <div>
+                <div style="font-size:13px;font-weight:bold;color:#166534;">পুনরায় চালু / স্বাভাবিক</div>
+                <div style="font-size:11px;color:#15803d;">Re-open / Clear</div>
+              </div>
+            </div>
+            <span class="type-check" id="check_reopen" style="color:#16a34a;font-weight:bold;font-size:15px;display:none;">✓</span>
+          </div>
+        </div>
       </div>
 
       <div id="busOffTimeBox" style="display:none;margin-bottom:10px;">
@@ -6865,6 +6930,7 @@ https://aionline.in.net`;
       clearSelectedBusOff();
     }
 
+    selectCustomBusOffType("today", "🚫", "আজকের জন্য বন্ধ (Closed Today)");
     renderActiveBusOffList();
   }
 
@@ -6873,10 +6939,58 @@ https://aionline.in.net`;
     if (modal) modal.classList.add("hidden");
     let resultsBox = document.getElementById("busOffSearchResults");
     if (resultsBox) resultsBox.style.display = "none";
+    let menu = document.getElementById("busOffTypeDropdownMenu");
+    if (menu) menu.style.display = "none";
+    let arrow = document.getElementById("busOffTypeArrow");
+    if (arrow) arrow.style.transform = "rotate(0deg)";
   }
 
+  function toggleCustomBusOffDropdown(e) {
+    if (e) e.stopPropagation();
+    let menu = document.getElementById("busOffTypeDropdownMenu");
+    let arrow = document.getElementById("busOffTypeArrow");
+    if (!menu) return;
+    let isOpen = menu.style.display === "block";
+    menu.style.display = isOpen ? "none" : "block";
+    if (arrow) arrow.style.transform = isOpen ? "rotate(0deg)" : "rotate(180deg)";
+  }
+
+  function selectCustomBusOffType(val, icon, label) {
+    let input = document.getElementById("busOffType");
+    if (input) input.value = val;
+
+    let triggerText = document.getElementById("busOffTypeTriggerText");
+    if (triggerText) {
+      triggerText.innerHTML = `<span style="font-size:16px;">${icon || '🚫'}</span><span>${label || 'আজকের জন্য বন্ধ'}</span>`;
+    }
+
+    const types = ["today", "trip_time", "specific_day", "temporary", "reopen"];
+    types.forEach(t => {
+      let chk = document.getElementById("check_" + t);
+      if (chk) chk.style.display = (t === val) ? "inline" : "none";
+    });
+
+    let menu = document.getElementById("busOffTypeDropdownMenu");
+    let arrow = document.getElementById("busOffTypeArrow");
+    if (menu) menu.style.display = "none";
+    if (arrow) arrow.style.transform = "rotate(0deg)";
+
+    onBusOffTypeChanged();
+  }
+
+  document.addEventListener("click", function(e) {
+    let menu = document.getElementById("busOffTypeDropdownMenu");
+    let trigger = document.getElementById("busOffTypeTrigger");
+    if (menu && trigger && !trigger.contains(e.target) && !menu.contains(e.target)) {
+      menu.style.display = "none";
+      let arrow = document.getElementById("busOffTypeArrow");
+      if (arrow) arrow.style.transform = "rotate(0deg)";
+    }
+  });
+
   function onBusOffTypeChanged() {
-    let type = document.getElementById("busOffType").value;
+    let typeInput = document.getElementById("busOffType");
+    let type = typeInput ? typeInput.value : "today";
     let timeBox = document.getElementById("busOffTimeBox");
     let dateBox = document.getElementById("busOffDateBox");
     if (timeBox) timeBox.style.display = (type === "trip_time") ? "block" : "none";
