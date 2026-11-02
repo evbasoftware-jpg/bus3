@@ -921,7 +921,7 @@
       transform: scale(0.98);
     }
 
-    /* নতুন ৬টি ফিচারের কুইক অ্যাকশন গ্রিড */
+    /* নতুন ৭টি ফিচারের কুইক অ্যাকশন গ্রিড */
     .features-quick-grid {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
@@ -932,6 +932,11 @@
       .features-quick-grid {
         grid-template-columns: repeat(3, 1fr);
       }
+    }
+    .feature-action-btn.btn-bus-off {
+      grid-column: 1 / -1;
+      border-color: #fca5a5;
+      background: linear-gradient(135deg, #ffffff 0%, #fef2f2 100%);
     }
     .feature-action-btn {
       background: #ffffff;
@@ -1437,6 +1442,7 @@
     <span class="pulsing-dot"></span>
     <span id="mapStatusText">ম্যাপ সক্রিয়: সকল স্টপ ও অবস্থান</span>
   </div>
+  <div id="busClosureLiveAlert" style="display:none;background:#fef2f2;border:1.5px solid #ef4444;color:#991b1b;border-radius:8px;padding:8px 12px;margin:8px 0;font-size:13px;font-weight:bold;text-align:center;"></div>
 
   <!-- ১ নম্বর নির্দেশনা: ম্যাপে ক্লিক করে সরাসরি নতুন স্টপ যোগ করুন (অফলাইন মোড) বাটন -->
   <button id="mapAddStopBtn" class="btn btn-map-mode" onclick="toggleMapAddMode()" style="align-items: center; justify-content: center; text-align: center; margin: 4px 0 16px 0;">
@@ -1446,7 +1452,7 @@
     <span id="mapAddStopBtnText">ম্যাপে ক্লিক করে সরাসরি নতুন স্টপ যোগ করুন (অফলাইন মোড)</span>
   </button>
     
-  <!-- ব্যবহারকারীর নির্দেশনা: ৬টি ফিচার ম্যাপের নিচে একদম লাস্টে যুক্ত করা হলো -->
+  <!-- ব্যবহারকারীর নির্দেশনা: ৭টি ফিচার ম্যাপের নিচে একদম লাস্টে যুক্ত করা হলো -->
   <div class="features-quick-grid">
     <button type="button" class="feature-action-btn btn-wake-alarm" onclick="openWakeAlarmModal()" title="গন্তব্যের ৫০০ মিটার পূর্বে ওয়েক-আপ অ্যালার্ট">
       <span class="feat-icon">⏰</span>
@@ -1483,6 +1489,12 @@
       <span class="feat-label">৬) ভিড়ের মাত্রা</span>
       <span class="feat-sub" id="quickCrowdSub">স্বাভাবিক</span>
       <span class="feat-badge badge-crowd-status" id="quickCrowdBadge">🟢 কম ভিড়</span>
+    </button>
+    <button type="button" class="feature-action-btn btn-bus-off" onclick="openBusOffModal()" title="কোনো বাস কোনো নির্দিষ্ট দিন বা সময় বন্ধ থাকলে আপডেট করুন">
+      <span class="feat-icon">🚫</span>
+      <span class="feat-label">৭) বাস বন্ধের তথ্য</span>
+      <span class="feat-sub">দিন বা সময় বন্ধ আপডেট</span>
+      <span class="feat-badge" id="quickBusOffBadge" style="background:#fee2e2;color:#991b1b;">🚫 বন্ধ/চালু আপডেট</span>
     </button>
   </div>
 
@@ -1803,6 +1815,66 @@
     <div style="display:flex;gap:8px;margin-top:12px;">
       <button type="button" class="btn btn-cancel" style="flex:1;" onclick="closeStaffModal()">বাতিল</button>
       <button type="button" class="btn" style="flex:1;background:#15803d;color:#fff;" onclick="verifyAndStartStaffMode()">সক্রিয় করুন</button>
+    </div>
+  </div>
+</div>
+
+<!-- ৭) বাস বন্ধ বা বাতিল আপডেট (Bus Suspension/Off) মডাল -->
+<div id="busOffModal" class="app-feature-modal hidden">
+  <div class="feature-modal-content" style="max-height: 85vh; overflow-y: auto;">
+    <div class="feature-modal-header">
+      <div class="feature-modal-title">🚫 বাস বন্ধ বা বাতিল আপডেট</div>
+      <button type="button" class="modal-close-x" onclick="closeBusOffModal()">&times;</button>
+    </div>
+    
+    <p style="font-size:13px;color:#334155;margin-top:0;line-height:1.45;">
+      কোনো বাস কোনো নির্দিষ্ট দিন (যেমন আজ বা ছুটির দিন) কিংবা নির্দিষ্ট সময়ের ট্রিপ বন্ধ থাকলে এখানে আপডেট করুন। যাত্রীরা সাথে সাথে লাল সতর্কবার্তা দেখতে পাবেন।
+    </p>
+
+    <div style="background:#fef2f2;border:1.5px solid #fca5a5;border-radius:10px;padding:12px;margin-bottom:12px;">
+      <div style="margin-bottom:10px;">
+        <label style="font-size:12.5px;font-weight:bold;color:#991b1b;display:block;margin-bottom:4px;">১) বাস নির্বাচন করুন:</label>
+        <select id="busOffSelect" style="width:100%;padding:10px;border-radius:8px;border:1.5px solid #cbd5e1;font-size:14px;background:#fff;font-weight:600;">
+          <option value="">-- বাস বেছে নিন --</option>
+        </select>
+      </div>
+
+      <div style="margin-bottom:10px;">
+        <label style="font-size:12.5px;font-weight:bold;color:#991b1b;display:block;margin-bottom:4px;">২) বন্ধের ধরন নির্বাচন করুন:</label>
+        <select id="busOffType" style="width:100%;padding:10px;border-radius:8px;border:1.5px solid #cbd5e1;font-size:13.5px;background:#fff;font-weight:600;" onchange="onBusOffTypeChanged()">
+          <option value="today">🚫 আজকের জন্য বন্ধ (Closed Today)</option>
+          <option value="trip_time">⏰ নির্দিষ্ট সময়ের ট্রিপ বন্ধ (Specific Trip Cancelled)</option>
+          <option value="specific_day">📅 নির্দিষ্ট দিন বন্ধ (Closed on Day/Date)</option>
+          <option value="temporary">⚠️ সাময়িকভাবে পরিষেবা স্থগিত (Temporary Suspended)</option>
+          <option value="reopen">✅ পুনরায় চালু / পরিষেবা স্বাভাবিক (Re-open / Clear)</option>
+        </select>
+      </div>
+
+      <div id="busOffTimeBox" style="display:none;margin-bottom:10px;">
+        <label style="font-size:12.5px;font-weight:bold;color:#1e293b;display:block;margin-bottom:4px;">নির্দিষ্ট ট্রিপ ছাড়ার সময় (যেমন: 10:15 AM বা 04:10 PM):</label>
+        <input type="text" id="busOffTripTime" placeholder="যেমন: 10:15 AM" style="width:100%;padding:9px;border-radius:8px;border:1.5px solid #cbd5e1;font-size:14px;box-sizing:border-box;">
+      </div>
+
+      <div id="busOffDateBox" style="display:none;margin-bottom:10px;">
+        <label style="font-size:12.5px;font-weight:bold;color:#1e293b;display:block;margin-bottom:4px;">নির্দিষ্ট দিন বা তারিখ (যেমন: রবিবার বা 2026-11-05):</label>
+        <input type="text" id="busOffDateInput" placeholder="যেমন: রবিবার অথবা তারিখ" style="width:100%;padding:9px;border-radius:8px;border:1.5px solid #cbd5e1;font-size:14px;box-sizing:border-box;">
+      </div>
+
+      <div style="margin-bottom:10px;">
+        <label style="font-size:12.5px;font-weight:bold;color:#1e293b;display:block;margin-bottom:4px;">বন্ধের কারণ (ঐচ্ছিক):</label>
+        <input type="text" id="busOffReason" placeholder="যেমন: যান্ত্রিক ত্রুটি / ড্রাইভার অনুপস্থিত / সাপ্তাহিক ছুটি" style="width:100%;padding:9px;border-radius:8px;border:1.5px solid #cbd5e1;font-size:13.5px;box-sizing:border-box;">
+      </div>
+
+      <button type="button" class="btn" style="width:100%;background:#dc2626;color:#fff;font-weight:bold;padding:11px;font-size:14px;border-radius:8px;" onclick="submitBusOffUpdate()">
+        💾 স্ট্যাটাস আপডেট ও সেভ করুন
+      </button>
+    </div>
+
+    <div style="margin-top:14px;">
+      <div style="font-size:13px;font-weight:800;color:#0f172a;margin-bottom:8px;">📋 বর্তমানে বন্ধ থাকা বাসের তালিকা:</div>
+      <div id="busOffActiveList" style="max-height:180px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;">
+        <div style="font-size:12.5px;color:#64748b;text-align:center;padding:10px;background:#f8fafc;border-radius:8px;">কোনো বাস বর্তমানে বন্ধ নেই।</div>
+      </div>
     </div>
   </div>
 </div>
@@ -3979,6 +4051,18 @@
         let div = document.createElement("div");
         div.className = "bus-item";
 
+        let closure = (typeof checkIsBusClosed === "function") ? checkIsBusClosed(b, item.fromTimeStr) : null;
+        let closureHtml = "";
+        if (closure) {
+          div.style.cssText = "border: 2px solid #ef4444 !important; background: #fff5f5;";
+          closureHtml = `
+            <div style="background:#fee2e2;border:1px solid #f87171;border-radius:6px;padding:4px 8px;margin-top:6px;font-size:12px;color:#991b1b;font-weight:bold;display:flex;align-items:center;gap:6px;">
+              <span>🚫</span>
+              <span>${closure.badgeText}${closure.reason ? ' • ' + closure.reason : ''}</span>
+            </div>
+          `;
+        }
+
         div.innerHTML = `
           <div class="bus-row-1">
             <span>📍 ${item.fromDisplayName}: ${item.fromTimeStr}</span>
@@ -3987,6 +4071,7 @@
           <div class="bus-row-2">
             🚌 <b>${b.name || 'বাস'}</b> - ${b.number} (${b.category || 'PUBLIC'})
           </div>
+          ${closureHtml}
         `;
         div.onclick = () => selectBus(b, item);
         listDiv.appendChild(div);
@@ -4289,6 +4374,18 @@
     if (curElem) curElem.innerText = initialCurStop;
     if (nextElem) nextElem.innerText = initialNextStop;
     if (destElem) destElem.innerText = initialDest;
+
+    // বাস বন্ধ/স্থগিত সংক্রান্ত লাইভ সতর্কবার্তা
+    let liveClosureAlert = document.getElementById("busClosureLiveAlert");
+    let closureInfo = (typeof checkIsBusClosed === "function") ? checkIsBusClosed(bestBusRow, searchResultItem ? searchResultItem.fromTimeStr : null) : null;
+    if (liveClosureAlert) {
+      if (closureInfo) {
+        liveClosureAlert.style.display = "block";
+        liveClosureAlert.innerHTML = `🚫 <b>সতর্কতা:</b> ${bestBusRow.name || 'বাসটি'} ${closureInfo.badgeText} (${closureInfo.reason || 'অনিবার্য কারণ'})`;
+      } else {
+        liveClosureAlert.style.display = "none";
+      }
+    }
 
     // ব্যাকগ্রাউন্ড সার্ভিস চালু এবং তাৎক্ষণিক বিবরণী প্রেরণ
     if (window.AndroidBridge && window.AndroidBridge.startBackgroundTrackingWithDetails) {
@@ -6224,81 +6321,413 @@ https://aionline.in.net`;
   }
 
   // ==========================================
-  // ৩ ও ৪ নম্বর নির্দেশনা: ৪টি ডায়নামিক ছবি (img1, img2, img3, img4) এবং কোনো ছবি ডিলিট হলে দাগহীনভাবে লুকানো
+  // ১ নম্বর নির্দেশনা: ৪টি ডায়নামিক ছবি (img1, img2, img3, img4) এবং ডিলিট হলে দাগহীনভাবে লুকানো
   // ==========================================
   function handleDynamicImgError(img) {
     if (!img) return;
-    img.style.display = "none";
-    img.removeAttribute("src");
-    let p = img.parentElement;
-    if (p) {
-      p.style.display = "none";
-      p.style.margin = "0";
-      p.style.padding = "0";
-      p.style.height = "0";
-    }
+    try {
+      img.removeAttribute("src");
+      img.style.setProperty("display", "none", "important");
+      img.style.setProperty("width", "0px", "important");
+      img.style.setProperty("height", "0px", "important");
+      img.style.setProperty("margin", "0px", "important");
+      img.style.setProperty("padding", "0px", "important");
+      img.style.setProperty("border", "none", "important");
+      img.style.setProperty("outline", "none", "important");
+      img.style.setProperty("box-shadow", "none", "important");
+      let p = img.parentElement;
+      if (p) {
+        p.style.setProperty("display", "none", "important");
+        p.style.setProperty("height", "0px", "important");
+        p.style.setProperty("min-height", "0px", "important");
+        p.style.setProperty("margin", "0px", "important");
+        p.style.setProperty("padding", "0px", "important");
+        p.style.setProperty("border", "none", "important");
+        p.style.setProperty("outline", "none", "important");
+        p.style.setProperty("box-shadow", "none", "important");
+        p.style.setProperty("background", "transparent", "important");
+      }
+    } catch (_) {}
   }
 
   function handleDynamicImgSuccess(img) {
     if (!img) return;
     if (img.naturalWidth > 0 && img.naturalHeight > 0) {
-      img.style.display = "block";
+      img.style.setProperty("display", "block", "important");
       let p = img.parentElement;
       if (p) {
-        p.style.display = "block";
-        p.style.margin = "6px 0 10px 0";
+        p.style.setProperty("display", "block", "important");
+        p.style.setProperty("margin", "6px 0 10px 0", "important");
       }
     } else {
       handleDynamicImgError(img);
     }
   }
 
-  function syncRemoteDynamicImages() {
-    ['img1', 'img2', 'img3', 'img4'].forEach(name => {
+  async function checkRemoteImageExists(url) {
+    try {
+      let res = await fetch(url, { method: "GET", cache: "no-store" });
+      if (!res.ok || res.status !== 200) return null;
+      let blob = await res.blob();
+      // GitHub 404 পেজ বা টেক্সট (~14 বাইট '404: Not Found') বাদ দিন; শুধু প্রকৃত ছবি গ্রহণ করুন
+      if (blob && blob.size > 150 && (!blob.type || blob.type.startsWith("image/") || blob.type === "application/octet-stream")) {
+        return URL.createObjectURL(blob);
+      }
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  async function syncRemoteDynamicImages() {
+    let imgNames = ['img1', 'img2', 'img3', 'img4'];
+    let ts = Date.now();
+
+    for (let name of imgNames) {
       let container = document.getElementById("container_" + name);
       let imgElem = document.getElementById("dynamic_" + name);
-      if (!imgElem) return;
+      if (!imgElem) continue;
 
-      let githubUrl = "https://raw.githubusercontent.com/evbasoftware-jpg/bus3/main/app/src/main/assets/" + name + ".png?v=" + new Date().getTime();
-      let localUrl = "file:///android_asset/" + name + ".png";
+      // ১. evbasoft GitHub রিপোজিটরি পরীক্ষা
+      let url1 = `https://raw.githubusercontent.com/evbasoft/bus3/main/app/src/main/assets/${name}.png?t=${ts}`;
+      let blobUrl = await checkRemoteImageExists(url1);
 
-      let testGithub = new Image();
-      testGithub.onload = function() {
-        if (testGithub.naturalWidth > 0) {
-          imgElem.src = githubUrl;
-          imgElem.style.display = "block";
-          if (container) {
-            container.style.display = "block";
-            container.style.margin = "6px 0 10px 0";
-          }
-        } else {
-          checkLocal();
-        }
-      };
-      testGithub.onerror = checkLocal;
-
-      function checkLocal() {
-        let testLocal = new Image();
-        testLocal.onload = function() {
-          if (testLocal.naturalWidth > 0) {
-            imgElem.src = localUrl;
-            imgElem.style.display = "block";
-            if (container) {
-              container.style.display = "block";
-              container.style.margin = "6px 0 10px 0";
-            }
-          } else {
-            handleDynamicImgError(imgElem);
-          }
-        };
-        testLocal.onerror = function() {
-          handleDynamicImgError(imgElem);
-        };
-        testLocal.src = localUrl;
+      // ২. evbasoftware-jpg GitHub রিপোজিটরি পরীক্ষা
+      if (!blobUrl) {
+        let url2 = `https://raw.githubusercontent.com/evbasoftware-jpg/bus3/main/app/src/main/assets/${name}.png?t=${ts}`;
+        blobUrl = await checkRemoteImageExists(url2);
       }
 
-      testGithub.src = githubUrl;
+      if (blobUrl) {
+        imgElem.src = blobUrl;
+        imgElem.style.setProperty("display", "block", "important");
+        if (container) {
+          container.style.setProperty("display", "block", "important");
+          container.style.setProperty("margin", "6px 0 10px 0", "important");
+        }
+        continue;
+      }
+
+      // ৩. লোকাল Android assets ফাইল পরীক্ষা (AndroidBridge.assetExists)
+      let localExists = false;
+      try {
+        if (window.AndroidBridge && typeof window.AndroidBridge.assetExists === "function") {
+          localExists = window.AndroidBridge.assetExists(name + ".png");
+        }
+      } catch (_) {}
+
+      if (localExists) {
+        imgElem.src = "file:///android_asset/" + name + ".png?t=" + ts;
+        imgElem.style.setProperty("display", "block", "important");
+        if (container) {
+          container.style.setProperty("display", "block", "important");
+          container.style.setProperty("margin", "6px 0 10px 0", "important");
+        }
+      } else {
+        handleDynamicImgError(imgElem);
+      }
+    }
+  }
+
+  // ==========================================
+  // ২ নম্বর নির্দেশনা: বাস বন্ধ বা বাতিল আপডেট (Bus Suspension/Off Management)
+  // ==========================================
+  const BUS_CLOSURES_STORAGE_KEY = "app_bus_closures_v2";
+
+  function getStoredBusClosures() {
+    try {
+      let raw = localStorage.getItem(BUS_CLOSURES_STORAGE_KEY);
+      if (raw) {
+        let list = JSON.parse(raw);
+        if (Array.isArray(list)) return list;
+      }
+    } catch (_) {}
+    return [];
+  }
+
+  function saveBusClosures(list) {
+    try {
+      localStorage.setItem(BUS_CLOSURES_STORAGE_KEY, JSON.stringify(list));
+    } catch (_) {}
+  }
+
+  function getTodayDateStr() {
+    let d = new Date();
+    let y = d.getFullYear();
+    let m = String(d.getMonth() + 1).padStart(2, '0');
+    let day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  }
+
+  function getTodayDayName() {
+    let days = ["রবিবার", "সোমবার", "মঙ্গলবার", "বুধবার", "বৃহস্পতিবার", "শুক্রবার", "শনিবার"];
+    return days[new Date().getDay()];
+  }
+
+  function getTodayDayNameEn() {
+    let days = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
+    return days[new Date().getDay()];
+  }
+
+  function checkIsBusClosed(busObj, tripTimeStr) {
+    if (!busObj) return null;
+    let closures = getStoredBusClosures();
+    if (!closures || closures.length === 0) return null;
+
+    let busName = (busObj.name || '').trim().toLowerCase();
+    let busNo = (busObj.number || '').trim().toLowerCase();
+    let todayDate = getTodayDateStr();
+    let todayDayBn = getTodayDayName().toLowerCase();
+    let todayDayEn = getTodayDayNameEn();
+
+    for (let c of closures) {
+      if (!c.active) continue;
+      let matchBus = false;
+      if (c.busNo && busNo && c.busNo.toLowerCase() === busNo) matchBus = true;
+      if (c.busName && busName && c.busName.toLowerCase() === busName) matchBus = true;
+      if (!matchBus) continue;
+
+      if (c.type === "today") {
+        if (!c.date || c.date === todayDate) {
+          return {
+            badgeText: "আজ এই বাসটি বন্ধ রয়েছে",
+            reason: c.reason || "অনিবার্য কারণবশত বন্ধ",
+            type: "today"
+          };
+        }
+      } else if (c.type === "temporary") {
+        return {
+          badgeText: "সাময়িকভাবে পরিষেবা স্থগিত",
+          reason: c.reason || "অনিবার্য কারণবশত",
+          type: "temporary"
+        };
+      } else if (c.type === "specific_day") {
+        let targetDay = (c.dayOrDate || '').trim().toLowerCase();
+        if (targetDay === todayDate || targetDay === todayDayBn || targetDay === todayDayEn || (c.date && c.date === todayDate)) {
+          return {
+            badgeText: `আজ (${c.dayOrDate}) বাসটি বন্ধ`,
+            reason: c.reason || "ছুটি / পরিষেবা বন্ধ",
+            type: "specific_day"
+          };
+        }
+      } else if (c.type === "trip_time") {
+        let targetTime = (c.tripTime || '').trim().toLowerCase().replace(/\s+/g, '');
+        let checkTime = (tripTimeStr || '').trim().toLowerCase().replace(/\s+/g, '');
+        let depTime = (busObj.depTime || '').trim().toLowerCase().replace(/\s+/g, '');
+        
+        let timeMatches = false;
+        if (targetTime && (checkTime.includes(targetTime) || targetTime.includes(checkTime) || depTime.includes(targetTime) || targetTime.includes(depTime))) {
+          timeMatches = true;
+        }
+        if (timeMatches && (!c.date || c.date === todayDate)) {
+          return {
+            badgeText: `${c.tripTime} ট্রিপটি আজ বাতিল`,
+            reason: c.reason || "ট্রিপ বাতিল",
+            type: "trip_time"
+          };
+        }
+      }
+    }
+    return null;
+  }
+
+  async function openBusOffModal() {
+    let modal = document.getElementById("busOffModal");
+    if (!modal) return;
+    modal.classList.remove("hidden");
+    
+    try {
+      await ensureBusesCatalogLoaded();
+    } catch (_) {}
+
+    let select = document.getElementById("busOffSelect");
+    if (select) {
+      select.innerHTML = `<option value="">-- বাস বেছে নিন --</option>`;
+      let seen = new Set();
+      let buses = [];
+      if (globalBusesCatalog && globalBusesCatalog.length > 0) {
+        globalBusesCatalog.forEach(b => {
+          let key = `${(b.name || '').trim()}_${(b.number || '').trim()}`.toUpperCase();
+          if (!seen.has(key)) {
+            seen.add(key);
+            buses.push(b);
+          }
+        });
+      }
+      buses.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+
+      buses.forEach(b => {
+        let opt = document.createElement("option");
+        opt.value = `${b.number || ''}:::${b.name || ''}`;
+        opt.innerText = `🚌 ${b.name || 'বাস'} (${b.number || ''}) - [${b.source || ''} ➔ ${b.dest || ''}]`;
+        if (trackingBus && (trackingBus.number === b.number || trackingBus.name === b.name)) {
+          opt.selected = true;
+        }
+        select.appendChild(opt);
+      });
+    }
+
+    renderActiveBusOffList();
+  }
+
+  function closeBusOffModal() {
+    let modal = document.getElementById("busOffModal");
+    if (modal) modal.classList.add("hidden");
+  }
+
+  function onBusOffTypeChanged() {
+    let type = document.getElementById("busOffType").value;
+    let timeBox = document.getElementById("busOffTimeBox");
+    let dateBox = document.getElementById("busOffDateBox");
+    if (timeBox) timeBox.style.display = (type === "trip_time") ? "block" : "none";
+    if (dateBox) dateBox.style.display = (type === "specific_day") ? "block" : "none";
+  }
+
+  function renderActiveBusOffList() {
+    let container = document.getElementById("busOffActiveList");
+    if (!container) return;
+    let closures = getStoredBusClosures();
+    let activeItems = closures.filter(c => c.active);
+
+    if (activeItems.length === 0) {
+      container.innerHTML = `<div style="font-size:12.5px;color:#64748b;text-align:center;padding:10px;background:#f8fafc;border-radius:8px;">কোনো বাস বর্তমানে বন্ধ নেই।</div>`;
+      return;
+    }
+
+    container.innerHTML = "";
+    activeItems.forEach(c => {
+      let div = document.createElement("div");
+      div.style.cssText = "background:#fff;border:1.5px solid #fca5a5;border-radius:8px;padding:8px 10px;display:flex;align-items:center;justify-content:space-between;gap:8px;";
+      let typeLabel = "আজ বন্ধ";
+      if (c.type === "trip_time") typeLabel = `${c.tripTime} ট্রিপ বন্ধ`;
+      else if (c.type === "specific_day") typeLabel = `${c.dayOrDate} বন্ধ`;
+      else if (c.type === "temporary") typeLabel = "সাময়িক স্থগিত";
+
+      div.innerHTML = `
+        <div style="flex:1;">
+          <div style="font-weight:bold;font-size:13px;color:#991b1b;">🚌 ${c.busName || ''} (${c.busNo || ''})</div>
+          <div style="font-size:11.5px;color:#b91c1c;margin-top:2px;">⚠️ ${typeLabel} ${c.reason ? '• ' + c.reason : ''}</div>
+          <div style="font-size:10.5px;color:#64748b;margin-top:1px;">আপডেট: ${c.updatedAt || ''}</div>
+        </div>
+        <button type="button" style="background:#16a34a;color:#fff;border:none;border-radius:6px;padding:6px 10px;font-size:11.5px;font-weight:bold;cursor:pointer;white-space:nowrap;" onclick="reopenBusClosure('${c.id}')">
+          ✅ চালু করুন
+        </button>
+      `;
+      container.appendChild(div);
     });
+  }
+
+  function reopenBusClosure(closureId) {
+    let closures = getStoredBusClosures();
+    let updated = closures.map(c => {
+      if (c.id === closureId) {
+        c.active = false;
+      }
+      return c;
+    });
+    saveBusClosures(updated);
+    renderActiveBusOffList();
+    showAppAlert("বাসটি সফলভাবে পুনরায় চালু (Active) করা হয়েছে।", "বাস চালু হয়েছে");
+    
+    // Refresh search results if open
+    let from = document.getElementById("searchFrom") ? document.getElementById("searchFrom").value.trim() : "";
+    let to = document.getElementById("searchTo") ? document.getElementById("searchTo").value.trim() : "";
+    if (from && to) autoSearchBuses();
+  }
+
+  function submitBusOffUpdate() {
+    let selectVal = document.getElementById("busOffSelect").value;
+    if (!selectVal) {
+      alert("দয়া করে একটি বাস নির্বাচন করুন।");
+      return;
+    }
+    let parts = selectVal.split(":::");
+    let busNo = parts[0] || "";
+    let busName = parts[1] || "";
+    let type = document.getElementById("busOffType").value;
+    let tripTime = document.getElementById("busOffTripTime").value.trim();
+    let dayOrDate = document.getElementById("busOffDateInput").value.trim();
+    let reason = document.getElementById("busOffReason").value.trim();
+
+    if (type === "trip_time" && !tripTime) {
+      alert("দয়া করে ট্রিপের সময় লিখুন (যেমন: 10:15 AM)।");
+      return;
+    }
+    if (type === "specific_day" && !dayOrDate) {
+      alert("দয়া করে দিন বা তারিখ লিখুন (যেমন: রবিবার বা 2026-11-05)।");
+      return;
+    }
+
+    let closures = getStoredBusClosures();
+
+    if (type === "reopen") {
+      closures = closures.map(c => {
+        if (c.busNo === busNo || c.busName === busName) {
+          c.active = false;
+        }
+        return c;
+      });
+      saveBusClosures(closures);
+      renderActiveBusOffList();
+      closeBusOffModal();
+      showAppAlert(`🚌 ${busName} (${busNo}) বাসটির পরিষেবা স্বাভাবিক / চালু করা হয়েছে।`, "বাস পরিষেবা চালু");
+    } else {
+      let newClosure = {
+        id: "close_" + Date.now() + "_" + Math.floor(Math.random()*1000),
+        busNo: busNo,
+        busName: busName,
+        type: type,
+        tripTime: tripTime,
+        dayOrDate: dayOrDate,
+        reason: reason,
+        date: getTodayDateStr(),
+        active: true,
+        updatedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })
+      };
+      closures.push(newClosure);
+      saveBusClosures(closures);
+
+      // Background sync to API (Sheet)
+      try {
+        fetch(API_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: new URLSearchParams({
+            action: "updateBusClosedStatus",
+            busNumber: busNo,
+            busName: busName,
+            statusType: type,
+            tripTime: tripTime,
+            dayOrDate: dayOrDate,
+            reason: reason,
+            date: getTodayDateStr()
+          })
+        }).catch(() => {});
+      } catch (_) {}
+
+      renderActiveBusOffList();
+      closeBusOffModal();
+      let msg = `🚌 ${busName} (${busNo}) বাসটির বন্ধের তথ্য আপডেট হয়েছে। সকল যাত্রীরা এখন এটি লাল সতর্কবার্তা হিসেবে দেখতে পাবেন।`;
+      showAppAlert(msg, "বাস বন্ধ আপডেট সম্পন্ন");
+    }
+
+    // Refresh search results
+    let from = document.getElementById("searchFrom") ? document.getElementById("searchFrom").value.trim() : "";
+    let to = document.getElementById("searchTo") ? document.getElementById("searchTo").value.trim() : "";
+    if (from && to) autoSearchBuses();
+
+    // If currently tracking this bus, update live alert banner
+    if (trackingBus && (trackingBus.number === busNo || trackingBus.name === busName)) {
+      let liveAlert = document.getElementById("busClosureLiveAlert");
+      if (liveAlert) {
+        if (type === "reopen") {
+          liveAlert.style.display = "none";
+        } else {
+          liveAlert.style.display = "block";
+          liveAlert.innerHTML = `🚫 <b>জরুরি সতর্কতা:</b> এই বাসটির পরিষেবা বন্ধ/স্থগিত রয়েছে (${reason || 'অনিবার্য কারণ'})`;
+        }
+      }
+    }
   }
 
   // ==========================================

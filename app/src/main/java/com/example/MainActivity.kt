@@ -66,7 +66,7 @@ class MainActivity : ComponentActivity() {
   private var isTtsInitialized = false
   private var audioPlayer: MediaPlayer? = null
   private var locationManager: LocationManager? = null
-  private var webView: WebView? = null
+  internal var webView: WebView? = null
   private var pendingGeolocationCallback: GeolocationPermissions.Callback? = null
   private var pendingGeolocationOrigin: String? = null
 
@@ -266,6 +266,7 @@ class MainActivity : ComponentActivity() {
       ViewGroup.LayoutParams.MATCH_PARENT
     )
 
+    wv.clearCache(true)
     with(wv.settings) {
       javaScriptEnabled = true
       domStorageEnabled = true
@@ -274,7 +275,7 @@ class MainActivity : ComponentActivity() {
       allowFileAccess = true
       allowContentAccess = true
       mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
-      cacheMode = WebSettings.LOAD_DEFAULT
+      cacheMode = WebSettings.LOAD_NO_CACHE
       useWideViewPort = true
       loadWithOverviewMode = true
       mediaPlaybackRequiresUserGesture = false
@@ -935,6 +936,27 @@ class WebAppInterface(private val activity: MainActivity) {
         }
         val chooser = Intent.createChooser(intent, "বাস লাইভ ট্র্যাকিং শেয়ার করুন")
         activity.startActivity(chooser)
+      } catch (_: Exception) {}
+    }
+  }
+
+  @JavascriptInterface
+  fun assetExists(fileName: String): Boolean {
+    return try {
+      val stream = activity.assets.open(fileName)
+      val len = stream.available()
+      stream.close()
+      len > 100
+    } catch (_: Exception) {
+      false
+    }
+  }
+
+  @JavascriptInterface
+  fun clearWebViewCache() {
+    activity.runOnUiThread {
+      try {
+        activity.webView?.clearCache(true)
       } catch (_: Exception) {}
     }
   }
