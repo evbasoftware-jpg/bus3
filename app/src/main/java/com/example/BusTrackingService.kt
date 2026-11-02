@@ -96,6 +96,10 @@ class BusTrackingService : Service() {
   private var nextLat: Double = 0.0
   private var nextLon: Double = 0.0
 
+  private var lastAnnouncedApproachStop: String = ""
+  private var lastAnnouncedArriveStop: String = ""
+  private var lastAnnouncedDestStop: String = ""
+
   private val locationListener = object : LocationListener {
     override fun onLocationChanged(location: Location) {
       val speedKmh = if (location.hasSpeed()) (location.speed * 3.6f) else 0f
@@ -111,6 +115,7 @@ class BusTrackingService : Service() {
   override fun onCreate() {
     super.onCreate()
     createNotificationChannel()
+    VoiceAnnouncementManager.init(this)
     locationManager = getSystemService(Context.LOCATION_SERVICE) as? LocationManager
 
     val powerManager = getSystemService(Context.POWER_SERVICE) as? PowerManager
@@ -253,6 +258,17 @@ class BusTrackingService : Service() {
 
       val targetLabel = if (destName.isNotBlank()) destName.uppercase() else "DEST"
       destDistEtaText = "$targetLabel ($distStr • ETA: $etaStr)"
+
+      // গন্তব্য পৌঁছে গেলে ঘোষণা (স্ক্রিন বন্ধ থাকলেও নির্ভরযোগ্য)
+      if (directMeters < 100f && destName.isNotBlank() && lastAnnouncedDestStop != destName) {
+        lastAnnouncedDestStop = destName
+        val annText = when (currentLangCode.lowercase()) {
+          "en" -> "Destination $destName arrived"
+          "hi" -> "गंतव्य $destName आ गया है"
+          else -> "গন্তব্য $destName পৌঁছানো হয়েছে"
+        }
+        VoiceAnnouncementManager.speak(annText, currentLangCode)
+      }
     }
 
     if (nextLat != 0.0 && nextLon != 0.0) {
@@ -285,6 +301,27 @@ class BusTrackingService : Service() {
 
       val targetNext = if (nextName.isNotBlank()) nextName else "NEXT"
       nextStopText = "$targetNext ($distStr • ETA: $nextEtaStr)"
+
+      // স্টপেজের ব্যাকগ্রাউন্ড ঘোষণা (মোবাইলের স্ক্রিন বন্ধ থাকলেও স্বয়ংক্রিয়ভাবে হবে)
+      if (nextName.isNotBlank()) {
+        if (directMeters in 80f..500f && lastAnnouncedApproachStop != nextName) {
+          lastAnnouncedApproachStop = nextName
+          val annText = when (currentLangCode.lowercase()) {
+            "en" -> "Next stop: $nextName"
+            "hi" -> "अगला स्टॉप: $nextName"
+            else -> "পরবর্তী স্টপেজ: $nextName"
+          }
+          VoiceAnnouncementManager.speak(annText, currentLangCode)
+        } else if (directMeters < 80f && lastAnnouncedArriveStop != nextName) {
+          lastAnnouncedArriveStop = nextName
+          val annText = when (currentLangCode.lowercase()) {
+            "en" -> "Approaching $nextName"
+            "hi" -> "$nextName पहुँच रहे हैं"
+            else -> "বাসটি $nextName পৌঁছাচ্ছে"
+          }
+          VoiceAnnouncementManager.speak(annText, currentLangCode)
+        }
+      }
     }
   }
 
@@ -655,6 +692,11 @@ class BusTrackingService : Service() {
     nextName = ""
     nextLat = 0.0
     nextLon = 0.0
+
+    lastAnnouncedApproachStop = ""
+    lastAnnouncedArriveStop = ""
+    lastAnnouncedDestStop = ""
+    VoiceAnnouncementManager.clearQueue()
 
     try {
       backgroundPollingJob?.cancel()

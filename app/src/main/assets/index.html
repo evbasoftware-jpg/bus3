@@ -1832,11 +1832,38 @@
     </p>
 
     <div style="background:#fef2f2;border:1.5px solid #fca5a5;border-radius:10px;padding:12px;margin-bottom:12px;">
-      <div style="margin-bottom:10px;">
-        <label style="font-size:12.5px;font-weight:bold;color:#991b1b;display:block;margin-bottom:4px;">১) বাস নির্বাচন করুন:</label>
-        <select id="busOffSelect" style="width:100%;padding:10px;border-radius:8px;border:1.5px solid #cbd5e1;font-size:14px;background:#fff;font-weight:600;">
-          <option value="">-- বাস বেছে নিন --</option>
-        </select>
+      <div style="margin-bottom:12px;">
+        <label style="font-size:12.5px;font-weight:bold;color:#991b1b;display:block;margin-bottom:6px;">১) বাস খুঁজুন ও নির্বাচন করুন:</label>
+        
+        <!-- সার্চ বক্স -->
+        <div id="busOffSearchBoxWrapper" style="position:relative;">
+          <input type="text" id="busOffSearchInput" placeholder="🔍 বাসের নাম, নম্বর বা রুট লিখুন (যেমন: PAPIYA বা 123)..." 
+                 autocomplete="off"
+                 oninput="onBusOffSearchInput(this.value)" 
+                 onfocus="onBusOffSearchFocus()"
+                 style="width:100%;padding:10px 32px 10px 12px;border-radius:8px;border:1.5px solid #cbd5e1;font-size:13.5px;box-sizing:border-box;background:#fff;outline:none;">
+          <span id="busOffSearchClearBtn" onclick="clearBusOffSearch()" style="display:none;position:absolute;right:10px;top:50%;transform:translateY(-50%);cursor:pointer;color:#94a3b8;font-size:16px;font-weight:bold;padding:4px;">✕</span>
+        </div>
+
+        <!-- লাইভ সার্চের ফলাফল তালিকা -->
+        <div id="busOffSearchResults" style="display:none;max-height:190px;overflow-y:auto;background:#ffffff;border:1.5px solid #cbd5e1;border-radius:8px;margin-top:4px;box-shadow:0 4px 12px rgba(0,0,0,0.1);z-index:1000;position:relative;">
+        </div>
+
+        <!-- নির্বাচিত বাসের কার্ড -->
+        <div id="busOffSelectedCard" style="display:none;background:#f0fdf4;border:1.5px solid #86efac;border-radius:8px;padding:8px 10px;margin-top:6px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+            <div style="flex:1;">
+              <div id="busOffSelectedName" style="font-size:13.5px;font-weight:bold;color:#166534;">✅ নির্বাচিত বাস: --</div>
+              <div id="busOffSelectedRoute" style="font-size:11.5px;color:#15803d;margin-top:2px;">রুট: --</div>
+            </div>
+            <button type="button" onclick="clearSelectedBusOff()" style="background:#fee2e2;border:1px solid #f87171;color:#991b1b;padding:5px 9px;border-radius:6px;font-size:11px;font-weight:bold;cursor:pointer;white-space:nowrap;">
+              পরিবর্তন ✕
+            </button>
+          </div>
+        </div>
+
+        <!-- হিডেন ইনপুট যাতে সেভ লজিক আগের মত কাজ করে -->
+        <input type="hidden" id="busOffSelect" value="" />
       </div>
 
       <div style="margin-bottom:10px;">
@@ -3388,14 +3415,26 @@
   window.addEventListener("DOMContentLoaded", async () => {
     loadDatalistSuggestions();
     syncRemoteDynamicImages();
+    try {
+      let saved = localStorage.getItem("active_tracking_bus");
+      if (saved && window.AndroidBridge && typeof window.AndroidBridge.isTrackingRunning === "function" && window.AndroidBridge.isTrackingRunning()) {
+        let b = JSON.parse(saved);
+        if (b && b.number) {
+          setTimeout(() => { selectBus(b, null); }, 300);
+        }
+      }
+    } catch (_) {}
   });
 
   window.onAppResumeState = function() {
     try {
-      if (typeof window.clearOldSpeechQueues === "function") {
+      if (!trackingBus && typeof window.clearOldSpeechQueues === "function") {
         window.clearOldSpeechQueues();
       }
       syncRemoteDynamicImages();
+      if (typeof map !== 'undefined' && map) {
+        map.invalidateSize();
+      }
     } catch (_) {}
   };
 
@@ -4277,12 +4316,17 @@
 
   document.addEventListener("visibilitychange", function() {
     if (document.hidden) {
-      window.clearOldSpeechQueues();
+      // ট্র্যাকিং চলাকালীন স্ক্রিন বন্ধ হলে কখনোই ঘোষণা কিউ মুছবেন না
+      if (!trackingBus) {
+        window.clearOldSpeechQueues();
+      }
     }
   });
 
   window.addEventListener("focus", function() {
-    window.clearOldSpeechQueues();
+    if (!trackingBus) {
+      window.clearOldSpeechQueues();
+    }
   });
 
   function selectBus(b, searchResultItem) {
@@ -4329,6 +4373,10 @@
     } else {
       trackingBus.selectedStops = [];
     }
+
+    try {
+      localStorage.setItem("active_tracking_bus", JSON.stringify(trackingBus));
+    } catch (_) {}
 
     document.getElementById("busTrackInput").value = `${bestBusRow.number} - ${bestBusRow.name}`;
     document.getElementById("busList").innerHTML = "";
@@ -6531,6 +6579,142 @@ https://aionline.in.net`;
     return null;
   }
 
+  let selectedBusOffObj = null;
+  let allBusOffOptionsList = [];
+
+  function prepareBusOffOptionsList() {
+    allBusOffOptionsList = [];
+    let seen = new Set();
+    if (globalBusesCatalog && globalBusesCatalog.length > 0) {
+      globalBusesCatalog.forEach(b => {
+        let key = `${(b.name || '').trim()}_${(b.number || '').trim()}`.toUpperCase();
+        if (!seen.has(key)) {
+          seen.add(key);
+          allBusOffOptionsList.push(b);
+        }
+      });
+    }
+    allBusOffOptionsList.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+  }
+
+  function renderBusOffSearchResults(query) {
+    let container = document.getElementById("busOffSearchResults");
+    if (!container) return;
+    
+    let q = (query || '').trim().toLowerCase();
+    let matches = allBusOffOptionsList.filter(b => {
+      if (!q) return true;
+      let name = (b.name || '').toLowerCase();
+      let num = (b.number || '').toLowerCase();
+      let src = (b.source || '').toLowerCase();
+      let dst = (b.dest || '').toLowerCase();
+      return name.includes(q) || num.includes(q) || src.includes(q) || dst.includes(q);
+    });
+
+    if (matches.length === 0) {
+      container.innerHTML = `<div style="padding:12px;text-align:center;font-size:12.5px;color:#dc2626;font-weight:600;">"${query}" দিয়ে কোনো বাস পাওয়া যায়নি</div>`;
+      container.style.display = "block";
+      return;
+    }
+
+    container.innerHTML = "";
+    // দ্রুত ও মসৃণ অভিজ্ঞতার জন্য প্রথম ৩০টি ফলাফল একবারে দেখান
+    matches.slice(0, 30).forEach(b => {
+      let itemDiv = document.createElement("div");
+      itemDiv.style.cssText = "padding:10px 12px;border-bottom:1px solid #f1f5f9;cursor:pointer;display:flex;flex-direction:column;gap:3px;transition:background 0.15s ease;";
+      itemDiv.onmouseenter = () => itemDiv.style.background = "#eff6ff";
+      itemDiv.onmouseleave = () => itemDiv.style.background = "#ffffff";
+      
+      itemDiv.innerHTML = `
+        <div style="font-size:13.5px;font-weight:bold;color:#0f172a;display:flex;align-items:center;justify-content:space-between;">
+          <span>🚌 ${b.name || 'বাস'}</span>
+          <span style="background:#e0f2fe;color:#0369a1;padding:2px 7px;border-radius:5px;font-size:11.5px;font-weight:bold;">${b.number || ''}</span>
+        </div>
+        <div style="font-size:11.5px;color:#64748b;margin-top:1px;">
+          📍 ${b.source || ''} ➔ 📍 ${b.dest || ''} ${b.depTime ? '• ছাড়ার সময়: ' + b.depTime : ''}
+        </div>
+      `;
+      itemDiv.onclick = (e) => {
+        e.stopPropagation();
+        selectBusForOff(b);
+      };
+      container.appendChild(itemDiv);
+    });
+    container.style.display = "block";
+  }
+
+  function onBusOffSearchInput(val) {
+    let clearBtn = document.getElementById("busOffSearchClearBtn");
+    if (clearBtn) clearBtn.style.display = val ? "block" : "none";
+    renderBusOffSearchResults(val);
+  }
+
+  function onBusOffSearchFocus() {
+    let val = document.getElementById("busOffSearchInput") ? document.getElementById("busOffSearchInput").value : "";
+    renderBusOffSearchResults(val);
+  }
+
+  function clearBusOffSearch() {
+    let input = document.getElementById("busOffSearchInput");
+    if (input) {
+      input.value = "";
+      input.focus();
+    }
+    let clearBtn = document.getElementById("busOffSearchClearBtn");
+    if (clearBtn) clearBtn.style.display = "none";
+    renderBusOffSearchResults("");
+  }
+
+  function selectBusForOff(b) {
+    if (!b) return;
+    selectedBusOffObj = b;
+    let selectVal = `${b.number || ''}:::${b.name || ''}`;
+    let hiddenInput = document.getElementById("busOffSelect");
+    if (hiddenInput) hiddenInput.value = selectVal;
+
+    let searchBoxWrapper = document.getElementById("busOffSearchBoxWrapper");
+    let resultsBox = document.getElementById("busOffSearchResults");
+    let card = document.getElementById("busOffSelectedCard");
+    let nameElem = document.getElementById("busOffSelectedName");
+    let routeElem = document.getElementById("busOffSelectedRoute");
+
+    if (resultsBox) resultsBox.style.display = "none";
+    if (searchBoxWrapper) searchBoxWrapper.style.display = "none";
+    if (card) card.style.display = "block";
+    if (nameElem) nameElem.innerHTML = `✅ নির্বাচিত বাস: <b>${b.name || 'বাস'} (${b.number || ''})</b>`;
+    if (routeElem) routeElem.innerText = `রুট: ${b.source || ''} ➔ ${b.dest || ''} ${b.depTime ? '• ছাড়ার সময়: ' + b.depTime : ''}`;
+  }
+
+  function clearSelectedBusOff() {
+    selectedBusOffObj = null;
+    let hiddenInput = document.getElementById("busOffSelect");
+    if (hiddenInput) hiddenInput.value = "";
+
+    let searchBoxWrapper = document.getElementById("busOffSearchBoxWrapper");
+    let resultsBox = document.getElementById("busOffSearchResults");
+    let card = document.getElementById("busOffSelectedCard");
+    let input = document.getElementById("busOffSearchInput");
+
+    if (card) card.style.display = "none";
+    if (searchBoxWrapper) searchBoxWrapper.style.display = "block";
+    if (input) {
+      input.value = "";
+      setTimeout(() => input.focus(), 100);
+    }
+    let clearBtn = document.getElementById("busOffSearchClearBtn");
+    if (clearBtn) clearBtn.style.display = "none";
+    if (resultsBox) resultsBox.style.display = "none";
+  }
+
+  // সার্চ ড্রপডাউনের বাইরে ক্লিক করলে ড্রপডাউন বন্ধ করুন
+  document.addEventListener("click", function(e) {
+    let box = document.getElementById("busOffSearchResults");
+    let input = document.getElementById("busOffSearchInput");
+    if (box && input && !box.contains(e.target) && e.target !== input) {
+      box.style.display = "none";
+    }
+  });
+
   async function openBusOffModal() {
     let modal = document.getElementById("busOffModal");
     if (!modal) return;
@@ -6540,31 +6724,13 @@ https://aionline.in.net`;
       await ensureBusesCatalogLoaded();
     } catch (_) {}
 
-    let select = document.getElementById("busOffSelect");
-    if (select) {
-      select.innerHTML = `<option value="">-- বাস বেছে নিন --</option>`;
-      let seen = new Set();
-      let buses = [];
-      if (globalBusesCatalog && globalBusesCatalog.length > 0) {
-        globalBusesCatalog.forEach(b => {
-          let key = `${(b.name || '').trim()}_${(b.number || '').trim()}`.toUpperCase();
-          if (!seen.has(key)) {
-            seen.add(key);
-            buses.push(b);
-          }
-        });
-      }
-      buses.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+    prepareBusOffOptionsList();
 
-      buses.forEach(b => {
-        let opt = document.createElement("option");
-        opt.value = `${b.number || ''}:::${b.name || ''}`;
-        opt.innerText = `🚌 ${b.name || 'বাস'} (${b.number || ''}) - [${b.source || ''} ➔ ${b.dest || ''}]`;
-        if (trackingBus && (trackingBus.number === b.number || trackingBus.name === b.name)) {
-          opt.selected = true;
-        }
-        select.appendChild(opt);
-      });
+    // যদি ব্যবহারকারী ইতিমধ্যে কোনো বাস ট্র্যাক করে থাকেন, তবে সেটি স্বয়ংক্রিয়ভাবে নির্বাচিত করে দিন
+    if (trackingBus && (trackingBus.number || trackingBus.name)) {
+      selectBusForOff(trackingBus);
+    } else {
+      clearSelectedBusOff();
     }
 
     renderActiveBusOffList();
@@ -6573,6 +6739,8 @@ https://aionline.in.net`;
   function closeBusOffModal() {
     let modal = document.getElementById("busOffModal");
     if (modal) modal.classList.add("hidden");
+    let resultsBox = document.getElementById("busOffSearchResults");
+    if (resultsBox) resultsBox.style.display = "none";
   }
 
   function onBusOffTypeChanged() {
@@ -6638,7 +6806,7 @@ https://aionline.in.net`;
   function submitBusOffUpdate() {
     let selectVal = document.getElementById("busOffSelect").value;
     if (!selectVal) {
-      alert("দয়া করে একটি বাস নির্বাচন করুন।");
+      alert("দয়া করে সার্চ বক্সে নাম বা নম্বর লিখে তালিকা থেকে একটি বাস নির্বাচন করুন।");
       return;
     }
     let parts = selectVal.split(":::");
@@ -6670,6 +6838,7 @@ https://aionline.in.net`;
       saveBusClosures(closures);
       renderActiveBusOffList();
       closeBusOffModal();
+      clearSelectedBusOff();
       showAppAlert(`🚌 ${busName} (${busNo}) বাসটির পরিষেবা স্বাভাবিক / চালু করা হয়েছে।`, "বাস পরিষেবা চালু");
     } else {
       let newClosure = {
@@ -6707,6 +6876,7 @@ https://aionline.in.net`;
 
       renderActiveBusOffList();
       closeBusOffModal();
+      clearSelectedBusOff();
       let msg = `🚌 ${busName} (${busNo}) বাসটির বন্ধের তথ্য আপডেট হয়েছে। সকল যাত্রীরা এখন এটি লাল সতর্কবার্তা হিসেবে দেখতে পাবেন।`;
       showAppAlert(msg, "বাস বন্ধ আপডেট সম্পন্ন");
     }
