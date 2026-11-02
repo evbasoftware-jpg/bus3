@@ -72,6 +72,9 @@ class BusTrackingService : Service() {
 
     // বাসের চালক বা কন্ডাক্টরের সিকিউরিটি মোড (শুধুমাত্র অনুমোদিত স্টাফ সক্রিয় করলেই সার্ভারে বাস লোকেশন আপলোড হবে)
     var isStaffMode: Boolean = false
+
+    // ট্র্যাকিং বন্ধ হলে অ্যাপের ইন্টারফেস ও ওয়েবভিউকে অবহিত করার কলব্যাক
+    var onTrackingStopped: (() -> Unit)? = null
   }
 
   private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -134,6 +137,13 @@ class BusTrackingService : Service() {
     if (action == ACTION_STOP_TRACKING) {
       stopTracking()
       return START_NOT_STICKY
+    }
+
+    if (action == ACTION_UPDATE_NOTIFICATION) {
+      if (!isRunning) {
+        // ট্র্যাকিং যখন বন্ধ, তখন কোনো আপডেট নোটিফিকেশন সার্ভিস পুনরায় চালু করতে পারবে না
+        return START_NOT_STICKY
+      }
     }
 
     if (action == ACTION_UPDATE_NOTIFICATION || action == ACTION_START_TRACKING) {
@@ -715,6 +725,10 @@ class BusTrackingService : Service() {
 
     stopForeground(STOP_FOREGROUND_REMOVE)
     stopSelf()
+
+    try {
+      onTrackingStopped?.invoke()
+    } catch (_: Exception) {}
   }
 
   override fun onDestroy() {

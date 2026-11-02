@@ -149,13 +149,24 @@ class MainActivity : ComponentActivity() {
       }
     }
 
+    BusTrackingService.onTrackingStopped = {
+      runOnUiThread {
+        webView?.evaluateJavascript(
+          "if (typeof stopActiveTrackingInWeb === 'function') { stopActiveTrackingInWeb(); }",
+          null
+        )
+      }
+    }
+
     setContent {
       MyApplicationTheme {
         BackHandler(enabled = true) {
           if (webView?.canGoBack() == true) {
             webView?.goBack()
           } else {
-            finish()
+            stopTrackingService()
+            VoiceAnnouncementManager.shutdown()
+            finishAffinity()
           }
         }
         Box(
@@ -490,6 +501,10 @@ class MainActivity : ComponentActivity() {
     destLat: Double = 0.0,
     destLon: Double = 0.0
   ) {
+    if (!BusTrackingService.isRunning) {
+      // ট্র্যাকিং যখন বন্ধ, তখন কোনো আপডেট নোটিফিকেশন সার্ভিস পুনরায় চালু করতে পারবে না
+      return
+    }
     checkAndRequestNotificationPermission()
     try {
       val intent = Intent(this, BusTrackingService::class.java).apply {
@@ -522,6 +537,13 @@ class MainActivity : ComponentActivity() {
       }
       startService(intent)
     } catch (_: Exception) {}
+    VoiceAnnouncementManager.clearQueue()
+    runOnUiThread {
+      webView?.evaluateJavascript(
+        "if (typeof stopActiveTrackingInWeb === 'function') { stopActiveTrackingInWeb(); }",
+        null
+      )
+    }
   }
 
   fun clearSpeechQueueAndStop() {
@@ -613,6 +635,15 @@ class WebAppInterface(private val activity: MainActivity) {
   @JavascriptInterface
   fun stopBackgroundTracking() {
     activity.stopTrackingService()
+  }
+
+  @JavascriptInterface
+  fun exitApp() {
+    activity.runOnUiThread {
+      activity.stopTrackingService()
+      VoiceAnnouncementManager.shutdown()
+      activity.finishAffinity()
+    }
   }
 
   @JavascriptInterface

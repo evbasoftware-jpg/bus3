@@ -1407,6 +1407,14 @@
 
   <div id="currentLocationBox">বাসের বর্তমান অবস্থান: কোনো বাস নির্বাচিত হয়নি</div>
 
+  <!-- লাইভ ট্র্যাকিং সক্রিয় থাকলে ট্র্যাকিং বন্ধ করার বোতাম -->
+  <div id="liveTrackingControlBox" style="display:none; margin: 8px 0 10px 0;">
+    <button type="button" id="btnStopLiveTracking" onclick="userStopLiveTracking()" style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: #ffffff; border: none; font-size: 14px; font-weight: 800; padding: 11px 16px; border-radius: 12px; width: 100%; box-shadow: 0 4px 12px rgba(220, 38, 38, 0.28); cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;">
+      <span style="font-size:16px;">🛑</span>
+      <span>ট্র্যাকিং বন্ধ করুন (Stop Tracking)</span>
+    </button>
+  </div>
+
   <div class="card-grid">
     <!-- ২ নং ছবি: img2.png (বর্তমান স্টপেজ এর উপরে থাকবে) -->
     <div id="container_img2" class="dynamic-img-container" style="display: none; grid-column: 1 / -1; width: 100%; text-align: center; margin: 0; padding: 0; border: none; outline: none; background: transparent;">
@@ -1495,6 +1503,13 @@
       <span class="feat-label">৭) বাস বন্ধের তথ্য</span>
       <span class="feat-sub">দিন বা সময় বন্ধ আপডেট</span>
       <span class="feat-badge" id="quickBusOffBadge" style="background:#fee2e2;color:#991b1b;">🚫 বন্ধ/চালু আপডেট</span>
+  </div>
+
+  <!-- কাজ শেষ? অ্যাপ সম্পূর্ণ বন্ধ করুন (Exit App) অপশন -->
+  <div style="margin: 18px 0 28px 0; text-align: center;">
+    <button type="button" onclick="confirmAndExitApp()" style="background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%); color: #334155; border: 1.5px solid #cbd5e1; font-size: 13.5px; font-weight: 800; padding: 12px 20px; border-radius: 12px; width: 100%; box-shadow: 0 2px 6px rgba(0,0,0,0.06); cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;">
+      <span style="font-size: 18px;">🚪</span>
+      <span>কাজ শেষ? অ্যাপ সম্পূর্ণ বন্ধ করুন (Exit App)</span>
     </button>
   </div>
 
@@ -1837,9 +1852,10 @@
         
         <!-- সার্চ বক্স -->
         <div id="busOffSearchBoxWrapper" style="position:relative;">
-          <input type="text" id="busOffSearchInput" placeholder="🔍 বাসের নাম, নম্বর বা রুট লিখুন (যেমন: PAPIYA বা 123)..." 
+          <input type="text" id="busOffSearchInput" placeholder="🔍 বাসের নাম, নম্বর বা রুট খুঁজুন (যেমন: KRISHNA বা 1111 বা PAPIYA)..." 
                  autocomplete="off"
                  oninput="onBusOffSearchInput(this.value)" 
+                 onkeyup="onBusOffSearchInput(this.value)"
                  onfocus="onBusOffSearchFocus()"
                  style="width:100%;padding:10px 32px 10px 12px;border-radius:8px;border:1.5px solid #cbd5e1;font-size:13.5px;box-sizing:border-box;background:#fff;outline:none;">
           <span id="busOffSearchClearBtn" onclick="clearBusOffSearch()" style="display:none;position:absolute;right:10px;top:50%;transform:translateY(-50%);cursor:pointer;color:#94a3b8;font-size:16px;font-weight:bold;padding:4px;">✕</span>
@@ -4386,6 +4402,8 @@
       let fullName = (bestBusRow.name && bestBusRow.number) ? `${bestBusRow.name} (${bestBusRow.number})` : (bestBusRow.name || bestBusRow.number);
       statusText.innerText = `🚌 বাসের নাম: ${fullName} • লাইভ ট্র্যাকিং চলছে`;
     }
+    let trackControl = document.getElementById("liveTrackingControlBox");
+    if (trackControl) trackControl.style.display = "block";
     try { map.invalidateSize(); } catch(_) {}
 
     let stopBtnText = document.getElementById("addStopBtnText");
@@ -5029,6 +5047,87 @@
     document.getElementById("staffActiveBanner").classList.add("hidden");
     document.getElementById("btnOpenStaffModal").classList.remove("hidden");
     showAppAlert("বাস কর্মী মোড বন্ধ করা হয়েছে। আপনার ফোন আর বাসের লাইভ লোকেশন সম্প্রচার করবে না।", "কর্মী মোড বন্ধ");
+  }
+
+  window.stopActiveTrackingInWeb = function() {
+    trackingBus = null;
+    promptDismissedStops.clear();
+    activeApproachingStop = null;
+    lastAnnouncedArrivalStop = null;
+    lastAnnouncedNextStop = null;
+    announcedArrivalStopsSet.clear();
+    announcedNextStopsSet.clear();
+    
+    try {
+      localStorage.removeItem("active_tracking_bus");
+    } catch (_) {}
+
+    if (trackingInterval) {
+      clearInterval(trackingInterval);
+      trackingInterval = null;
+    }
+
+    if (busMarker && map) {
+      try { map.removeLayer(busMarker); } catch (_) {}
+      busMarker = null;
+    }
+    if (stopRoutePolyline && map) {
+      try { map.removeLayer(stopRoutePolyline); } catch (_) {}
+      stopRoutePolyline = null;
+    }
+    if (routeLine && map) {
+      try { map.removeLayer(routeLine); } catch (_) {}
+      routeLine = null;
+    }
+
+    let trackInput = document.getElementById("busTrackInput");
+    if (trackInput) trackInput.value = "";
+
+    let trackControl = document.getElementById("liveTrackingControlBox");
+    if (trackControl) trackControl.style.display = "none";
+
+    let locBox = document.getElementById("currentLocationBox");
+    if (locBox) locBox.innerText = "বাসের বর্তমান অবস্থান: কোনো বাস নির্বাচিত হয়নি";
+
+    let statusText = document.getElementById("mapStatusText");
+    if (statusText) statusText.innerText = "ম্যাপ সক্রিয়: সকল স্টপ ও অবস্থান";
+
+    let curElem = document.getElementById("infoCurStop");
+    let nextElem = document.getElementById("infoNextStop");
+    let destElem = document.getElementById("infoDestStop");
+    let speedElem = document.getElementById("infoSpeed");
+    if (curElem) curElem.innerText = "--";
+    if (nextElem) nextElem.innerText = "--";
+    if (destElem) destElem.innerText = "--";
+    if (speedElem) speedElem.innerText = "--";
+
+    let routeCard = document.getElementById("routeTrackerCard");
+    if (routeCard) routeCard.classList.add("hidden");
+
+    let liveClosureAlert = document.getElementById("busClosureLiveAlert");
+    if (liveClosureAlert) liveClosureAlert.style.display = "none";
+
+    let addStopBtnText = document.getElementById("addStopBtnText");
+    if (addStopBtnText) addStopBtnText.innerText = "এই জায়গাটি বাসের স্টপেজ হিসাবে যুক্ত করুন";
+
+    renderAllMasterStopsOnMap(masterStopsList);
+  };
+
+  function userStopLiveTracking() {
+    if (window.AndroidBridge && window.AndroidBridge.stopBackgroundTracking) {
+      window.AndroidBridge.stopBackgroundTracking();
+    }
+    stopActiveTrackingInWeb();
+    showAppAlert("✅ বাসের লাইভ ট্র্যাকিং সম্পূর্ণ বন্ধ করা হয়েছে।", "ট্র্যাকিং বন্ধ");
+  }
+
+  function confirmAndExitApp() {
+    if (confirm("আপনি কি অ্যাপটি সম্পূর্ণ বন্ধ করতে চান?")) {
+      userStopLiveTracking();
+      if (window.AndroidBridge && window.AndroidBridge.exitApp) {
+        window.AndroidBridge.exitApp();
+      }
+    }
   }
 
   async function syncUserGPSAsBus(busNo, lat, lon, speed, acc) {
@@ -6587,39 +6686,72 @@ https://aionline.in.net`;
     let seen = new Set();
     if (globalBusesCatalog && globalBusesCatalog.length > 0) {
       globalBusesCatalog.forEach(b => {
-        let key = `${(b.name || '').trim()}_${(b.number || '').trim()}`.toUpperCase();
+        let bName = String(b.name || '').trim();
+        let bNum = String(b.number || '').trim();
+        let key = `${bName}__${bNum}`.toUpperCase();
         if (!seen.has(key)) {
           seen.add(key);
           allBusOffOptionsList.push(b);
         }
       });
     }
-    allBusOffOptionsList.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+    allBusOffOptionsList.sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')));
   }
 
   function renderBusOffSearchResults(query) {
     let container = document.getElementById("busOffSearchResults");
     if (!container) return;
+
+    if (!allBusOffOptionsList || allBusOffOptionsList.length === 0) {
+      prepareBusOffOptionsList();
+    }
     
-    let q = (query || '').trim().toLowerCase();
-    let matches = allBusOffOptionsList.filter(b => {
-      if (!q) return true;
-      let name = (b.name || '').toLowerCase();
-      let num = (b.number || '').toLowerCase();
-      let src = (b.source || '').toLowerCase();
-      let dst = (b.dest || '').toLowerCase();
-      return name.includes(q) || num.includes(q) || src.includes(q) || dst.includes(q);
-    });
+    let rawQ = String(query || '').trim();
+    let q = rawQ.toLowerCase();
+    let cleanQ = q.replace(/[^a-z0-9]/g, '');
+
+    let matches = [];
+    try {
+      matches = allBusOffOptionsList.filter(b => {
+        if (!rawQ) return true;
+        let name = String(b.name || '').toLowerCase();
+        let num = String(b.number || '').toLowerCase();
+        let src = String(b.source || '').toLowerCase();
+        let dst = String(b.dest || '').toLowerCase();
+
+        if (name.includes(q) || num.includes(q) || src.includes(q) || dst.includes(q)) {
+          return true;
+        }
+
+        if (cleanQ.length > 0) {
+          let cleanNum = num.replace(/[^a-z0-9]/g, '');
+          let cleanName = name.replace(/[^a-z0-9]/g, '');
+          if (cleanNum.includes(cleanQ) || cleanName.includes(cleanQ)) {
+            return true;
+          }
+        }
+        return false;
+      });
+    } catch (e) {
+      console.warn("busOff filter error:", e);
+      matches = allBusOffOptionsList;
+    }
 
     if (matches.length === 0) {
-      container.innerHTML = `<div style="padding:12px;text-align:center;font-size:12.5px;color:#dc2626;font-weight:600;">"${query}" দিয়ে কোনো বাস পাওয়া যায়নি</div>`;
+      container.innerHTML = `<div style="padding:14px 12px;text-align:center;font-size:13px;color:#dc2626;font-weight:600;">"${rawQ}" দিয়ে কোনো বাস পাওয়া যায়নি</div>`;
       container.style.display = "block";
       return;
     }
 
     container.innerHTML = "";
-    // দ্রুত ও মসৃণ অভিজ্ঞতার জন্য প্রথম ৩০টি ফলাফল একবারে দেখান
-    matches.slice(0, 30).forEach(b => {
+    // দ্রুত ও মসৃণ অভিজ্ঞতার জন্য প্রথম ৩৫টি ফলাফল একবারে দেখান
+    matches.slice(0, 35).forEach(b => {
+      let bName = String(b.name || 'বাস');
+      let bNum = String(b.number || '');
+      let bSrc = String(b.source || '');
+      let bDst = String(b.dest || '');
+      let bDep = b.depTime ? String(b.depTime) : '';
+
       let itemDiv = document.createElement("div");
       itemDiv.style.cssText = "padding:10px 12px;border-bottom:1px solid #f1f5f9;cursor:pointer;display:flex;flex-direction:column;gap:3px;transition:background 0.15s ease;";
       itemDiv.onmouseenter = () => itemDiv.style.background = "#eff6ff";
@@ -6627,11 +6759,11 @@ https://aionline.in.net`;
       
       itemDiv.innerHTML = `
         <div style="font-size:13.5px;font-weight:bold;color:#0f172a;display:flex;align-items:center;justify-content:space-between;">
-          <span>🚌 ${b.name || 'বাস'}</span>
-          <span style="background:#e0f2fe;color:#0369a1;padding:2px 7px;border-radius:5px;font-size:11.5px;font-weight:bold;">${b.number || ''}</span>
+          <span>🚌 ${bName}</span>
+          <span style="background:#e0f2fe;color:#0369a1;padding:2px 7px;border-radius:5px;font-size:11.5px;font-weight:bold;">${bNum}</span>
         </div>
         <div style="font-size:11.5px;color:#64748b;margin-top:1px;">
-          📍 ${b.source || ''} ➔ 📍 ${b.dest || ''} ${b.depTime ? '• ছাড়ার সময়: ' + b.depTime : ''}
+          📍 ${bSrc} ➔ 📍 ${bDst} ${bDep ? '• ছাড়ার সময়: ' + bDep : ''}
         </div>
       `;
       itemDiv.onclick = (e) => {
