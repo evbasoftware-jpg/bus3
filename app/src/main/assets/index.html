@@ -1629,13 +1629,13 @@
     </div>
 
     <div style="font-weight:800;color:#0f172a;margin-bottom:6px;font-size:13px;">🚏 স্টপেজ ভিত্তিক সময়সূচি তালিকা:</div>
-    <div style="max-height:260px;overflow-y:auto;">
+    <div id="timeTableScrollContainer" style="max-height:280px;overflow-y:auto;border-radius:8px;border:1px solid #e2e8f0;">
       <table class="data-table-styled">
         <thead>
           <tr>
             <th style="width:35px;">ক্রম</th>
             <th>স্টপেজের নাম</th>
-            <th>আনুমানিক সময়</th>
+            <th>সময়সূচি (লাইভ / নির্ধারিত)</th>
             <th>স্ট্যাটাস</th>
           </tr>
         </thead>
@@ -6078,6 +6078,14 @@
         }, 1200);
       }
     } catch (_) {}
+
+    // বাসের সময়সূচি মডাল খোলা থাকলে বাসের লাইভ লোকেশন অনুযায়ী সাথে সাথে টেবিল আপডেট করা
+    try {
+      let ttModal = document.getElementById("timeTableModal");
+      if (ttModal && !ttModal.classList.contains("hidden")) {
+        renderBusTimeTable();
+      }
+    } catch (_) {}
   }
 
   // ==========================================
@@ -6283,12 +6291,27 @@
   // ৩) বাসের সময়সূচি (Bus Time Table)
   // ==========================================
   function openTimeTableModal() {
+    window.hasScrolledTimeTableModal = false;
     renderBusTimeTable();
     document.getElementById("timeTableModal").classList.remove("hidden");
+    if (window.timeTableInterval) clearInterval(window.timeTableInterval);
+    window.timeTableInterval = setInterval(() => {
+      let ttModal = document.getElementById("timeTableModal");
+      if (ttModal && !ttModal.classList.contains("hidden")) {
+        renderBusTimeTable();
+      } else {
+        clearInterval(window.timeTableInterval);
+        window.timeTableInterval = null;
+      }
+    }, 3500);
   }
 
   function closeTimeTableModal() {
     document.getElementById("timeTableModal").classList.add("hidden");
+    if (window.timeTableInterval) {
+      clearInterval(window.timeTableInterval);
+      window.timeTableInterval = null;
+    }
   }
 
   function getOrderedRouteStopsForBus(bus) {
@@ -6374,17 +6397,12 @@
     let bCat = trackingBus.category || "PUBLIC";
     let bDays = trackingBus.days || "প্রত্যহ (প্রতিদিন)";
 
-    if (header) header.innerText = `🚌 ${bName} (${bNum}) - [${bCat}]`;
-    if (routeDetails) routeDetails.innerHTML = `🛣️ রুট: <b>${bSrc}</b> ➔ <b>${bDest}</b><br>📅 চলাচলের দিন: <b>${bDays}</b>`;
-
     let stops = getOrderedRouteStopsForBus(trackingBus);
     
     if (!stops || stops.length === 0) {
       tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;padding:16px;color:#64748b;">এই বাসের স্টপেজ তালিকা প্রস্তুত হচ্ছে...</td></tr>`;
       return;
     }
-
-    tbody.innerHTML = "";
 
     // বাসের সম্পূর্ণ রুটের স্টপ তালিকা ও ভৌগোলিক ক্রম অনুযায়ী রোড দূরত্ব পরিমাপ
     let allRouteStops = getFullStopsListForBus(trackingBus);
@@ -6440,6 +6458,7 @@
     // BusStops শিটের নির্ধারিত সময়ের জন্য কী (Key) ম্যাপিং
     let cleanBusNum = String(trackingBus.number || "").trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
 
+    let scheduledMinutesList = [];
     let prevMin = depMins - 2;
     stops.forEach((s, idx) => {
       let sName = typeof s === 'string' ? s : (s.name || s.stopName);
@@ -6467,22 +6486,356 @@
         }
       }
       prevMin = estMin;
+      scheduledMinutesList.push({
+        estMin: estMin,
+        exactTime: exactTime,
+        formatted: exactTime || formatMinutesToTime(estMin)
+      });
+    });
 
-      let timeFormatted = exactTime || formatMinutesToTime(estMin);
-      let isFirst = (idx === 0);
-      let isLast = (idx === stops.length - 1);
-      let statusLabel = isFirst ? 'যাত্রা শুরু' : (isLast ? 'গন্তব্য' : 'স্টপেজ');
-      let statusColor = isFirst ? '#15803d' : (isLast ? '#b91c1c' : '#475569');
+    // বাসটির লাইভ জিপিএস অবস্থান ও গতিবেগ যাচাই
+    let bLat = null, bLon = null, liveSpeed = 0;
+    if (isStaffModeActive && userPos && !isNaN(userPos.lat) && userPos.lat !== 0) {
+      bLat = Number(userPos.lat);
+      bLon = Number(userPos.lon);
+      liveSpeed = Number(userPos.speed || 0);
+    } else if (isPassengerOnboardBus && userPos && !isNaN(userPos.lat) && userPos.lat !== 0) {
+      bLat = Number(userPos.lat);
+      bLon = Number(userPos.lon);
+      liveSpeed = Number(userPos.speed || 0);
+    } else if (busPos && !isNaN(busPos.lat) && busPos.lat !== 0 && !isNaN(busPos.lon) && busPos.lon !== 0) {
+      bLat = Number(busPos.lat);
+      bLon = Number(busPos.lon);
+      liveSpeed = Number(busPos.speed || 0);
+    }
+    let isLive = (bLat !== null && bLon !== null && !isNaN(bLat) && !isNaN(bLon) && bLat !== 0 && bLon !== 0);
+
+    // স্টপেজ কো-অর্ডিনেট সহ তালিকা তৈরি
+    let stopsWithCoords = [];
+    stops.forEach((s, idx) => {
+      let sLat = Number(s.latitude || s.lat);
+      let sLon = Number(s.longitude || s.lon);
+      if ((isNaN(sLat) || isNaN(sLon) || sLat === 0) && (s.name || s.stopName)) {
+        let resolved = resolvePlaceCoords(s.name || s.stopName, stopCandidates);
+        if (resolved) {
+          sLat = resolved.lat;
+          sLon = resolved.lon;
+        }
+      }
+      if (!isNaN(sLat) && !isNaN(sLon) && sLat !== 0) {
+        stopsWithCoords.push({ stop: s, routeIndex: idx, lat: sLat, lon: sLon });
+      }
+    });
+
+    let activeStopIdx = -1;
+    let isAtStop = false;
+    let nextUpcomingStopIdx = 0;
+    let busEarlyMins = 0;
+    let busLateMins = 0;
+
+    if (isLive && stopsWithCoords.length > 0) {
+      function projectOnSeg(pLat, pLon, aLat, aLon, bLat, bLon) {
+        let cosLat = Math.cos(aLat * Math.PI / 180);
+        let dx = (bLon - aLon) * cosLat;
+        let dy = bLat - aLat;
+        let lenSq = dx * dx + dy * dy;
+        if (lenSq === 0) return { t: 0, distMeters: getDistanceMeters(pLat, pLon, aLat, aLon) };
+        let px = (pLon - aLon) * cosLat;
+        let py = pLat - aLat;
+        let t = (px * dx + py * dy) / lenSq;
+        let clampedT = Math.max(0, Math.min(1, t));
+        let projLat = aLat + clampedT * (bLat - aLat);
+        let projLon = aLon + clampedT * (bLon - aLon);
+        return { t, clampedT, distMeters: getDistanceMeters(pLat, pLon, projLat, projLon) };
+      }
+
+      let closestStopItem = null;
+      let minStopDist = Infinity;
+      stopsWithCoords.forEach(item => {
+        let d = getDistanceMeters(bLat, bLon, item.lat, item.lon);
+        if (d < minStopDist) {
+          minStopDist = d;
+          closestStopItem = item;
+        }
+      });
+
+      if (closestStopItem && minStopDist <= 65) {
+        // বাসটি নির্দিষ্ট কোনো স্টপেজের ৬০ মিটারের মধ্যে আছে
+        activeStopIdx = closestStopItem.routeIndex;
+        isAtStop = true;
+        nextUpcomingStopIdx = activeStopIdx + 1;
+      } else if (stopsWithCoords.length >= 2) {
+        let bestSeg = 0;
+        let minSegDist = Infinity;
+        let bestT = 0;
+        for (let k = 0; k < stopsWithCoords.length - 1; k++) {
+          let segA = stopsWithCoords[k];
+          let segB = stopsWithCoords[k + 1];
+          let proj = projectOnSeg(bLat, bLon, segA.lat, segA.lon, segB.lat, segB.lon);
+          let penalty = (proj.t >= 0 && proj.t <= 1) ? 0 : 50;
+          let score = proj.distMeters + penalty;
+          if (score < minSegDist) {
+            minSegDist = score;
+            bestSeg = k;
+            bestT = proj.t;
+          }
+        }
+
+        if (bestT < 0 && bestSeg === 0) {
+          activeStopIdx = -1;
+          isAtStop = false;
+          nextUpcomingStopIdx = stopsWithCoords[0].routeIndex;
+        } else if (bestT > 1 && bestSeg === stopsWithCoords.length - 2) {
+          activeStopIdx = stopsWithCoords[stopsWithCoords.length - 1].routeIndex;
+          isAtStop = true;
+          nextUpcomingStopIdx = stops.length;
+        } else {
+          // বাস segA পেরিয়ে segB এর দিকে ধাবিত হচ্ছে
+          activeStopIdx = stopsWithCoords[bestSeg].routeIndex;
+          isAtStop = false;
+          nextUpcomingStopIdx = stopsWithCoords[bestSeg + 1].routeIndex;
+        }
+      } else if (closestStopItem) {
+        activeStopIdx = closestStopItem.routeIndex;
+        isAtStop = (minStopDist <= 75);
+        nextUpcomingStopIdx = isAtStop ? activeStopIdx + 1 : activeStopIdx;
+      }
+    }
+
+    // ঘড়ির বর্তমান সময়
+    let now = new Date();
+    let currentMins = now.getHours() * 60 + now.getMinutes();
+    let effectiveSpeed = (liveSpeed && liveSpeed > 15) ? Math.min(Math.max(liveSpeed, 25), 55) : 32;
+
+    // প্রতিটি পরবর্তী স্টপের জন্য লাইভ অবস্থান ও রোড দূরত্ব অনুযায়ী রিয়েলটাইম সময় নির্ধারণ
+    let liveArrivalTimes = new Array(stops.length).fill(null);
+
+    if (isLive && nextUpcomingStopIdx < stops.length) {
+      let cumMetersFromBus = 0;
+      let prevLat = bLat;
+      let prevLon = bLon;
+
+      for (let i = nextUpcomingStopIdx; i < stops.length; i++) {
+        let s = stops[i];
+        let sLat = Number(s.latitude || s.lat);
+        let sLon = Number(s.longitude || s.lon);
+        if ((isNaN(sLat) || isNaN(sLon) || sLat === 0) && (s.name || s.stopName)) {
+          let resolved = resolvePlaceCoords(s.name || s.stopName, stopCandidates);
+          if (resolved) { sLat = resolved.lat; sLon = resolved.lon; }
+        }
+
+        let legMeters = 2000;
+        if (!isNaN(sLat) && !isNaN(sLon) && sLat !== 0) {
+          legMeters = getDistanceMeters(prevLat, prevLon, sLat, sLon) * 1.25;
+          if (legMeters < 500) legMeters = 700;
+          prevLat = sLat;
+          prevLon = sLon;
+        }
+        cumMetersFromBus += legMeters;
+
+        let driveMins = Math.round((cumMetersFromBus / 1000 / effectiveSpeed) * 60);
+        let dwellMins = (i - nextUpcomingStopIdx) * 1; // যাত্রী ওঠা-নামার বিরতি
+        let totalTravelMins = driveMins + dwellMins;
+        if (totalTravelMins < 1) totalTravelMins = 1;
+
+        let arrivalMin = (currentMins + totalTravelMins) % 1440;
+        liveArrivalTimes[i] = {
+          arrivalMin: arrivalMin,
+          travelMins: totalTravelMins,
+          formatted: formatMinutesToTime(arrivalMin)
+        };
+      }
+    }
+
+    // বাসের গতি সময়ের আগে নাকি দেরিতে চলছে পরিমাপ
+    if (isLive && nextUpcomingStopIdx < stops.length && liveArrivalTimes[nextUpcomingStopIdx]) {
+      let nextSched = scheduledMinutesList[nextUpcomingStopIdx].estMin;
+      let nextLive = liveArrivalTimes[nextUpcomingStopIdx].arrivalMin;
+      let diff = nextSched - nextLive;
+      if (diff > 720) diff -= 1440;
+      if (diff < -720) diff += 1440;
+
+      if (diff >= 2) {
+        busEarlyMins = diff;
+      } else if (diff <= -3) {
+        busLateMins = Math.abs(diff);
+      }
+    }
+
+    if (header) header.innerText = `🚌 ${bName} (${bNum}) - [${bCat}]`;
+
+    if (routeDetails) {
+      let liveBadgeHtml = "";
+      if (isLive) {
+        let earlyLateTag = "";
+        if (busEarlyMins >= 2) {
+          earlyLateTag = ` • <span style="background:#dcfce7;color:#166534;padding:2px 6px;border-radius:4px;font-weight:700;">⚡ সময়ের আগে চলছে (${busEarlyMins} মি. দ্রুত)</span>`;
+        } else if (busLateMins >= 3) {
+          earlyLateTag = ` • <span style="background:#fee2e2;color:#991b1b;padding:2px 6px;border-radius:4px;font-weight:700;">⚠️ বিলম্বিত (${busLateMins} মি. লেট)</span>`;
+        } else {
+          earlyLateTag = ` • <span style="background:#e0f2fe;color:#0369a1;padding:2px 6px;border-radius:4px;font-weight:700;">⏱️ সঠিক সময়ে চলছে</span>`;
+        }
+
+        let curStopName = (activeStopIdx >= 0 && activeStopIdx < stops.length) ? (stops[activeStopIdx].name || stops[activeStopIdx].stopName) : "";
+        let curLocText = isAtStop ? `বাস স্টপেজে দাঁড়িয়ে: ${curStopName}` : (curStopName ? `বাস ${curStopName} অতিক্রম করে পরবর্তী স্টপে অগ্রসর হচ্ছে` : "বাস চলন্ত অবস্থায় আছে");
+
+        liveBadgeHtml = `
+          <div style="margin-top:6px;padding:8px 10px;background:#ecfdf5;border:1.5px solid #10b981;border-radius:8px;color:#065f46;font-size:12px;line-height:1.4;">
+            <div style="font-weight:800;display:flex;align-items:center;gap:6px;">
+              <span>🟢 লাইভ অবস্থান অনুযায়ী সময়সূচি স্বয়ংক্রিয়ভাবে আপডেট হচ্ছে</span>
+              <span style="font-weight:normal;color:#047857;">(গতি: ${Math.round(liveSpeed)} KM/H)</span>
+            </div>
+            <div style="margin-top:3px;font-size:11.5px;color:#065f46;">
+              📍 ${curLocText}${earlyLateTag}
+            </div>
+          </div>
+        `;
+      } else {
+        liveBadgeHtml = `
+          <div style="margin-top:6px;padding:6px 10px;background:#f8fafc;border:1px solid #cbd5e1;border-radius:6px;color:#475569;font-size:11.5px;">
+            🕒 নির্ধারিত সময়সূচি (বাসের লাইভ জিপিএস চালু হলে বাসটির অবস্থান অনুযায়ী রিয়েল-টাইম সময় দেখাবে)
+          </div>
+        `;
+      }
+
+      routeDetails.innerHTML = `🛣️ রুট: <b>${bSrc}</b> ➔ <b>${bDest}</b><br>📅 চলাচলের দিন: <b>${bDays}</b>${liveBadgeHtml}`;
+    }
+
+    tbody.innerHTML = "";
+    let focusRowIndex = -1;
+
+    stops.forEach((s, idx) => {
+      let sName = typeof s === 'string' ? s : (s.name || s.stopName);
+      let sched = scheduledMinutesList[idx];
+      let schedTimeFormatted = sched.formatted;
+      let schedMins = sched.estMin;
 
       let tr = document.createElement("tr");
+      tr.id = `tt-row-${idx}`;
+
+      let isPassed = false;
+      let isCurrent = false;
+      let isNext = false;
+      let isDestination = (idx === stops.length - 1);
+
+      if (isLive) {
+        if (idx < activeStopIdx) {
+          isPassed = true;
+        } else if (idx === activeStopIdx) {
+          if (isAtStop) {
+            isCurrent = true;
+            focusRowIndex = idx;
+          } else {
+            isPassed = true;
+          }
+        } else if (idx === nextUpcomingStopIdx) {
+          isNext = true;
+          if (focusRowIndex === -1) focusRowIndex = idx;
+        }
+      }
+
+      // ১. সময় কলাম (Time Column)
+      let timeCellHtml = "";
+      if (isLive) {
+        if (isCurrent) {
+          timeCellHtml = `
+            <div style="font-weight:800;color:#047857;font-size:13px;">${formatMinutesToTime(currentMins)} <span style="font-size:10px;background:#10b981;color:#fff;padding:1px 5px;border-radius:4px;">এখন</span></div>
+            <div style="font-size:10.5px;color:#64748b;margin-top:2px;">নির্ধারিত: ${schedTimeFormatted}</div>
+          `;
+        } else if (isPassed) {
+          timeCellHtml = `
+            <div style="font-weight:700;color:#64748b;font-size:12.5px;">${schedTimeFormatted}</div>
+            <div style="font-size:10px;color:#16a34a;font-weight:600;">অতিক্রান্ত ✓</div>
+          `;
+        } else {
+          let liveInfo = liveArrivalTimes[idx];
+          if (liveInfo) {
+            let diff = schedMins - liveInfo.arrivalMin;
+            if (diff > 720) diff -= 1440;
+            if (diff < -720) diff += 1440;
+
+            if (diff >= 2) {
+              // বাস সময়ের আগে পৌঁছাবে
+              timeCellHtml = `
+                <div style="font-weight:800;color:#047857;font-size:13px;">⚡ ${liveInfo.formatted}</div>
+                <div style="font-size:10.5px;color:#059669;font-weight:700;margin-top:2px;">⏱️ নির্ধারিত: ${schedTimeFormatted} (${diff} মি. আগে)</div>
+              `;
+            } else if (diff <= -3) {
+              // বাস কিছুটা দেরিতে পৌঁছাবে
+              timeCellHtml = `
+                <div style="font-weight:800;color:#c2410c;font-size:13px;">⚡ ${liveInfo.formatted}</div>
+                <div style="font-size:10.5px;color:#ea580c;font-weight:700;margin-top:2px;">⏱️ নির্ধারিত: ${schedTimeFormatted} (${Math.abs(diff)} মি. লেট)</div>
+              `;
+            } else {
+              // ঠিক সময়ে পৌঁছাবে
+              timeCellHtml = `
+                <div style="font-weight:800;color:#0369a1;font-size:13px;">⚡ ${liveInfo.formatted}</div>
+                <div style="font-size:10.5px;color:#64748b;margin-top:2px;">⏱️ নির্ধারিত: ${schedTimeFormatted} (ঠিক সময়ে)</div>
+              `;
+            }
+          } else {
+            timeCellHtml = `<div style="font-weight:800;color:#0369a1;font-size:13px;">${schedTimeFormatted}</div>`;
+          }
+        }
+      } else {
+        timeCellHtml = `<span style="background:#e0f2fe;color:#0369a1;padding:4px 8px;border-radius:6px;font-weight:800;font-size:13px;">${schedTimeFormatted}</span>`;
+      }
+
+      // ২. স্ট্যাটাস কলাম (Status Column)
+      let statusCellHtml = "";
+      if (isLive) {
+        if (isCurrent) {
+          statusCellHtml = `<span style="background:#ecfdf5;color:#047857;padding:3px 7px;border-radius:6px;font-weight:800;font-size:11.5px;border:1.5px solid #10b981;white-space:nowrap;">📍 বর্তমান অবস্থান</span>`;
+        } else if (isPassed) {
+          statusCellHtml = `<span style="background:#f1f5f9;color:#475569;padding:3px 7px;border-radius:6px;font-weight:700;font-size:11.5px;border:1px solid #cbd5e1;white-space:nowrap;">✓ অতিক্রম করেছে</span>`;
+        } else if (isNext) {
+          let minsText = liveArrivalTimes[idx] ? ` (${liveArrivalTimes[idx].travelMins} মি.)` : "";
+          statusCellHtml = `<span style="background:#e0f2fe;color:#0284c7;padding:3px 7px;border-radius:6px;font-weight:800;font-size:11.5px;border:1px solid #7dd3fc;white-space:nowrap;">⏩ পরবর্তী স্টপ${minsText}</span>`;
+        } else if (isDestination) {
+          let minsText = liveArrivalTimes[idx] ? ` (${liveArrivalTimes[idx].travelMins} মি.)` : "";
+          statusCellHtml = `<span style="background:#fef2f2;color:#b91c1c;padding:3px 7px;border-radius:6px;font-weight:800;font-size:11.5px;border:1px solid #fca5a5;white-space:nowrap;">🎯 গন্তব্য${minsText}</span>`;
+        } else {
+          let minsText = liveArrivalTimes[idx] ? ` (${liveArrivalTimes[idx].travelMins} মি.)` : "";
+          statusCellHtml = `<span style="color:#475569;font-weight:600;font-size:11.5px;white-space:nowrap;">স্টপেজ${minsText}</span>`;
+        }
+      } else {
+        let isFirst = (idx === 0);
+        let statusLabel = isFirst ? 'যাত্রা শুরু' : (isDestination ? 'গন্তব্য' : 'স্টপেজ');
+        let statusColor = isFirst ? '#15803d' : (isDestination ? '#b91c1c' : '#475569');
+        statusCellHtml = `<span style="color:${statusColor};font-weight:bold;">${statusLabel}</span>`;
+      }
+
+      // ৩. সারি স্টাইলিং (Row Styling)
+      if (isCurrent) {
+        tr.style.background = "#ecfdf5";
+        tr.style.borderLeft = "4px solid #10b981";
+      } else if (isNext) {
+        tr.style.background = "#f0f9ff";
+        tr.style.borderLeft = "4px solid #0284c7";
+      } else if (isPassed) {
+        tr.style.background = "#f8fafc";
+        tr.style.opacity = "0.75";
+      }
+
       tr.innerHTML = `
         <td style="text-align:center;font-weight:bold;">${idx + 1}</td>
         <td><b>🚏 ${sName}</b></td>
-        <td><span style="background:#e0f2fe;color:#0369a1;padding:4px 8px;border-radius:6px;font-weight:800;font-size:13px;">${timeFormatted}</span></td>
-        <td><span style="color:${statusColor};font-weight:bold;">${statusLabel}</span></td>
+        <td>${timeCellHtml}</td>
+        <td>${statusCellHtml}</td>
       `;
       tbody.appendChild(tr);
     });
+
+    // স্বয়ংক্রিয়ভাবে বর্তমান বা পরবর্তী স্টপেজ সেন্টারে স্ক্রল করা
+    if (focusRowIndex !== -1 && !window.hasScrolledTimeTableModal) {
+      setTimeout(() => {
+        let el = document.getElementById(`tt-row-${focusRowIndex}`);
+        if (el) {
+          el.scrollIntoView({ behavior: "smooth", block: "center" });
+          window.hasScrolledTimeTableModal = true;
+        }
+      }, 150);
+    }
   }
 
   // ==========================================
