@@ -47,30 +47,44 @@
     }
     .translate-top-bar span{ font-size:13px; font-weight:800; color:#1e293b; display: flex; align-items: center; gap: 4px; }
 
-    #google_translate_element{ display:inline-flex; align-items:center; flex: 1; justify-content: flex-end; }
-    .goog-te-gadget{ font-size:0 !important; line-height:0 !important;}
-    .goog-te-gadget span, .goog-te-gadget a, .goog-logo-link{ display:none !important;}
+    #google_translate_element { 
+      position: absolute !important; 
+      left: -9999px !important; 
+      width: 1px !important; 
+      height: 1px !important; 
+      overflow: hidden !important; 
+      opacity: 0 !important; 
+      pointer-events: none !important; 
+    }
+    .goog-te-gadget { font-size: 0 !important; line-height: 0 !important; }
+    .goog-te-gadget span, .goog-te-gadget a, .goog-logo-link { display: none !important; }
 
-    .goog-te-gadget .goog-te-combo, #fallbackLangSelect {
-      height:36px !important; 
-      width:220px !important; 
-      max-width:100% !important; 
-      margin:0 !important; 
-      padding:4px 8px !important; 
-      font-size:13px !important; 
-      font-weight:700 !important;
-      color:#1e293b !important; 
-      background:#ffffff !important; 
-      border:1.5px solid #0288d1 !important; 
-      border-radius:8px !important; 
-      outline:none !important; 
-      cursor:pointer !important;
+    #appLanguageSelect {
+      height: 38px !important; 
+      width: auto !important;
+      min-width: 180px !important;
+      max-width: 230px !important; 
+      margin: 0 !important; 
+      padding: 6px 10px !important; 
+      font-size: 13.5px !important; 
+      font-weight: 700 !important;
+      color: #0f172a !important; 
+      background: #ffffff !important; 
+      border: 1.5px solid #0288d1 !important; 
+      border-radius: 8px !important; 
+      outline: none !important; 
+      cursor: pointer !important;
       box-shadow: 0 1px 3px rgba(0,0,0,0.08) !important;
+      -webkit-appearance: menulist !important;
+      appearance: menulist !important;
+      touch-action: manipulation !important;
+      display: inline-block !important;
+      visibility: visible !important;
+      opacity: 1 !important;
     }
 
-    .goog-te-menu-frame, .goog-te-menu2 {
-      max-height:75vh !important; overflow-y:auto !important; -webkit-overflow-scrolling:touch !important;}
-    .skiptranslate>iframe{display:none !important}
+    iframe.goog-te-banner-frame { display: none !important; visibility: hidden !important; }
+    body { top: 0px !important; }
 
     input, select, textarea {
       width: 100%;
@@ -712,7 +726,7 @@
       .grid { grid-template-columns: 1fr; }
       .stop-checkbox-container { grid-column: span 1; }
       .translate-top-bar{ flex-direction: row; }
-      .goog-te-gadget .goog-te-combo, #fallbackLangSelect { width:170px !important; }
+      #appLanguageSelect { width: 175px !important; min-width: 150px !important; }
       .bus-row-1 { flex-direction: column; align-items: flex-start; gap: 4px; }
     }
   
@@ -1213,9 +1227,7 @@
 <!-- সবার উপরে গুগলের সবগুলো ভাষা সহ ল্যাঙ্গুয়েজ সিলেকশন অপশন -->
 <div class="translate-top-bar" id="translateBar">
   <span>🌐 ভাষা (Language):</span>
-  <div id="google_translate_element"></div>
-  <!-- Fallback selector if Google script is connecting -->
-  <select id="fallbackLangSelect" class="hidden" onchange="applyLanguageFallback(this.value)">
+  <select id="appLanguageSelect" onchange="onAppLanguageChange(this.value)">
     <option value="bn">বাংলা (Bengali)</option>
     <option value="en">English</option>
     <option value="hi">हिन्दी (Hindi)</option>
@@ -1252,6 +1264,7 @@
     <option value="my">မြန်မာ (Burmese)</option>
     <option value="sw">Kiswahili (Swahili)</option>
   </select>
+  <div id="google_translate_element"></div>
 </div>
     
 <div class="head">
@@ -2052,29 +2065,22 @@
     }
   }
 
-  // যদি কোনো কারণে গুগল ট্র্যান্সলেট লোড হতে দেরি হয়, ফলব্যাক সিলেক্টর দেখাবে
-  setTimeout(() => {
-    let combo = document.querySelector('.goog-te-combo');
-    if (!combo) {
-      let fb = document.getElementById('fallbackLangSelect');
-      if (fb) fb.classList.remove('hidden');
-    }
-  }, 2500);
+  function getStoredAppLanguage() {
+    try {
+      var saved = localStorage.getItem('app_language');
+      if (saved) return saved.toLowerCase();
+      var match = document.cookie.match(/googtrans=\/[^/]+\/([a-z]{2,3}(-[a-z0-9]+)?)/i);
+      if (match && match[1]) return match[1].toLowerCase();
+    } catch (_) {}
+    return "bn";
+  }
 
   function getCurrentAppLanguage() {
     try {
-      var match = document.cookie.match(/googtrans=\/[^/]+\/([a-z]{2,3})/i);
-      if (match && match[1]) {
-        return match[1].toLowerCase();
-      }
-      var combo = document.querySelector('.goog-te-combo');
-      if (combo && combo.value) {
-        return combo.value.toLowerCase();
-      }
-      var fb = document.getElementById('fallbackLangSelect');
-      if (fb && fb.value) {
-        return fb.value.toLowerCase();
-      }
+      var select = document.getElementById('appLanguageSelect');
+      if (select && select.value) return select.value.toLowerCase();
+      var stored = getStoredAppLanguage();
+      if (stored) return stored;
     } catch (_) {}
     return "bn";
   }
@@ -2096,48 +2102,79 @@
     }
   }
 
-  function applyLanguageFallback(lang) {
+  function syncGoogleTranslateCombo(lang) {
     let combo = document.querySelector('.goog-te-combo');
     if (combo) {
-      combo.value = lang;
-      combo.dispatchEvent(new Event('change'));
+      let targetVal = (lang === "bn") ? "" : lang;
+      if (combo.value !== targetVal) {
+        combo.value = targetVal;
+        combo.dispatchEvent(new Event('change'));
+      }
+      return true;
+    }
+    return false;
+  }
+
+  function onAppLanguageChange(lang) {
+    if (!lang) lang = "bn";
+    try {
+      localStorage.setItem('app_language', lang);
+    } catch (_) {}
+
+    // সেট করুন গুগল ট্রান্সলেট কুকি
+    if (lang === "bn") {
+      document.cookie = "googtrans=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT;";
+      document.cookie = "googtrans=; path=/; domain=" + location.hostname + "; expires=Thu, 01 Jan 1970 00:00:00 GMT;";
     } else {
       document.cookie = "googtrans=/bn/" + lang + "; path=/;";
-      document.cookie = "googtrans=/bn/" + lang + "; path=/; domain=" + location.hostname;
-      location.reload();
+      document.cookie = "googtrans=/bn/" + lang + "; path=/; domain=" + location.hostname + ";";
     }
+
+    // কম্বো পরিবর্তন করুন
+    let synced = syncGoogleTranslateCombo(lang);
+    if (!synced && lang !== "bn") {
+      let attempts = 0;
+      let syncInterval = setInterval(() => {
+        attempts++;
+        if (syncGoogleTranslateCombo(lang) || attempts > 10) {
+          clearInterval(syncInterval);
+        }
+      }, 300);
+    }
+
     notifyLanguageChanged(lang);
   }
 
-  setInterval(() => {
-    let combo = document.querySelector('.goog-te-combo');
-    if (combo && !combo.dataset.monitored) {
-      combo.dataset.monitored = "true";
-      combo.addEventListener('change', () => {
-        notifyLanguageChanged(combo.value);
-      });
-    }
-  }, 1000);
+  function applyLanguageFallback(lang) {
+    onAppLanguageChange(lang);
+  }
 
-  const observer = new MutationObserver(() => {
-    const iframe = document.querySelector('.goog-te-menu-frame');
-    if (iframe && iframe.contentDocument) {
-      const doc = iframe.contentDocument;
-      if (doc.body) {
-        doc.body.style.overflowY = 'auto';
-        doc.body.style.maxHeight = '75vh';
-        doc.body.style.webkitOverflowScrolling = 'touch';
-      }
+  // পেজ লোড হলে সংরক্ষিত ভাষা পুনরুদ্ধার করা
+  document.addEventListener("DOMContentLoaded", () => {
+    let savedLang = getStoredAppLanguage();
+    let select = document.getElementById('appLanguageSelect');
+    if (select && savedLang) {
+      select.value = savedLang;
     }
-    const tooltip = document.querySelector('.goog-tooltip');
-    if (tooltip) tooltip.style.display = 'none';
+    notifyLanguageChanged(savedLang || "bn");
+  });
 
-    // যদি গুগল কম্বো পাওয়া যায়, ফলব্যাক ড্রপডাউন লুকানো হবে
+  // গুগল ট্রান্সলেট কম্বো রেডি হলে সিঙ্ক করা
+  let comboSyncCheck = setInterval(() => {
     let combo = document.querySelector('.goog-te-combo');
     if (combo) {
-      let fb = document.getElementById('fallbackLangSelect');
-      if (fb) fb.classList.add('hidden');
+      let currentLang = getCurrentAppLanguage();
+      if (currentLang && currentLang !== "bn") {
+        syncGoogleTranslateCombo(currentLang);
+      }
+      clearInterval(comboSyncCheck);
     }
+  }, 500);
+  setTimeout(() => clearInterval(comboSyncCheck), 15000);
+
+  const observer = new MutationObserver(() => {
+    const tooltip = document.querySelector('.goog-tooltip');
+    if (tooltip) tooltip.style.display = 'none';
   });
   observer.observe(document.body, { childList: true, subtree: true });
 </script>
@@ -4979,7 +5016,9 @@
       return showAppAlert("লোকেশন স্থানাঙ্ক পাওয়া যায়নি!");
     }
 
-    if (trackingBus && !pendingMapClickCoords) {
+    let isMapClick = !!pendingMapClickCoords;
+
+    if (trackingBus && !isMapClick) {
       let now = new Date();
       let hours = now.getHours();
       let minutes = String(now.getMinutes()).padStart(2, '0');
@@ -5003,33 +5042,50 @@
           method: "POST",
           headers: { "Content-Type": "text/plain;charset=utf-8" },
           body: JSON.stringify(payload)
-        });
+        }).catch(() => null);
 
-        delete stopsCache[trackingBus.number];
+        let getUrl = `${API_URL}?action=addStop&busNumber=${encodeURIComponent(trackingBus.number)}&stopName=${encodeURIComponent(stopName)}&lat=${encodeURIComponent(targetLat)}&lon=${encodeURIComponent(targetLon)}`;
+        fetch(getUrl).catch(() => null);
+      } catch (_) {}
 
-        if (!trackingBus.selectedStops) trackingBus.selectedStops = [];
-        let cStop = cleanStopName(stopName);
-        if (!trackingBus.selectedStops.includes(cStop)) {
-          trackingBus.selectedStops.push(cStop);
-        }
+      delete stopsCache[trackingBus.number];
 
-        currentBusStopsList.push({
-          stopName: stopName,
+      if (!trackingBus.selectedStops) trackingBus.selectedStops = [];
+      let cStop = cleanStopName(stopName);
+      if (!trackingBus.selectedStops.includes(cStop)) {
+        trackingBus.selectedStops.push(cStop);
+      }
+
+      currentBusStopsList.push({
+        stopName: stopName,
+        name: stopName,
+        lat: targetLat,
+        lon: targetLon,
+        latitude: targetLat,
+        longitude: targetLon
+      });
+
+      let existIdx = masterStopsList.findIndex(s => cleanStopName(s.name || s.stopName) === cStop);
+      if (existIdx !== -1) {
+        masterStopsList[existIdx].lat = targetLat;
+        masterStopsList[existIdx].lon = targetLon;
+      } else {
+        masterStopsList.push({
           name: stopName,
+          stopName: stopName,
           lat: targetLat,
           lon: targetLon,
           latitude: targetLat,
           longitude: targetLon
         });
-
-        showAppAlert(`✅ "${stopName}" স্টপেজটি ${trackingBus.name} বাসে সফলভাবে যুক্ত হয়েছে!`);
-        closeModals();
-        loadDatalistSuggestions();
-        updateDistanceAndTracking();
-      } catch (e) {
-        showAppAlert("স্টপ যুক্ত করা সম্ভব হয়নি!");
       }
+
+      showAppAlert(`✅ "${stopName}" স্টপেজটি ${trackingBus.name} বাসে ও Master_Stops তালিকায় সফলভাবে যুক্ত হয়েছে!`);
+      closeModals();
+      loadDatalistSuggestions();
+      updateDistanceAndTracking();
     } else {
+      // ম্যাপে ক্লিক করে সরাসরি Master_Stops শিটে নতুন স্থান যুক্ত করা
       let payload = {
         action: "addMasterStop",
         stopName: stopName,
@@ -5042,14 +5098,72 @@
           method: "POST",
           headers: { "Content-Type": "text/plain;charset=utf-8" },
           body: JSON.stringify(payload)
-        });
+        }).catch(() => null);
 
-        showAppAlert(`✅ নতুন স্টপ "${stopName}" সফলভাবে সংরক্ষিত হয়েছে!`);
-        closeModals();
-        loadDatalistSuggestions();
-      } catch (e) {
-        showAppAlert("স্টপ সংরক্ষণ ব্যর্থ হয়েছে!");
+        let getBackupUrl = `${API_URL}?action=addMasterStop&stopName=${encodeURIComponent(stopName)}&lat=${encodeURIComponent(targetLat)}&lon=${encodeURIComponent(targetLon)}`;
+        fetch(getBackupUrl).catch(() => null);
+      } catch (err) {
+        console.log("Sync error:", err);
       }
+
+      // অ্যাপের মেমোরিতে (masterStopsList) সাথে সাথে যুক্ত বা আপডেট করা
+      let cStop = cleanStopName(stopName);
+      let existIdx = masterStopsList.findIndex(s => cleanStopName(s.name || s.stopName) === cStop);
+      if (existIdx !== -1) {
+        masterStopsList[existIdx].lat = targetLat;
+        masterStopsList[existIdx].latitude = targetLat;
+        masterStopsList[existIdx].lon = targetLon;
+        masterStopsList[existIdx].longitude = targetLon;
+      } else {
+        masterStopsList.push({
+          name: stopName,
+          stopName: stopName,
+          lat: targetLat,
+          latitude: targetLat,
+          lon: targetLon,
+          longitude: targetLon
+        });
+      }
+
+      // যদি কোনো বাস সিলেক্ট করা থাকে, তবে তার স্টপ তালিকাতেও যুক্ত করা
+      if (trackingBus) {
+        if (!trackingBus.selectedStops) trackingBus.selectedStops = [];
+        if (!trackingBus.selectedStops.includes(cStop)) {
+          trackingBus.selectedStops.push(cStop);
+        }
+        currentBusStopsList.push({
+          name: stopName,
+          stopName: stopName,
+          lat: targetLat,
+          latitude: targetLat,
+          lon: targetLon,
+          longitude: targetLon
+        });
+      }
+
+      // ম্যাপে তাৎক্ষণিক সুন্দর মার্কার দিয়ে দেখানো
+      try {
+        let newMarker = L.circleMarker([targetLat, targetLon], {
+          radius: 8,
+          fillColor: "#059669",
+          color: "#ffffff",
+          weight: 2,
+          opacity: 1,
+          fillOpacity: 0.95
+        }).addTo(map);
+        newMarker.bindPopup(`<b>📍 ${stopName}</b><br><span style="font-size:11.5px;color:#059669;font-weight:bold;">মাস্টার স্টপেজ যুক্ত হয়েছে</span>`).openPopup();
+      } catch (_) {}
+
+      // ম্যাপ ক্লিক মোড অন থাকলে স্বয়ংক্রিয়ভাবে বন্ধ করা (যাতে লাল বাটনটি স্বাভাবিক নীল রঙে ফেরত আসে)
+      if (isMapAddMode) {
+        toggleMapAddMode();
+      }
+
+      closeModals();
+      loadDatalistSuggestions();
+      if (trackingBus) updateDistanceAndTracking();
+
+      showAppAlert(`✅ নতুন স্টপ "${stopName}" Master_Stops শিট ও ম্যাপে সফলভাবে সংরক্ষিত হয়েছে!`, "স্টপ যুক্ত হয়েছে");
     }
   }
 

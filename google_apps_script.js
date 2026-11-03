@@ -7,20 +7,23 @@
  * 1) "Buses" শীটের কলম (মোট ১২টি):
  *    State | District | Bus_Number | Bus_Name | Category | Days | Source | Dep_Time | Destination | Arr_Time | Selected_Stops | Status
  *
- *    - নতুন বাস যুক্ত হলে 'Status' কলমে স্বয়ংক্রিয়ভাবে 'active' বসবে।
- *    - কোনো বাসের 'active' লেখাটি মুছে দিলে (খালি রাখলে) সেই বাস সার্চ লিস্ট বা ক্যাটালগে দেখাবে না।
- *
- * 2) "BusStops" শীটের কলম:
+ * 2) "Master_Stops" শীটের কলম (৩টি):
  *    Stop_Name | Latitude | Longitude
- *    (ব্যবহারকারীর ২ নম্বর নির্দেশনা অনুযায়ী বাসে নতুন স্টপ যুক্ত করার সময় এই শীটে কোনো ডাটা ঢুকবে না, কেবল Buses শীটের Selected_Stops আপডেট হবে)
+ *    (ম্যাপে ক্লিক করে বা অ্যাপ থেকে নতুন স্থান/স্টপ যোগ করলে এই শীটে সরাসরি সেভ হবে)
  *
- * 3) "LiveGPS" শীটের কলম:
+ * 3) "BusStops" শীটের কলম:
+ *    Stop_Name | Latitude | Longitude (অথবা বাসের স্টপ ভিত্তিক সময়সূচি)
+ *
+ * 4) "LiveGPS" শীটের কলম (৬টি):
  *    Bus_Number | Latitude | Longitude | Speed | Accuracy | Last_Update
+ *
+ * 5) "BusClosures" শীটের কলম:
+ *    Date | Bus_Number | Bus_Name | Status_Type | Trip_Time | Day_Or_Date | Reason | Updated_At
  * =========================================================================
  */
 
 function doGet(e) {
-  var action = e.parameter.action;
+  var action = (e && e.parameter) ? e.parameter.action : "";
 
   if (action === "getBuses") {
     return handleGetBuses();
@@ -28,17 +31,26 @@ function doGet(e) {
     return handleGetStopsList();
   } else if (action === "getLive") {
     return handleGetLive(e.parameter.busNo);
+  } else if (action === "addMasterStop") {
+    return handleAddMasterStop(e.parameter);
+  } else if (action === "addStop") {
+    return handleAddStop(e.parameter);
   }
 
-  return createJsonResponse({ ok: false, error: "Invalid action" });
+  return createJsonResponse({ ok: false, error: "Invalid GET action" });
 }
 
 function doPost(e) {
-  var data;
-  try {
-    data = JSON.parse(e.postData.contents);
-  } catch (err) {
-    return createJsonResponse({ ok: false, error: "Invalid JSON body" });
+  var data = {};
+  if (e && e.postData && e.postData.contents) {
+    try {
+      data = JSON.parse(e.postData.contents);
+    } catch (err) {
+      // urlencoded fallback
+      data = e.parameter || {};
+    }
+  } else if (e && e.parameter) {
+    data = e.parameter;
   }
 
   var action = data.action;
@@ -47,11 +59,15 @@ function doPost(e) {
     return handleAddBus(data);
   } else if (action === "addStop") {
     return handleAddStop(data);
+  } else if (action === "addMasterStop") {
+    return handleAddMasterStop(data);
   } else if (action === "updateGPS") {
     return handleUpdateGPS(data);
+  } else if (action === "updateBusClosedStatus") {
+    return handleUpdateBusClosedStatus(data);
   }
 
-  return createJsonResponse({ ok: false, error: "Unknown POST action" });
+  return createJsonResponse({ ok: false, error: "Unknown POST action: " + action });
 }
 
 // -------------------------------------------------------------
@@ -75,9 +91,7 @@ function handleGetBuses() {
     // ১২ নম্বর কলম: Status (ইনডেক্স 11)
     var status = String(r[11] || "").trim().toLowerCase();
 
-    // ব্যবহারকারীর ৩ নম্বর নির্দেশনা:
-    // Status কলমে 'active' লেখা থাকলে তবেই বাসের তথ্য দেখানো হবে।
-    // যদি 'active' ডিলিট করে দেওয়া হয় (খালি থাকে বা অন্য কিছু থাকে), তাহলে লিস্টে আসবে না।
+    // Status কলমে 'active' লেখা থাকলে তবেই বাসের তথ্য দেখানো হবে
     if (r[11] !== undefined && status !== "active") {
       continue;
     }
@@ -85,7 +99,9 @@ function handleGetBuses() {
     var selectedStopsRaw = r[10] || "";
     var selectedStops = [];
     if (typeof selectedStopsRaw === "string") {
-      selectedStops = selectedStopsRaw.split(",").map(function(s) { return s.trim().toUpperCase(); }).filter(function(s) { return s.length > 0; });
+      selectedStops = selectedStopsRaw.split(",").map(function(s) { 
+        return s.replace(/[\u200B-\u200D\uFEFF]/g, "").trim().toUpperCase(); 
+      }).filter(function(s) { return s.length > 0; });
     } else if (Array.isArray(selectedStopsRaw)) {
       selectedStops = selectedStopsRaw;
     }
@@ -133,7 +149,66 @@ function handleGetStopsList() {
 }
 
 // -------------------------------------------------------------
-// ৩. বাসের লাইভ জিপিএস লোকেশন আনা
+// ৩. মাস্টার স্টপ সরাসরি "Master_Stops" শিটে যুক্ত বা আপডেট করা
+// -------------------------------------------------------------
+function handleAddMasterStop(data) {
+  var stopName = String(data.stopName || data.name || "").replace(/[\u200B-\u200D\uFEFF]/g, "").trim().toUpperCase();
+  var lat = Number(data.lat || data.latitude);
+  var lon = Number(data.lon || data.longitude);
+
+  if (!stopName || isNaN(lat) || isNaN(lon) || lat === 0 || lon === 0) {
+    return createJsonResponse({ ok: false, error: "Valid stopName, lat, and lon are required" });
+  }
+
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  // Master_Stops শিট অগ্রাধিকার পাবে
+  var sheet = ss.getSheetByName("Master_Stops");
+  if (!sheet) {
+    sheet = ss.getSheetByName("BusStops");
+  }
+  if (!sheet) {
+    sheet = ss.insertSheet("Master_Stops");
+    sheet.appendRow(["Stop_Name", "Latitude", "Longitude"]);
+  }
+
+  var rows = sheet.getDataRange().getValues();
+  var existingRowIndex = -1;
+
+  for (var i = 1; i < rows.length; i++) {
+    var sName = String(rows[i][0] || "").replace(/[\u200B-\u200D\uFEFF]/g, "").trim().toUpperCase();
+    if (sName === stopName) {
+      existingRowIndex = i + 1; // 1-based index
+      break;
+    }
+  }
+
+  if (existingRowIndex !== -1) {
+    // স্টপটি আগে থেকে থাকলে অক্ষাংশ-দ্রাঘিমাংশ আপডেট করা
+    sheet.getRange(existingRowIndex, 2, 1, 2).setValues([[lat, lon]]);
+    return createJsonResponse({
+      ok: true,
+      updated: true,
+      message: "Stop coordinates updated in Master_Stops",
+      stopName: stopName,
+      lat: lat,
+      lon: lon
+    });
+  } else {
+    // নতুন স্টপ Master_Stops-এর নতুন সারিতে যোগ করা
+    sheet.appendRow([stopName, lat, lon]);
+    return createJsonResponse({
+      ok: true,
+      added: true,
+      message: "New stop added to Master_Stops successfully",
+      stopName: stopName,
+      lat: lat,
+      lon: lon
+    });
+  }
+}
+
+// -------------------------------------------------------------
+// ৪. বাসের লাইভ জিপিএস লোকেশন আনা
 // -------------------------------------------------------------
 function handleGetLive(busNo) {
   if (!busNo) return createJsonResponse({ ok: false, error: "busNo required" });
@@ -216,7 +291,7 @@ function handleGetLive(busNo) {
 }
 
 // -------------------------------------------------------------
-// ৪. নতুন বাসের তথ্য সংরক্ষণ (Status স্বয়ংক্রিয়ভাবে 'active' যুক্ত হবে)
+// ৫. নতুন বাসের তথ্য সংরক্ষণ (Status স্বয়ংক্রিয়ভাবে 'active' যুক্ত হবে)
 // -------------------------------------------------------------
 function handleAddBus(data) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -237,7 +312,6 @@ function handleAddBus(data) {
     selectedStopsStr = String(data.selectedStops);
   }
 
-  // ৩ নম্বর নির্দেশনা: নতুন বাসের ক্ষেত্রে Status কলমে "active" লেখা বসবে
   var statusValue = data.status || "active";
 
   sheet.appendRow([
@@ -259,14 +333,19 @@ function handleAddBus(data) {
 }
 
 // -------------------------------------------------------------
-// ৫. স্টপ যুক্ত করা (ব্যবহারকারীর ২ নম্বর নির্দেশনা: BusStops শীটে যুক্ত হবে না, কেবল Buses শীটের Selected_Stops এ যুক্ত হবে)
+// ৬. স্টপ যুক্ত করা (Buses শিটের Selected_Stops এবং Master_Stops উভয় স্থানে)
 // -------------------------------------------------------------
 function handleAddStop(data) {
   var busNo = String(data.busNumber || "").trim().toUpperCase();
   var stopName = String(data.stopName || "").trim().toUpperCase();
 
-  if (!busNo || !stopName) {
-    return createJsonResponse({ ok: false, error: "busNumber and stopName are required" });
+  if (!stopName) {
+    return createJsonResponse({ ok: false, error: "stopName is required" });
+  }
+
+  // যদি বাস নম্বর না থাকে, এটি সরাসরি Master_Stops এ যুক্ত হবে
+  if (!busNo) {
+    return handleAddMasterStop(data);
   }
 
   var ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -285,7 +364,6 @@ function handleAddStop(data) {
       if (stopsArray.indexOf(stopName) === -1) {
         stopsArray.push(stopName);
         var updatedStopsStr = stopsArray.join(",");
-        // 11th column is Selected_Stops (row index i+1, column index 11)
         sheet.getRange(i + 1, 11).setValue(updatedStopsStr);
         updated = true;
       }
@@ -293,13 +371,16 @@ function handleAddStop(data) {
     }
   }
 
-  // ২ নম্বর নির্দেশনা অনুযায়ী "BusStops" শীটে নতুন নাম যুক্ত করার অংশ সম্পূর্ণ বাদ দেওয়া হয়েছে।
+  // কো-অর্ডিনেট থাকলে Master_Stops-এও সংরক্ষণ করুন যাতে অন্যান্য বাসও এই স্টপ পায়
+  if (data.lat && data.lon) {
+    handleAddMasterStop(data);
+  }
 
-  return createJsonResponse({ ok: true, updated: updated, message: "Stop added to Selected_Stops in Buses sheet only" });
+  return createJsonResponse({ ok: true, updated: updated, message: "Stop added to Selected_Stops and Master_Stops" });
 }
 
 // -------------------------------------------------------------
-// ৬. জিপিএস লোকেশন আপডেট করা (LiveGPS শীট)
+// ৭. জিপিএস লোকেশন আপডেট করা (LiveGPS শিট)
 // -------------------------------------------------------------
 function handleUpdateGPS(data) {
   var busNo = String(data.busNumber || "").trim().toUpperCase();
@@ -334,6 +415,32 @@ function handleUpdateGPS(data) {
   }
 
   return createJsonResponse({ ok: true, message: "GPS updated" });
+}
+
+// -------------------------------------------------------------
+// ৮. বাস বন্ধ বা বাতিল স্ট্যাটাস আপডেট (BusClosures শিট)
+// -------------------------------------------------------------
+function handleUpdateBusClosedStatus(data) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName("BusClosures");
+  if (!sheet) {
+    sheet = ss.insertSheet("BusClosures");
+    sheet.appendRow(["Date", "Bus_Number", "Bus_Name", "Status_Type", "Trip_Time", "Day_Or_Date", "Reason", "Updated_At"]);
+  }
+
+  var updatedAt = Utilities.formatDate(new Date(), "Asia/Kolkata", "dd/MM/yyyy, hh:mm:ss a");
+  sheet.appendRow([
+    data.date || "",
+    data.busNumber || "",
+    data.busName || "",
+    data.statusType || "",
+    data.tripTime || "",
+    data.dayOrDate || "",
+    data.reason || "",
+    updatedAt
+  ]);
+
+  return createJsonResponse({ ok: true, message: "Bus closure status recorded" });
 }
 
 // -------------------------------------------------------------
