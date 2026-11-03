@@ -262,7 +262,9 @@ class MainActivity : ComponentActivity() {
     val existing = webView
     if (existing != null) return existing
 
-    val wv = WebView(context.applicationContext)
+    val wv = WebView(this)
+    wv.isFocusable = true
+    wv.isFocusableInTouchMode = true
     wv.setBackgroundColor(android.graphics.Color.WHITE)
     wv.layoutParams = ViewGroup.LayoutParams(
       ViewGroup.LayoutParams.MATCH_PARENT,

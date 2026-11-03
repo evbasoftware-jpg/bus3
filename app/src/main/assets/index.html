@@ -59,13 +59,15 @@
     .goog-te-gadget { font-size: 0 !important; line-height: 0 !important; }
     .goog-te-gadget span, .goog-te-gadget a, .goog-logo-link { display: none !important; }
 
-    #appLanguageSelect {
+    #appLanguageSelect { display: none !important; }
+
+    .lang-picker-btn {
       height: 38px !important; 
       width: auto !important;
-      min-width: 180px !important;
-      max-width: 230px !important; 
+      min-width: 175px !important;
+      max-width: 235px !important; 
       margin: 0 !important; 
-      padding: 6px 10px !important; 
+      padding: 6px 12px !important; 
       font-size: 13.5px !important; 
       font-weight: 700 !important;
       color: #0f172a !important; 
@@ -74,13 +76,42 @@
       border-radius: 8px !important; 
       outline: none !important; 
       cursor: pointer !important;
+      display: inline-flex !important;
+      align-items: center !important;
+      justify-content: space-between !important;
+      gap: 6px !important;
       box-shadow: 0 1px 3px rgba(0,0,0,0.08) !important;
-      -webkit-appearance: menulist !important;
-      appearance: menulist !important;
       touch-action: manipulation !important;
-      display: inline-block !important;
-      visibility: visible !important;
-      opacity: 1 !important;
+    }
+    .lang-picker-btn:active {
+      background: #f0f9ff !important;
+      border-color: #0284c7 !important;
+    }
+    .lang-arrow {
+      font-size: 11px !important;
+      color: #0288d1 !important;
+    }
+    .lang-item-btn {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px;
+      border: 1.5px solid #e2e8f0;
+      border-radius: 8px;
+      background: #ffffff;
+      font-size: 14.5px;
+      font-weight: 600;
+      color: #1e293b;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      width: 100%;
+      text-align: left;
+    }
+    .lang-item-btn:active, .lang-item-btn.active {
+      background: #f0f9ff;
+      border-color: #0288d1;
+      color: #0288d1;
+      font-weight: 700;
     }
 
     iframe.goog-te-banner-frame { display: none !important; visibility: hidden !important; }
@@ -726,7 +757,7 @@
       .grid { grid-template-columns: 1fr; }
       .stop-checkbox-container { grid-column: span 1; }
       .translate-top-bar{ flex-direction: row; }
-      #appLanguageSelect { width: 175px !important; min-width: 150px !important; }
+      #appLanguageSelect, .lang-picker-btn { width: 175px !important; min-width: 150px !important; }
       .bus-row-1 { flex-direction: column; align-items: flex-start; gap: 4px; }
     }
   
@@ -1225,9 +1256,13 @@
 </div>
 
 <!-- সবার উপরে গুগলের সবগুলো ভাষা সহ ল্যাঙ্গুয়েজ সিলেকশন অপশন -->
-<div class="translate-top-bar" id="translateBar">
-  <span>🌐 ভাষা (Language):</span>
-  <select id="appLanguageSelect" onchange="onAppLanguageChange(this.value)">
+<div class="translate-top-bar" id="translateBar" onclick="openLanguageModal()">
+  <span>🌐 ভাষা (LANGUAGE):</span>
+  <button type="button" class="lang-picker-btn" id="langPickerBtn" onclick="openLanguageModal(); event.stopPropagation();">
+    <span id="currentLangLabel">বাংলা (BENGALI)</span>
+    <span class="lang-arrow">▼</span>
+  </button>
+  <select id="appLanguageSelect" style="display:none;" onchange="onAppLanguageChange(this.value)">
     <option value="bn">বাংলা (Bengali)</option>
     <option value="en">English</option>
     <option value="hi">हिन्दी (Hindi)</option>
@@ -1259,12 +1294,31 @@
     <option value="nl">Nederlands (Dutch)</option>
     <option value="pl">Polski (Polish)</option>
     <option value="fa">فارسی (Persian)</option>
-    <option value="ne">नेपाली (Nepali)</option>
+    <option value="ne">নেपाली (Nepali)</option>
     <option value="si">සිංහල (Sinhala)</option>
     <option value="my">မြန်မာ (Burmese)</option>
     <option value="sw">Kiswahili (Swahili)</option>
   </select>
   <div id="google_translate_element"></div>
+</div>
+
+<!-- ভাষা নির্বাচনের কাস্টম মডাল (Language Selection Modal) -->
+<div id="languageModal" class="modal-overlay hidden" onclick="if(event.target===this) closeLanguageModal()">
+  <div class="modal-card" style="max-width: 420px; width: 92%; max-height: 85vh; display: flex; flex-direction: column; padding: 16px; border-radius: 14px; text-align: left;">
+    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1.5px solid #e2e8f0; padding-bottom: 10px; margin-bottom: 12px;">
+      <h4 style="margin: 0; color: #0288d1; font-size: 16.5px; font-weight: 800; display: flex; align-items: center; gap: 6px;">
+        🌐 ভাষা নির্বাচন করুন (Select Language)
+      </h4>
+      <button type="button" onclick="closeLanguageModal()" style="background: none; border: none; font-size: 24px; color: #64748b; cursor: pointer; padding: 0 4px; line-height: 1;">&times;</button>
+    </div>
+    
+    <div style="margin-bottom: 10px; position: relative;">
+      <input type="text" id="langSearchInput" placeholder="🔍 ভাষা খুঁজুন (Search Language)..." oninput="filterLanguageList(this.value)" style="margin: 0; padding: 9px 12px; font-size: 14px; border: 1.5px solid #cbd5e1; border-radius: 8px;">
+    </div>
+    
+    <div id="languageOptionsList" style="overflow-y: auto; flex: 1; max-height: 55vh; display: flex; flex-direction: column; gap: 6px; padding-right: 2px;">
+    </div>
+  </div>
 </div>
     
 <div class="head">
@@ -2065,6 +2119,115 @@
     }
   }
 
+  const APP_LANGUAGES = [
+    { code: "bn", name: "বাংলা", eng: "Bengali" },
+    { code: "en", name: "English", eng: "English" },
+    { code: "hi", name: "हिन्दी", eng: "Hindi" },
+    { code: "ta", name: "தமிழ்", eng: "Tamil" },
+    { code: "te", name: "తెలుగు", eng: "Telugu" },
+    { code: "mr", name: "मराठी", eng: "Marathi" },
+    { code: "gu", name: "ગુજરાતી", eng: "Gujarati" },
+    { code: "kn", name: "ಕನ್ನಡ", eng: "Kannada" },
+    { code: "ml", name: "മലയാളം", eng: "Malayalam" },
+    { code: "pa", name: "ਪੰਜਾਬੀ", eng: "Punjabi" },
+    { code: "ur", name: "اردو", eng: "Urdu" },
+    { code: "or", name: "ଓଡ଼ିଆ", eng: "Odia" },
+    { code: "as", name: "অসমীয়া", eng: "Assamese" },
+    { code: "ar", name: "العربية", eng: "Arabic" },
+    { code: "es", name: "Español", eng: "Spanish" },
+    { code: "fr", name: "Français", eng: "French" },
+    { code: "de", name: "Deutsch", eng: "German" },
+    { code: "ru", name: "Русский", eng: "Russian" },
+    { code: "zh-CN", name: "中文", eng: "Chinese" },
+    { code: "ja", name: "日本語", eng: "Japanese" },
+    { code: "ko", name: "한국어", eng: "Korean" },
+    { code: "pt", name: "Português", eng: "Portuguese" },
+    { code: "id", name: "Bahasa Indonesia", eng: "Indonesian" },
+    { code: "ms", name: "Bahasa Melayu", eng: "Malay" },
+    { code: "th", name: "ไทย", eng: "Thai" },
+    { code: "vi", name: "Tiếng Việt", eng: "Vietnamese" },
+    { code: "tr", name: "Türkçe", eng: "Turkish" },
+    { code: "it", name: "Italiano", eng: "Italian" },
+    { code: "nl", name: "Nederlands", eng: "Dutch" },
+    { code: "pl", name: "Polski", eng: "Polish" },
+    { code: "fa", name: "فارسی", eng: "Persian" },
+    { code: "ne", name: "नेपाली", eng: "Nepali" },
+    { code: "si", name: "සිංহල", eng: "Sinhala" },
+    { code: "my", name: "မြန်မာ", eng: "Burmese" },
+    { code: "sw", name: "Kiswahili", eng: "Swahili" }
+  ];
+
+  function getLanguageLabel(code) {
+    let item = APP_LANGUAGES.find(l => l.code === code);
+    if (!item) return "বাংলা (BENGALI)";
+    return `${item.name} (${item.eng.toUpperCase()})`;
+  }
+
+  function updateCurrentLanguageDisplay(lang) {
+    let lbl = document.getElementById("currentLangLabel");
+    if (lbl) {
+      lbl.innerText = getLanguageLabel(lang);
+    }
+    let sel = document.getElementById("appLanguageSelect");
+    if (sel && sel.value !== lang) {
+      sel.value = lang;
+    }
+  }
+
+  function openLanguageModal() {
+    renderLanguageList("");
+    let modal = document.getElementById("languageModal");
+    if (modal) modal.classList.remove("hidden");
+    let input = document.getElementById("langSearchInput");
+    if (input) {
+      input.value = "";
+      setTimeout(() => input.focus(), 150);
+    }
+  }
+
+  function closeLanguageModal() {
+    let modal = document.getElementById("languageModal");
+    if (modal) modal.classList.add("hidden");
+  }
+
+  function filterLanguageList(q) {
+    renderLanguageList(q);
+  }
+
+  function renderLanguageList(filterText) {
+    let container = document.getElementById("languageOptionsList");
+    if (!container) return;
+    let curLang = getCurrentAppLanguage();
+    let q = (filterText || "").trim().toLowerCase();
+
+    let filtered = APP_LANGUAGES.filter(item => {
+      if (!q) return true;
+      return item.name.toLowerCase().includes(q) ||
+             item.eng.toLowerCase().includes(q) ||
+             item.code.toLowerCase().includes(q);
+    });
+
+    if (filtered.length === 0) {
+      container.innerHTML = `<div style="padding:16px;text-align:center;color:#64748b;font-size:13.5px;">কোনো ভাষা পাওয়া যায়নি ("${filterText}")</div>`;
+      return;
+    }
+
+    container.innerHTML = filtered.map(item => {
+      let isSelected = (item.code === curLang);
+      return `
+        <button type="button" class="lang-item-btn ${isSelected ? 'active' : ''}" onclick="selectLanguageItem('${item.code}')">
+          <span><b>${item.name}</b> <span style="font-size:12.5px;color:#64748b;margin-left:4px;">(${item.eng})</span></span>
+          ${isSelected ? '<span style="color:#0288d1;font-size:16px;font-weight:bold;">✓</span>' : ''}
+        </button>
+      `;
+    }).join("");
+  }
+
+  function selectLanguageItem(code) {
+    onAppLanguageChange(code);
+    closeLanguageModal();
+  }
+
   function getStoredAppLanguage() {
     try {
       var saved = localStorage.getItem('app_language');
@@ -2121,6 +2284,8 @@
       localStorage.setItem('app_language', lang);
     } catch (_) {}
 
+    updateCurrentLanguageDisplay(lang);
+
     // সেট করুন গুগল ট্রান্সলেট কুকি
     if (lang === "bn") {
       document.cookie = "googtrans=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT;";
@@ -2152,10 +2317,7 @@
   // পেজ লোড হলে সংরক্ষিত ভাষা পুনরুদ্ধার করা
   document.addEventListener("DOMContentLoaded", () => {
     let savedLang = getStoredAppLanguage();
-    let select = document.getElementById('appLanguageSelect');
-    if (select && savedLang) {
-      select.value = savedLang;
-    }
+    updateCurrentLanguageDisplay(savedLang || "bn");
     notifyLanguageChanged(savedLang || "bn");
   });
 
@@ -6569,23 +6731,51 @@
       arrMins = depMins + totalDurationMins;
     }
 
-    // BusStops শিটের নির্ধারিত সময়ের জন্য কী (Key) ম্যাপিং
+    // বাসের নির্ধারিত সময়সূচি (Scheduled Times) তৈরি করা
     let cleanBusNum = String(trackingBus.number || "").trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
 
+    // ১. সার্চ কার্ডের From ও To সময় (যেমন Labpur: 04:41 PM এবং Suri: 06:00 PM)
+    let sFromClean = cleanStopName(trackingBus.searchFrom || document.getElementById("searchFrom")?.value?.trim() || "");
+    let sToClean = cleanStopName(trackingBus.searchTo || document.getElementById("searchTo")?.value?.trim() || "");
+    let knownFromMin = trackingBus.searchFromTime ? timeToMinutes(trackingBus.searchFromTime) : (trackingBus.fromTimeStr ? timeToMinutes(trackingBus.fromTimeStr) : null);
+    let knownToMin = trackingBus.searchToTime ? timeToMinutes(trackingBus.searchToTime) : (trackingBus.toTimeStr ? timeToMinutes(trackingBus.toTimeStr) : null);
+
+    let fromStopIdx = -1;
+    let toStopIdx = -1;
+    stops.forEach((s, i) => {
+      let cName = cleanStopName(typeof s === 'string' ? s : (s.name || s.stopName));
+      if (sFromClean && (cName === sFromClean || isStopEqual(cName, sFromClean)) && fromStopIdx === -1) fromStopIdx = i;
+      if (sToClean && (cName === sToClean || isStopEqual(cName, sToClean))) toStopIdx = i;
+    });
+
     let scheduledMinutesList = [];
-    let prevMin = depMins - 2;
+    let prevMin = (fromStopIdx === 0 && knownFromMin !== null) ? (knownFromMin - 2) : (depMins - 2);
+
     stops.forEach((s, idx) => {
       let sName = typeof s === 'string' ? s : (s.name || s.stopName);
       let cleanName = cleanStopName(sName);
 
-      // ১. যদি BusStops শিটে এই বাসের নির্দিষ্ট স্টপের নির্ধারিত সময় থাকে:
+      // ১) BusStops শিটের সুনির্দিষ্ট নির্ধারিত সময় থাকলে তা নেওয়া হবে
       let schedKey = `${cleanBusNum}_${cleanName}`;
       let exactTime = (typeof busStopsScheduleMap !== "undefined" && busStopsScheduleMap[schedKey]) ? busStopsScheduleMap[schedKey] : null;
 
-      let estMin = depMins;
+      let estMin = null;
       if (exactTime) {
-        estMin = timeToMinutes(exactTime) || depMins;
+        estMin = timeToMinutes(exactTime);
+      } else if (idx === fromStopIdx && knownFromMin !== null) {
+        // বাসের লিস্ট কার্ডের From সময় (যেমন Labpur: 04:41 PM) এর সাথে ১০০% নিখুঁত মিল থাকবে
+        estMin = knownFromMin;
+      } else if (idx === toStopIdx && knownToMin !== null) {
+        // বাসের লিস্ট কার্ডের To সময় (যেমন Suri: 06:00 PM) এর সাথে ১০০% নিখুঁত মিল থাকবে
+        estMin = knownToMin;
+      } else if (fromStopIdx !== -1 && toStopIdx !== -1 && idx > fromStopIdx && idx < toStopIdx && knownFromMin !== null && knownToMin !== null) {
+        // From ও To এর মধ্যবর্তী স্টপগুলোর সময় From এবং To এর মধ্যবর্তী অনুপাত অনুযায়ী হিসেব
+        let subFraction = (idx - fromStopIdx) / (toStopIdx - fromStopIdx);
+        let subDuration = knownToMin - knownFromMin;
+        if (subDuration < 0) subDuration += 1440;
+        estMin = knownFromMin + Math.round(subFraction * subDuration);
       } else {
+        // সাধারণ দূরত্বের অগ্রগতি অনুযায়ী
         let routeIdx = findStopIndexInList(cleanName, allRouteStops);
         if (routeIdx !== -1 && totalFullDist > 0) {
           let progress = cumDistAll[routeIdx] / totalFullDist;
@@ -6593,13 +6783,16 @@
         } else {
           estMin = depMins + Math.round((idx / Math.max(stops.length - 1, 1)) * totalDurationMins);
         }
+      }
 
-        // ক্রমিক সময় সর্বদা বৃদ্ধি পাবে (অন্তত ২ মিনিটের ব্যবধানে)
-        if (estMin <= prevMin) {
-          estMin = prevMin + 2;
-        }
+      if (estMin === null) estMin = prevMin + 2;
+
+      // ক্রমিক সময় সর্বদা বৃদ্ধি পাবে (কমপক্ষে ১-২ মিনিটের ব্যবধানে)
+      if (estMin <= prevMin) {
+        estMin = prevMin + 2;
       }
       prevMin = estMin;
+
       scheduledMinutesList.push({
         estMin: estMin,
         exactTime: exactTime,
