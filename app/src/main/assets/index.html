@@ -3094,6 +3094,14 @@
 
     if (isStaffModeActive) {
       busPos = { lat: userPos.lat, lon: userPos.lon, speed: userPos.speed };
+      let locBox = document.getElementById("currentLocationBox");
+      if (locBox) {
+        locBox.style.color = "#047857";
+        locBox.style.background = "#ecfdf5";
+        locBox.style.border = "1.5px solid #10b981";
+        let spd = Math.round(userPos.speed || 0);
+        locBox.innerText = `🟢 বাস চালক লাইভ সক্রিয়: অবস্থান LAT ${userPos.lat.toFixed(4)}, LON ${userPos.lon.toFixed(4)} (গতি: ${spd} KM/H)`;
+      }
       if (busMarker) {
         busMarker.setLatLng([busPos.lat, busPos.lon]);
       } else {
@@ -4714,9 +4722,42 @@
         }
       }
 
+      // যদি এই ফোনটি নিজেই চালক বা কন্ডাক্টরের ফোন হয়, তবে কোনো অবস্থাতেই "ড্রাইভার এখনও যুক্ত হননি" দেখাবেন না
+      if (isStaffModeActive) {
+        if (userPos) {
+          busPos = { lat: userPos.lat, lon: userPos.lon, speed: userPos.speed };
+          if (locBox) {
+            locBox.style.color = "#047857";
+            locBox.style.background = "#ecfdf5";
+            locBox.style.border = "1.5px solid #10b981";
+            let spd = Math.round(userPos.speed || 0);
+            locBox.innerText = `🟢 বাস চালক লাইভ সক্রিয়: অবস্থান LAT ${userPos.lat.toFixed(4)}, LON ${userPos.lon.toFixed(4)} (গতি: ${spd} KM/H)`;
+          }
+          if (!busMarker) {
+            busMarker = L.marker([busPos.lat, busPos.lon], { icon: busIcon }).addTo(map);
+          } else {
+            busMarker.setLatLng([busPos.lat, busPos.lon]);
+          }
+        } else {
+          if (locBox) {
+            locBox.style.color = "#047857";
+            locBox.style.background = "#ecfdf5";
+            locBox.style.border = "1.5px solid #10b981";
+            locBox.innerText = `🟢 বাস চালক মোড সক্রিয়: এই ফোন থেকে জিপিএস সংযোগ হচ্ছে...`;
+          }
+        }
+        updateDistanceAndTracking();
+        return;
+      }
+
       if (!data.ok || !data.live) {
         if (!isStaffModeActive && !isPassengerOnboardBus) {
-          locBox.innerText = `বাসের লাইভ জিপিএস সিগন্যালে ড্রাইভার এখনও যুক্ত হননি (${busNo})`;
+          if (locBox) {
+            locBox.style.color = "#de12b2";
+            locBox.style.background = "#ffedfb";
+            locBox.style.border = "none";
+            locBox.innerText = `বাসের লাইভ জিপিএস সিগন্যালে ড্রাইভার এখনও যুক্ত হননি (${busNo})`;
+          }
           if (busMarker) {
             map.removeLayer(busMarker);
             busMarker = null;
@@ -4753,12 +4794,19 @@
       let bLon = Number(b.lon);
 
       if (isNaN(bLat) || isNaN(bLon) || bLat === 0) {
-        locBox.innerText = `বাসের লাইভ জিপিএস সিগন্যালে ড্রাইভার এখনও যুক্ত হননি (${busNo})`;
-        if (busMarker) {
-          map.removeLayer(busMarker);
-          busMarker = null;
+        if (!isStaffModeActive && !isPassengerOnboardBus) {
+          if (locBox) {
+            locBox.style.color = "#de12b2";
+            locBox.style.background = "#ffedfb";
+            locBox.style.border = "none";
+            locBox.innerText = `বাসের লাইভ জিপিএস সিগন্যালে ড্রাইভার এখনও যুক্ত হননি (${busNo})`;
+          }
+          if (busMarker) {
+            map.removeLayer(busMarker);
+            busMarker = null;
+          }
+          busPos = null;
         }
-        busPos = null;
         updateDistanceAndTracking();
         return;
       }
@@ -4785,7 +4833,12 @@
       }
 
       if (isStale && !isStaffModeActive && !isPassengerOnboardBus) {
-        locBox.innerText = `বাসের লাইভ জিপিএস সিগন্যালে ড্রাইভার এখনও যুক্ত হননি (${busNo})`;
+        if (locBox) {
+          locBox.style.color = "#de12b2";
+          locBox.style.background = "#ffedfb";
+          locBox.style.border = "none";
+          locBox.innerText = `বাসের লাইভ জিপিএস সিগন্যালে ড্রাইভার এখনও যুক্ত হননি (${busNo})`;
+        }
         if (busMarker) {
           map.removeLayer(busMarker);
           busMarker = null;
@@ -4801,7 +4854,12 @@
         let distToUser = getDistanceMeters(userPos.lat, userPos.lon, bLat, bLon);
         // যদি বাসের অবস্থান যাত্রীর ৩০ মিটারের মধ্যে থাকে এবং বাসের গতি ৪ কিমির কম হয় (যাত্রী বাসের জন্য অপেক্ষা করছেন বা পুরনো ডাটা):
         if (distToUser < 30 && (b.speed || 0) < 4) {
-          locBox.innerText = `বাসের লাইভ জিপিএস সিগন্যালে ড্রাইভার এখনও যুক্ত হননি (${busNo})`;
+          if (locBox) {
+            locBox.style.color = "#de12b2";
+            locBox.style.background = "#ffedfb";
+            locBox.style.border = "none";
+            locBox.innerText = `বাসের লাইভ জিপিএস সিগন্যালে ড্রাইভার এখনও যুক্ত হননি (${busNo})`;
+          }
           if (busMarker) {
             map.removeLayer(busMarker);
             busMarker = null;
@@ -4813,7 +4871,12 @@
       }
 
       busPos = { lat: bLat, lon: bLon, speed: b.speed || 0 };
-      locBox.innerText = `বাসের বর্তমান অবস্থান: LAT ${busPos.lat.toFixed(4)}, LON ${busPos.lon.toFixed(4)} (গতি: ${busPos.speed} KM/H)`;
+      if (locBox && !isStaffModeActive) {
+        locBox.style.color = "#1565c0";
+        locBox.style.background = "#eff6ff";
+        locBox.style.border = "1px solid #bfdbfe";
+        locBox.innerText = `বাসের বর্তমান অবস্থান: LAT ${busPos.lat.toFixed(4)}, LON ${busPos.lon.toFixed(4)} (গতি: ${busPos.speed} KM/H)`;
+      }
 
       if (!busMarker) {
         busMarker = L.marker([busPos.lat, busPos.lon], { icon: busIcon }).addTo(map);
@@ -5090,6 +5153,19 @@
     document.getElementById("btnOpenStaffModal").classList.add("hidden");
     closeStaffModal();
 
+    let locBox = document.getElementById("currentLocationBox");
+    if (locBox) {
+      locBox.style.color = "#047857";
+      locBox.style.background = "#ecfdf5";
+      locBox.style.border = "1.5px solid #10b981";
+      if (userPos) {
+        let spd = Math.round(userPos.speed || 0);
+        locBox.innerText = `🟢 বাস চালক লাইভ সক্রিয়: অবস্থান LAT ${userPos.lat.toFixed(4)}, LON ${userPos.lon.toFixed(4)} (গতি: ${spd} KM/H)`;
+      } else {
+        locBox.innerText = `🟢 বাস চালক মোড সক্রিয়: এই ফোনের লাইভ জিপিএস বাসের অবস্থান হিসেবে সম্প্রচার হচ্ছে`;
+      }
+    }
+
     showAppAlert(`বাস কর্মী মোড সফলভাবে সক্রিয় হয়েছে! এখন ${trackingBus.name} (${trackingBus.number}) বাসের লাইভ লোকেশন এই ফোন থেকে সম্প্রচার করা হবে।`, "কর্মী মোড সক্রিয়");
 
     if (userPos) {
@@ -5111,11 +5187,24 @@
     }
     document.getElementById("staffActiveBanner").classList.add("hidden");
     document.getElementById("btnOpenStaffModal").classList.remove("hidden");
+    let locBox = document.getElementById("currentLocationBox");
+    if (locBox) {
+      locBox.style.color = "#de12b2";
+      locBox.style.background = "#ffedfb";
+      locBox.style.border = "none";
+      locBox.innerText = trackingBus ? `বাসের লাইভ জিপিএস সিগন্যালে ড্রাইভার এখনও যুক্ত হননি (${trackingBus.number})` : `বাসের বর্তমান অবস্থান: কোনো বাস নির্বাচিত হয়নি`;
+    }
     showAppAlert("বাস কর্মী মোড বন্ধ করা হয়েছে। আপনার ফোন আর বাসের লাইভ লোকেশন সম্প্রচার করবে না।", "কর্মী মোড বন্ধ");
   }
 
   window.stopActiveTrackingInWeb = function() {
     trackingBus = null;
+    isStaffModeActive = false;
+    let staffBanner = document.getElementById("staffActiveBanner");
+    if (staffBanner) staffBanner.classList.add("hidden");
+    let btnStaff = document.getElementById("btnOpenStaffModal");
+    if (btnStaff) btnStaff.classList.remove("hidden");
+
     promptDismissedStops.clear();
     activeApproachingStop = null;
     lastAnnouncedArrivalStop = null;
@@ -5152,7 +5241,12 @@
     if (trackControl) trackControl.style.display = "none";
 
     let locBox = document.getElementById("currentLocationBox");
-    if (locBox) locBox.innerText = "বাসের বর্তমান অবস্থান: কোনো বাস নির্বাচিত হয়নি";
+    if (locBox) {
+      locBox.style.color = "#de12b2";
+      locBox.style.background = "#ffedfb";
+      locBox.style.border = "none";
+      locBox.innerText = "বাসের বর্তমান অবস্থান: কোনো বাস নির্বাচিত হয়নি";
+    }
 
     let statusText = document.getElementById("mapStatusText");
     if (statusText) statusText.innerText = "ম্যাপ সক্রিয়: সকল স্টপ ও অবস্থান";
