@@ -2085,7 +2085,7 @@
     <p>বাস স্টপের নাম লিখুন:</p>
     <input type="text" id="manualStopName" placeholder="যেমন: কদমতলী বা পতিরাম">
     <div class="modal-actions">
-      <button class="btn btn-cancel" onclick="closeModals()">Cancel</lbutton>
+      <button class="btn btn-cancel" onclick="closeModals()">Cancel</button>
       <button class="btn" onclick="saveCurrentStopAction()">Save</button>
     </div>
   </div>
@@ -3478,8 +3478,8 @@
 
     // বাস অফলাইন থাকলেও স্টপ তালিকা ও রুট টাইমলাইন কার্ড সক্রিয় থাকবে
     evaluateStoppagesAndEta(distKm, currentEffectiveSpeed, refLat, refLon);
-    if (effectiveBusLat && effectiveBusLon) {
-      checkNearbyMasterStops(effectiveBusLat, effectiveBusLon);
+    if (refLat && refLon) {
+      checkNearbyMasterStops(refLat, refLon);
     }
   }
   
@@ -4042,15 +4042,56 @@
     return globalBusesCatalog;
   }
 
-  // স্টপ ম্যাচিং হেল্পার (হুবহু মিল অথবা পূর্ণাঙ্গ শব্দ/টোকেন মিল)
+  // স্টপ ম্যাচিং হেল্পার (হুবহু মিল, বাংলা-ইংরেজি রূপান্তর, অথবা পূর্ণাঙ্গ শব্দ/টোকেন মিল)
   function isStopEqual(q, s) {
     if (!q || !s) return false;
     let a = cleanStopName(q);
     let b = cleanStopName(s);
+    if (!a || !b) return false;
     if (a === b) return true;
+    if (a.replace(/[\s\-_.,/]+/g, '') === b.replace(/[\s\-_.,/]+/g, '')) return true;
+
+    // টোকেন বা পার্ট মিল (যেমন "SURI BUS STAND" এবং "SURI")
     if (a.startsWith(b + " ") || a.endsWith(" " + b) || a.includes(" " + b + " ")) return true;
     if (b.startsWith(a + " ") || b.endsWith(" " + a) || b.includes(" " + a + " ")) return true;
+
+    // বাংলা বনাম ইংরেজি ক্রস-ম্যাচিং (Bilingual cross-matching)
+    let isABn = /[\u0980-\u09FF]/.test(a);
+    let isBBn = /[\u0980-\u09FF]/.test(b);
+
+    if (isABn !== isBBn) {
+      let en = isABn ? b : a;
+      let bn = isABn ? a : b;
+
+      // ১. ডিকশনারি সরাসরি চেক
+      if (typeof BENGALI_STOP_DICTIONARY !== "undefined" && BENGALI_STOP_DICTIONARY[en]) {
+        let dictVal = cleanStopName(BENGALI_STOP_DICTIONARY[en]);
+        if (dictVal === bn || dictVal.replace(/\s+/g, '') === bn.replace(/\s+/g, '')) return true;
+      }
+      if (typeof BENGALI_STOP_DICTIONARY !== "undefined") {
+        for (let [k, v] of Object.entries(BENGALI_STOP_DICTIONARY)) {
+          let cleanV = cleanStopName(v);
+          if (cleanV === bn && (cleanStopName(k) === en || cleanStopName(k).replace(/\s+/g, '') === en.replace(/\s+/g, ''))) return true;
+        }
+      }
+
+      // ২. ফোনেটিক ট্রান্সলিটারেশন
+      if (typeof transliterateEnglishToBengali === "function") {
+        let bnTrans = cleanStopName(transliterateEnglishToBengali(en));
+        if (bnTrans === bn || bnTrans.replace(/\s+/g, '') === bn.replace(/\s+/g, '')) return true;
+        if (bn.startsWith(bnTrans + " ") || bn.endsWith(" " + bnTrans) || bn.includes(" " + bnTrans + " ")) return true;
+      }
+    } else if (isABn && isBBn) {
+      let n1 = a.replace(/য়/g, 'য').replace(/ড়/g, 'ড').replace(/ঢ়/g, 'ঢ').replace(/\s+/g, '');
+      let n2 = b.replace(/য়/g, 'য').replace(/ড়/g, 'ড').replace(/ঢ়/g, 'ঢ').replace(/\s+/g, '');
+      if (n1 === n2) return true;
+    }
+
     return false;
+  }
+
+  function areStopsEquivalent(q, s) {
+    return isStopEqual(q, s);
   }
 
   // প্রত্যক্ষ রুট স্টপেজ ক্রমানুসারে অনুসন্ধান (Direct Sequential Stop Match)
@@ -4129,7 +4170,7 @@
     return list;
   }
 
-  // বাসের আপ (UP) বনাম ডাউন (DOWN) ট্রিপ সঠিকভাবে বাছাই করা (From ও To অনুযায়ী)
+  // বাসের আপ (UP) বনাম ডাউন (DOWN) ট্রিপ সঠিকভাবে বাছাই করা (From, To এবং বর্তমান সময়সূচি অনুযায়ী)
   function findBestMatchingBusRow(busNumOrName, fromInput, toInput) {
     if (!globalBusesCatalog || globalBusesCatalog.length === 0) return null;
     let q = String(busNumOrName || '').trim().toUpperCase();
@@ -4150,36 +4191,62 @@
     let nFrom = cleanStopName(fromInput);
     let nTo = cleanStopName(toInput);
 
-    if (nFrom && nTo) {
-      for (let cand of candidates) {
-        let stops = getFullStopsListForBus(cand);
+    let now = new Date();
+    let currentMins = now.getHours() * 60 + now.getMinutes();
+
+    function scoreCandidate(cand) {
+      let score = 0;
+      let stops = getFullStopsListForBus(cand);
+
+      // ১. দিক নির্বাচন (Direction Match: UP vs DOWN)
+      if (nFrom && nTo) {
         let fIdx = findStopIndexInList(nFrom, stops);
         let tIdx = findStopIndexInList(nTo, stops);
         if (fIdx !== -1 && tIdx !== -1 && fIdx < tIdx) {
-          return cand; // From -> To অভিমুখে নিখুঁত ম্যাচ
+          score += 1000;
+        } else if (fIdx !== -1 && tIdx !== -1 && fIdx > tIdx) {
+          score -= 1000; // উল্টো দিক (বিপরীত ট্রিপ)
         }
-      }
-    }
-
-    if (nTo) {
-      for (let cand of candidates) {
+      } else if (nTo) {
         let dClean = cleanStopName(cand.dest);
         if (dClean === nTo || isStopEqual(nTo, dClean)) {
-          return cand;
+          score += 500;
         }
-      }
-    }
-
-    if (nFrom) {
-      for (let cand of candidates) {
+      } else if (nFrom) {
         let sClean = cleanStopName(cand.source);
         if (sClean === nFrom || isStopEqual(nFrom, sClean)) {
-          return cand;
+          score += 500;
         }
+      }
+
+      // ২. সময়সূচি ও বর্তমান ভ্রমণের সময় অনুযায়ী স্কোরিং
+      let depMins = timeToMinutes(cand.depTime);
+      let arrMins = timeToMinutes(cand.arrTime);
+      if (depMins !== null) {
+        let effectiveArrMins = (arrMins !== null && arrMins >= depMins) ? arrMins : (depMins + 120);
+        // যদি বাসটি বর্তমানে এই ট্রিপ চলাকালীন সময়ে থাকে
+        if (currentMins >= depMins - 20 && currentMins <= effectiveArrMins + 45) {
+          score += 300;
+        }
+        // ট্রিপ শুরুর সময়ের নৈকট্য
+        let diff = Math.abs(currentMins - depMins);
+        score += Math.max(0, 100 - Math.floor(diff / 5));
+      }
+
+      return score;
+    }
+
+    let bestCand = candidates[0];
+    let bestScore = -999999;
+    for (let cand of candidates) {
+      let sc = scoreCandidate(cand);
+      if (sc > bestScore) {
+        bestScore = sc;
+        bestCand = cand;
       }
     }
 
-    return candidates[0];
+    return bestCand;
   }
 
   function searchBusesInCatalog(query) {
@@ -4282,23 +4349,46 @@
     // স্টপ ও বাসের তালিকা সমান্তরালভাবে (parallel) দ্রুত লোড করুন
     Promise.all([
       (async () => {
+        let stopsFromApi = [];
         try {
           let res = await fetch(`${API_URL}?action=getStopsList`);
           let data = await res.json();
-          if (data && data.stops && data.stops.length >= 10) {
-            masterStopsList = data.stops;
+          if (data && data.stops && data.stops.length > 0) {
+            stopsFromApi = data.stops;
           }
         } catch (e) {
           console.log("Error loading stops from API:", e);
         }
 
-        // যদি API থেকে পর্যাপ্ত স্টপ না আসে (যেমন Apps Script এ এখনও Master_Stops কনফিগার করা না থাকলে)
-        if (!masterStopsList || masterStopsList.length < 10) {
-          let directStops = await fetchMasterStopsDirect();
-          if (directStops && directStops.length > 0) {
-            masterStopsList = directStops;
-          }
+        let directStops = [];
+        try {
+          directStops = await fetchMasterStopsDirect() || [];
+        } catch (e) {
+          console.log("Error loading direct stops:", e);
         }
+
+        // এপিআই ও সরাসরি গুগল শিট ডেটা উভয়কে মার্জ করে সম্পূর্ণ তালিকা তৈরি
+        let combinedMap = new Map();
+        [...stopsFromApi, ...directStops].forEach(s => {
+          let sName = s.name || s.stopName;
+          let sLat = Number(s.latitude || s.lat);
+          let sLon = Number(s.longitude || s.lon);
+          let cKey = cleanStopName(sName);
+          if (cKey && !isNaN(sLat) && !isNaN(sLon) && sLat !== 0) {
+            if (!combinedMap.has(cKey)) {
+              combinedMap.set(cKey, {
+                name: sName,
+                stopName: sName,
+                lat: sLat,
+                latitude: sLat,
+                lon: sLon,
+                longitude: sLon
+              });
+            }
+          }
+        });
+
+        masterStopsList = Array.from(combinedMap.values());
 
         if (masterStopsList && masterStopsList.length > 0) {
           let rawNames = masterStopsList.map(s => typeof s === 'string' ? s : (s.name || s.stopName));
@@ -4996,7 +5086,14 @@
   async function fetchBusLive(busNo) {
     let locBox = document.getElementById("currentLocationBox");
     try {
-      let res = await fetch(`${API_URL}?action=getLive&busNo=${encodeURIComponent(busNo)}`);
+      let extraParams = "";
+      if (trackingBus) {
+        if (trackingBus.originalSource || trackingBus.source) extraParams += `&source=${encodeURIComponent(trackingBus.originalSource || trackingBus.source)}`;
+        if (trackingBus.originalDest || trackingBus.dest) extraParams += `&dest=${encodeURIComponent(trackingBus.originalDest || trackingBus.dest)}`;
+        if (trackingBus.originalDepTime || trackingBus.depTime) extraParams += `&depTime=${encodeURIComponent(trackingBus.originalDepTime || trackingBus.depTime)}`;
+        if (trackingBus.id !== undefined) extraParams += `&rowId=${encodeURIComponent(trackingBus.id)}`;
+      }
+      let res = await fetch(`${API_URL}?action=getLive&busNo=${encodeURIComponent(busNo)}${extraParams}`);
       let data = await res.json();
 
       if (data.stops && data.stops.length > 0) {
@@ -5296,6 +5393,12 @@
         action: "addStop",
         busNumber: trackingBus.number,
         busName: trackingBus.name,
+        source: trackingBus.originalSource || trackingBus.source || "",
+        dest: trackingBus.originalDest || trackingBus.dest || "",
+        depTime: trackingBus.originalDepTime || trackingBus.depTime || "",
+        arrTime: trackingBus.originalArrTime || trackingBus.arrTime || "",
+        rowId: trackingBus.id !== undefined ? trackingBus.id : "",
+        currentTime: timeStr,
         stopName: stopName,
         time: timeStr,
         lat: targetLat,
@@ -5310,7 +5413,7 @@
           body: JSON.stringify(payload)
         }).catch(() => null);
 
-        let getUrl = `${API_URL}?action=addStop&busNumber=${encodeURIComponent(trackingBus.number)}&stopName=${encodeURIComponent(stopName)}&lat=${encodeURIComponent(targetLat)}&lon=${encodeURIComponent(targetLon)}`;
+        let getUrl = `${API_URL}?action=addStop&busNumber=${encodeURIComponent(trackingBus.number)}&source=${encodeURIComponent(trackingBus.originalSource || trackingBus.source || "")}&dest=${encodeURIComponent(trackingBus.originalDest || trackingBus.dest || "")}&depTime=${encodeURIComponent(trackingBus.originalDepTime || trackingBus.depTime || "")}&rowId=${encodeURIComponent(trackingBus.id !== undefined ? trackingBus.id : "")}&currentTime=${encodeURIComponent(timeStr)}&stopName=${encodeURIComponent(stopName)}&lat=${encodeURIComponent(targetLat)}&lon=${encodeURIComponent(targetLon)}`;
         fetch(getUrl).catch(() => null);
       } catch (_) {}
 
@@ -5320,6 +5423,15 @@
       let cStop = cleanStopName(stopName);
       if (!trackingBus.selectedStops.includes(cStop)) {
         trackingBus.selectedStops.push(cStop);
+      }
+
+      // মেমরিতে গ্লোবাল ক্যাটালগের নির্দিষ্ট ট্রিপেও এই স্টপ তাৎক্ষণিক আপডেট করুন
+      if (globalBusesCatalog && globalBusesCatalog.length > 0) {
+        let catBus = globalBusesCatalog.find(b => (b.id !== undefined && trackingBus.id !== undefined && b.id === trackingBus.id) || (b.number === trackingBus.number && b.source === (trackingBus.originalSource || trackingBus.source) && b.dest === (trackingBus.originalDest || trackingBus.dest) && b.depTime === (trackingBus.originalDepTime || trackingBus.depTime)));
+        if (catBus) {
+          if (!catBus.selectedStops) catBus.selectedStops = [];
+          if (!catBus.selectedStops.includes(cStop)) catBus.selectedStops.push(cStop);
+        }
       }
 
       currentBusStopsList.push({
@@ -5712,7 +5824,7 @@
     return Math.sqrt((px - projX) ** 2 + (py - projY) ** 2);
   }
 
-  // বাসের রুটের ভেতরের স্টপ কি না তা নিশ্চিতকরণ (রুটের বাইরের স্টপেজে দাঁড়িয়ে বাস সিলেক্ট করলে পপআপ আসবে না)
+  // বাসের রুটের ভেতরের স্টপ কি না তা নিশ্চিতকরণ (বাংলা ও ইংরেজি নাম নির্বিশেষে এবং সক্রিয় রুটের করিডোর মেলানো)
   function isStopOnBusRoute(stopObj, bus) {
     if (!stopObj || !bus) return false;
     let sLat = Number(stopObj.latitude || stopObj.lat);
@@ -5723,15 +5835,14 @@
 
     function findStopCoord(name) {
       if (!name) return null;
-      let cName = cleanStopName(name);
       if (currentBusStopsList && currentBusStopsList.length > 0) {
-        let f = currentBusStopsList.find(st => cleanStopName(st.name || st.stopName) === cName);
+        let f = currentBusStopsList.find(st => areStopsEquivalent(st.name || st.stopName, name));
         if (f && !isNaN(Number(f.lat || f.latitude))) {
           return { lat: Number(f.lat || f.latitude), lon: Number(f.lon || f.longitude) };
         }
       }
       if (masterStopsList && masterStopsList.length > 0) {
-        let f = masterStopsList.find(st => cleanStopName(st.name || st.stopName) === cName);
+        let f = masterStopsList.find(st => areStopsEquivalent(st.name || st.stopName, name));
         if (f && !isNaN(Number(f.lat || f.latitude))) {
           return { lat: Number(f.lat || f.latitude), lon: Number(f.lon || f.longitude) };
         }
@@ -5756,16 +5867,15 @@
       if (p) routePoints.push(p);
     }
 
-    if (routePoints.length === 0) {
-      return false; // রুটের কোনো কো-অর্ডিনেট না থাকলে অনুমান করে পপআপ দেওয়া যাবে না
+    // যদি রুটের স্টপগুলোর নাম ভিন্ন ভাষায় (বাংলা বা ইংরেজি) থাকার কারণে করিডোর তৈরি না হয়,
+    // অথবা নতুন বাসে এখনও পর্যাপ্ত কো-অর্ডিনেট যুক্ত না থাকে, তবে যেহেতু বাসটি সক্রিয় ট্র্যাকিংয়ে
+    // এবং স্টপের একদম নিকটে রয়েছে, পপআপ অনুমোদন করুন
+    if (routePoints.length < 2) {
+      return true;
     }
 
-    if (routePoints.length === 1) {
-      return getDistanceMeters(sLat, sLon, routePoints[0].lat, routePoints[0].lon) <= 1500;
-    }
-
-    // বাসের প্রতিটি পরপর স্টপের মধ্যবর্তী করিডোর থেকে দূরত্ব হিসাব (সর্বোচ্চ ১৫০০ মিটার)
-    const MAX_CORRIDOR_METERS = 1500;
+    // বাসের প্রতিটি পরপর স্টপের মধ্যবর্তী করিডোর থেকে দূরত্ব হিসাব (সর্বোচ্চ ২৫০০ মিটার)
+    const MAX_CORRIDOR_METERS = 2500;
     for (let i = 0; i < routePoints.length - 1; i++) {
       let dist = distanceToSegmentMeters(
         sLat, sLon,
@@ -5813,14 +5923,16 @@
 
       if (isNaN(sLat) || isNaN(sLon) || sLat === 0) continue;
 
-      if (allowedStops.includes(cleanName) || promptDismissedStops.has(cleanName)) {
+      // স্টপটি ইতিমধ্যেই বাসের সিলেক্টেড স্টপেজে থাকলে বা ব্যবহারকারী এড়িয়ে গেলে বাদ দিন
+      let isAlreadyAdded = allowedStops.some(allowed => areStopsEquivalent(allowed, cleanName));
+      if (isAlreadyAdded || promptDismissedStops.has(cleanName)) {
         continue;
       }
 
       let dist = getDistanceMeters(busLat, busLon, sLat, sLon);
 
-      // ১ নম্বর নির্দেশনা: শুধুমাত্র যদি স্টপটি এই বাসের রুটের করিডোরের ভেতরের কোনো স্টপ হয়, তবেই শনাক্তকরণ পপআপ আসবে
-      if (dist <= 50 && isStopOnBusRoute(s, trackingBus)) {
+      // ৮৫ মিটারের মধ্যে পৌঁছালে এবং বাসের রুটের স্টপ হলে পপআপ প্রম্পট দেখানো হবে
+      if (dist <= 85 && isStopOnBusRoute(s, trackingBus)) {
         foundNearby = { stop: s, name: sName, cleanName: cleanName, lat: sLat, lon: sLon };
         break;
       }
@@ -5834,7 +5946,7 @@
     } else {
       if (activeApproachingStop) {
         let currentDist = getDistanceMeters(busLat, busLon, activeApproachingStop.lat, activeApproachingStop.lon);
-        if (currentDist > 50) {
+        if (currentDist > 95) {
           closeSmartStopPrompt(false);
         }
       }
@@ -5880,6 +5992,12 @@
       action: "addStop",
       busNumber: trackingBus.number,
       busName: trackingBus.name,
+      source: trackingBus.originalSource || trackingBus.source || "",
+      dest: trackingBus.originalDest || trackingBus.dest || "",
+      depTime: trackingBus.originalDepTime || trackingBus.depTime || "",
+      arrTime: trackingBus.originalArrTime || trackingBus.arrTime || "",
+      rowId: trackingBus.id !== undefined ? trackingBus.id : "",
+      currentTime: timeStr,
       stopName: stopObj.name,
       time: timeStr,
       lat: stopObj.lat,
@@ -5892,13 +6010,25 @@
         method: "POST",
         headers: { "Content-Type": "text/plain;charset=utf-8" },
         body: JSON.stringify(payload)
-      });
+      }).catch(() => null);
+
+      let getUrl = `${API_URL}?action=addStop&busNumber=${encodeURIComponent(trackingBus.number)}&source=${encodeURIComponent(trackingBus.originalSource || trackingBus.source || "")}&dest=${encodeURIComponent(trackingBus.originalDest || trackingBus.dest || "")}&depTime=${encodeURIComponent(trackingBus.originalDepTime || trackingBus.depTime || "")}&rowId=${encodeURIComponent(trackingBus.id !== undefined ? trackingBus.id : "")}&currentTime=${encodeURIComponent(timeStr)}&stopName=${encodeURIComponent(stopObj.name)}&lat=${encodeURIComponent(stopObj.lat)}&lon=${encodeURIComponent(stopObj.lon)}`;
+      fetch(getUrl).catch(() => null);
 
       delete stopsCache[trackingBus.number];
 
       if (!trackingBus.selectedStops) trackingBus.selectedStops = [];
       if (!trackingBus.selectedStops.includes(stopObj.cleanName)) {
         trackingBus.selectedStops.push(stopObj.cleanName);
+      }
+
+      // মেমরিতে গ্লোবাল ক্যাটালগের নির্দিষ্ট ট্রিপেও এই স্টপ তাৎক্ষণিক আপডেট করুন
+      if (globalBusesCatalog && globalBusesCatalog.length > 0) {
+        let catBus = globalBusesCatalog.find(b => (b.id !== undefined && trackingBus.id !== undefined && b.id === trackingBus.id) || (b.number === trackingBus.number && b.source === (trackingBus.originalSource || trackingBus.source) && b.dest === (trackingBus.originalDest || trackingBus.dest) && b.depTime === (trackingBus.originalDepTime || trackingBus.depTime)));
+        if (catBus) {
+          if (!catBus.selectedStops) catBus.selectedStops = [];
+          if (!catBus.selectedStops.includes(stopObj.cleanName)) catBus.selectedStops.push(stopObj.cleanName);
+        }
       }
 
       currentBusStopsList.push({

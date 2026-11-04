@@ -30,7 +30,7 @@ function doGet(e) {
   } else if (action === "getStopsList") {
     return handleGetStopsList();
   } else if (action === "getLive") {
-    return handleGetLive(e.parameter.busNo);
+    return handleGetLive(e.parameter.busNo, e.parameter);
   } else if (action === "addMasterStop") {
     return handleAddMasterStop(e.parameter);
   } else if (action === "addStop") {
@@ -210,9 +210,10 @@ function handleAddMasterStop(data) {
 // -------------------------------------------------------------
 // ৪. বাসের লাইভ জিপিএস লোকেশন আনা
 // -------------------------------------------------------------
-function handleGetLive(busNo) {
+function handleGetLive(busNo, params) {
   if (!busNo) return createJsonResponse({ ok: false, error: "busNo required" });
   busNo = String(busNo).trim().toUpperCase();
+  params = params || {};
 
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var gpsSheet = ss.getSheetByName("LiveGPS");
@@ -235,20 +236,50 @@ function handleGetLive(busNo) {
     }
   }
 
-  // বাসের সিলেক্টেড স্টপ তালিকা আনা
+  // বাসের সিলেক্টেড স্টপ তালিকা আনা (নির্দিষ্ট UP / DOWN ট্রিপ অনুযায়ী)
   var selectedStops = [];
   var busesSheet = ss.getSheetByName("Buses");
   if (busesSheet) {
     var bRows = busesSheet.getDataRange().getValues();
+    var cIndices = [];
     for (var j = 1; j < bRows.length; j++) {
       if (String(bRows[j][2] || "").trim().toUpperCase() === busNo) {
-        var rawStops = bRows[j][10] || "";
-        if (typeof rawStops === "string") {
-          selectedStops = rawStops.split(",").map(function(s) { 
-            return s.replace(/[\u200B-\u200D\uFEFF]/g, "").trim().toUpperCase(); 
-          }).filter(Boolean);
+        cIndices.push(j);
+      }
+    }
+
+    if (cIndices.length > 0) {
+      var matchJ = cIndices[0];
+      if (cIndices.length > 1) {
+        var pSrc = String(params.source || "").replace(/[\u200B-\u200D\uFEFF]/g, "").trim().toUpperCase();
+        var pDst = String(params.dest || "").replace(/[\u200B-\u200D\uFEFF]/g, "").trim().toUpperCase();
+        var pDep = String(params.depTime || "").trim();
+        var bestScore = -999999;
+
+        for (var c = 0; c < cIndices.length; c++) {
+          var cj = cIndices[c];
+          var sc = 0;
+          var rSrc = String(bRows[cj][6] || "").replace(/[\u200B-\u200D\uFEFF]/g, "").trim().toUpperCase();
+          var rDst = String(bRows[cj][8] || "").replace(/[\u200B-\u200D\uFEFF]/g, "").trim().toUpperCase();
+          var rDep = String(bRows[cj][7] || "").trim();
+
+          if (pSrc && rSrc === pSrc) sc += 50;
+          if (pDst && rDst === pDst) sc += 50;
+          if (pSrc && pDst && rSrc === pDst && rDst === pSrc) sc -= 100;
+          if (pDep && parseTimeToMinutes(rDep) === parseTimeToMinutes(pDep)) sc += 60;
+
+          if (sc > bestScore) {
+            bestScore = sc;
+            matchJ = cj;
+          }
         }
-        break;
+      }
+
+      var rawStops = bRows[matchJ][10] || "";
+      if (typeof rawStops === "string") {
+        selectedStops = rawStops.split(",").map(function(s) { 
+          return s.replace(/[\u200B-\u200D\uFEFF]/g, "").trim().toUpperCase(); 
+        }).filter(Boolean);
       }
     }
   }
@@ -337,7 +368,7 @@ function handleAddBus(data) {
 // -------------------------------------------------------------
 function handleAddStop(data) {
   var busNo = String(data.busNumber || "").trim().toUpperCase();
-  var stopName = String(data.stopName || "").trim().toUpperCase();
+  var stopName = String(data.stopName || "").replace(/[\u200B-\u200D\uFEFF]/g, "").trim().toUpperCase();
 
   if (!stopName) {
     return createJsonResponse({ ok: false, error: "stopName is required" });
@@ -353,22 +384,111 @@ function handleAddStop(data) {
   if (!sheet) return createJsonResponse({ ok: false, error: "Buses sheet not found" });
 
   var rows = sheet.getDataRange().getValues();
-  var updated = false;
+  var candidateIndices = [];
 
   for (var i = 1; i < rows.length; i++) {
     var currentBusNo = String(rows[i][2] || "").trim().toUpperCase();
     if (currentBusNo === busNo) {
-      var currentStopsRaw = String(rows[i][10] || "").trim();
-      var stopsArray = currentStopsRaw ? currentStopsRaw.split(",").map(function(s) { return s.trim().toUpperCase(); }) : [];
-
-      if (stopsArray.indexOf(stopName) === -1) {
-        stopsArray.push(stopName);
-        var updatedStopsStr = stopsArray.join(",");
-        sheet.getRange(i + 1, 11).setValue(updatedStopsStr);
-        updated = true;
-      }
-      break;
+      candidateIndices.push(i);
     }
+  }
+
+  if (candidateIndices.length === 0) {
+    if (data.lat && data.lon) {
+      handleAddMasterStop(data);
+    }
+    return createJsonResponse({ ok: false, error: "Bus not found in Buses sheet" });
+  }
+
+  var targetIndex = -1;
+
+  // ১. যদি rowId বা id সরাসরি দেওয়া থাকে এবং তা এই বাসেরই সারি হয়
+  if (data.rowId !== undefined && data.rowId !== "" && !isNaN(Number(data.rowId))) {
+    var reqRowId = Number(data.rowId);
+    if (candidateIndices.indexOf(reqRowId) !== -1) {
+      targetIndex = reqRowId;
+    }
+  }
+
+  // ২. একক সারি থাকলে
+  if (targetIndex === -1 && candidateIndices.length === 1) {
+    targetIndex = candidateIndices[0];
+  }
+
+  // ৩. একাধিক সারি থাকলে: UP / DOWN অভিমুখ এবং সময়সূচি অনুযায়ী নির্দিষ্ট রো বাছাই
+  if (targetIndex === -1) {
+    var reqSrc = String(data.source || "").replace(/[\u200B-\u200D\uFEFF]/g, "").trim().toUpperCase();
+    var reqDst = String(data.dest || "").replace(/[\u200B-\u200D\uFEFF]/g, "").trim().toUpperCase();
+    var reqDep = String(data.depTime || "").trim();
+    var reqCurrentTime = String(data.currentTime || "").trim();
+
+    var currentMins = parseTimeToMinutes(reqCurrentTime);
+    if (currentMins === null) {
+      var kolkataTime = Utilities.formatDate(new Date(), "Asia/Kolkata", "hh:mm a");
+      currentMins = parseTimeToMinutes(kolkataTime);
+    }
+
+    var bestScore = -999999;
+    var bestIdx = candidateIndices[0];
+
+    for (var c = 0; c < candidateIndices.length; c++) {
+      var idx = candidateIndices[c];
+      var rSrc = String(rows[idx][6] || "").replace(/[\u200B-\u200D\uFEFF]/g, "").trim().toUpperCase();
+      var rDst = String(rows[idx][8] || "").replace(/[\u200B-\u200D\uFEFF]/g, "").trim().toUpperCase();
+      var rDep = String(rows[idx][7] || "").trim();
+      var rArr = String(rows[idx][9] || "").trim();
+
+      var score = 0;
+
+      // দিক মিল (UP vs DOWN)
+      if (reqSrc && rSrc === reqSrc) score += 50;
+      if (reqDst && rDst === reqDst) score += 50;
+      // যদি উল্টো দিক হয় (বিপরীত ট্রিপ)
+      if (reqSrc && reqDst && rSrc === reqDst && rDst === reqSrc) score -= 100;
+
+      // ছাড়ার নির্দিষ্ট সময় মিল
+      if (reqDep) {
+        var reqDepM = parseTimeToMinutes(reqDep);
+        var rDepM = parseTimeToMinutes(rDep);
+        if (reqDepM !== null && rDepM !== null && reqDepM === rDepM) {
+          score += 60;
+        }
+      }
+
+      // চলমান ট্রিপের সময়সূচি (Current Time) অনুযায়ী স্কোর
+      if (currentMins !== null) {
+        var depM = parseTimeToMinutes(rDep);
+        var arrM = parseTimeToMinutes(rArr);
+        if (depM !== null) {
+          var effectiveArrM = (arrM !== null && arrM >= depM) ? arrM : (depM + 120);
+          if (currentMins >= depM - 20 && currentMins <= effectiveArrM + 45) {
+            score += 40;
+          }
+          var diff = Math.abs(currentMins - depM);
+          score += Math.max(0, 30 - Math.floor(diff / 15));
+        }
+      }
+
+      if (score > bestScore) {
+        bestScore = score;
+        bestIdx = idx;
+      }
+    }
+
+    targetIndex = bestIdx;
+  }
+
+  var updated = false;
+  var currentStopsRaw = String(rows[targetIndex][10] || "").trim();
+  var stopsArray = currentStopsRaw ? currentStopsRaw.split(",").map(function(s) { 
+    return s.replace(/[\u200B-\u200D\uFEFF]/g, "").trim().toUpperCase(); 
+  }).filter(Boolean) : [];
+
+  if (stopsArray.indexOf(stopName) === -1) {
+    stopsArray.push(stopName);
+    var updatedStopsStr = stopsArray.join(",");
+    sheet.getRange(targetIndex + 1, 11).setValue(updatedStopsStr);
+    updated = true;
   }
 
   // কো-অর্ডিনেট থাকলে Master_Stops-এও সংরক্ষণ করুন যাতে অন্যান্য বাসও এই স্টপ পায়
@@ -376,7 +496,29 @@ function handleAddStop(data) {
     handleAddMasterStop(data);
   }
 
-  return createJsonResponse({ ok: true, updated: updated, message: "Stop added to Selected_Stops and Master_Stops" });
+  return createJsonResponse({ 
+    ok: true, 
+    updated: updated, 
+    targetRow: targetIndex + 1,
+    busNumber: busNo,
+    source: rows[targetIndex][6],
+    dest: rows[targetIndex][8],
+    depTime: rows[targetIndex][7],
+    message: "Stop added to specific trip row " + (targetIndex + 1) + " (Selected_Stops) and Master_Stops" 
+  });
+}
+
+function parseTimeToMinutes(tStr) {
+  if (!tStr) return null;
+  tStr = String(tStr).trim();
+  var match = tStr.match(/(\d{1,2}):(\d{2})(?::\d{2})?\s*(AM|PM)?/i);
+  if (!match) return null;
+  var h = parseInt(match[1], 10);
+  var m = parseInt(match[2], 10);
+  var ampm = match[3] ? match[3].toUpperCase() : null;
+  if (ampm === "PM" && h < 12) h += 12;
+  if (ampm === "AM" && h === 12) h = 0;
+  return h * 60 + m;
 }
 
 // -------------------------------------------------------------
