@@ -1307,13 +1307,13 @@
   <div class="modal-card" style="max-width: 420px; width: 92%; max-height: 85vh; display: flex; flex-direction: column; padding: 16px; border-radius: 14px; text-align: left;">
     <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1.5px solid #e2e8f0; padding-bottom: 10px; margin-bottom: 12px;">
       <h4 style="margin: 0; color: #0288d1; font-size: 16.5px; font-weight: 800; display: flex; align-items: center; gap: 6px;">
-        🌐 ভাষা নির্বাচন করুন (Select Language)
+        🌐 ভাষা নির্বাচন করুন (১০০+ ভাষা / 100+ Languages)
       </h4>
       <button type="button" onclick="closeLanguageModal()" style="background: none; border: none; font-size: 24px; color: #64748b; cursor: pointer; padding: 0 4px; line-height: 1;">&times;</button>
     </div>
     
     <div style="margin-bottom: 10px; position: relative;">
-      <input type="text" id="langSearchInput" placeholder="🔍 ভাষা খুঁজুন (Search Language)..." oninput="filterLanguageList(this.value)" style="margin: 0; padding: 9px 12px; font-size: 14px; border: 1.5px solid #cbd5e1; border-radius: 8px;">
+      <input type="text" id="langSearchInput" placeholder="🔍 ভাষা খুঁজুন (যেমন: Hindi, English, বাংলা, Arabic)..." oninput="filterLanguageList(this.value)" style="margin: 0; padding: 9px 12px; font-size: 14px; border: 1.5px solid #cbd5e1; border-radius: 8px;">
     </div>
     
     <div id="languageOptionsList" style="overflow-y: auto; flex: 1; max-height: 55vh; display: flex; flex-direction: column; gap: 6px; padding-right: 2px;">
@@ -2120,41 +2120,140 @@
   }
 
   const APP_LANGUAGES = [
+    // প্রধান ভারতীয় ও আঞ্চলিক ভাষা (Indian & Regional Languages)
     { code: "bn", name: "বাংলা", eng: "Bengali" },
     { code: "en", name: "English", eng: "English" },
     { code: "hi", name: "हिन्दी", eng: "Hindi" },
-    { code: "ta", name: "தமிழ்", eng: "Tamil" },
-    { code: "te", name: "తెలుగు", eng: "Telugu" },
-    { code: "mr", name: "मराठी", eng: "Marathi" },
+    { code: "as", name: "অসমীয়া", eng: "Assamese" },
+    { code: "bho", name: "भोजपुरी", eng: "Bhojpuri" },
     { code: "gu", name: "ગુજરાતી", eng: "Gujarati" },
     { code: "kn", name: "ಕನ್ನಡ", eng: "Kannada" },
+    { code: "mai", name: "मैथिली", eng: "Maithili" },
     { code: "ml", name: "മലയാളം", eng: "Malayalam" },
-    { code: "pa", name: "ਪੰਜਾਬੀ", eng: "Punjabi" },
-    { code: "ur", name: "اردو", eng: "Urdu" },
-    { code: "or", name: "ଓଡ଼ିଆ", eng: "Odia" },
-    { code: "as", name: "অসমীয়া", eng: "Assamese" },
-    { code: "ar", name: "العربية", eng: "Arabic" },
-    { code: "es", name: "Español", eng: "Spanish" },
-    { code: "fr", name: "Français", eng: "French" },
-    { code: "de", name: "Deutsch", eng: "German" },
-    { code: "ru", name: "Русский", eng: "Russian" },
-    { code: "zh-CN", name: "中文", eng: "Chinese" },
-    { code: "ja", name: "日本語", eng: "Japanese" },
-    { code: "ko", name: "한국어", eng: "Korean" },
-    { code: "pt", name: "Português", eng: "Portuguese" },
-    { code: "id", name: "Bahasa Indonesia", eng: "Indonesian" },
-    { code: "ms", name: "Bahasa Melayu", eng: "Malay" },
-    { code: "th", name: "ไทย", eng: "Thai" },
-    { code: "vi", name: "Tiếng Việt", eng: "Vietnamese" },
-    { code: "tr", name: "Türkçe", eng: "Turkish" },
-    { code: "it", name: "Italiano", eng: "Italian" },
-    { code: "nl", name: "Nederlands", eng: "Dutch" },
-    { code: "pl", name: "Polski", eng: "Polish" },
-    { code: "fa", name: "فارسی", eng: "Persian" },
+    { code: "mni-Mtei", name: "মৈতৈলোন্", eng: "Meiteilon (Manipuri)" },
+    { code: "mr", name: "मराठी", eng: "Marathi" },
+    { code: "lus", name: "Mizo ṭawng", eng: "Mizo" },
     { code: "ne", name: "नेपाली", eng: "Nepali" },
-    { code: "si", name: "සිංহල", eng: "Sinhala" },
+    { code: "or", name: "ଓଡ଼ିଆ", eng: "Odia" },
+    { code: "pa", name: "ਪੰਜਾਬੀ", eng: "Punjabi" },
+    { code: "sa", name: "संस्कृतम्", eng: "Sanskrit" },
+    { code: "sd", name: "سنڌي", eng: "Sindhi" },
+    { code: "ta", name: "தமிழ்", eng: "Tamil" },
+    { code: "te", name: "తెలుగు", eng: "Telugu" },
+    { code: "ur", name: "اردو", eng: "Urdu" },
+
+    // আন্তর্জাতিক ও অন্যান্য ভাষা (International & Global Languages)
+    { code: "af", name: "Afrikaans", eng: "Afrikaans" },
+    { code: "sq", name: "Shqip", eng: "Albanian" },
+    { code: "am", name: "አማርኛ", eng: "Amharic" },
+    { code: "ar", name: "العربية", eng: "Arabic" },
+    { code: "hy", name: "Հայերեն", eng: "Armenian" },
+    { code: "ay", name: "Aymar aru", eng: "Aymara" },
+    { code: "az", name: "Azərbaycan", eng: "Azerbaijani" },
+    { code: "bm", name: "Bamanankan", eng: "Bambara" },
+    { code: "eu", name: "Euskara", eng: "Basque" },
+    { code: "be", name: "Беларуская", eng: "Belarusian" },
+    { code: "bs", name: "Bosanski", eng: "Bosnian" },
+    { code: "bg", name: "Български", eng: "Bulgarian" },
+    { code: "ca", name: "Català", eng: "Catalan" },
+    { code: "ceb", name: "Cebuano", eng: "Cebuano" },
+    { code: "zh-CN", name: "简体中文", eng: "Chinese (Simplified)" },
+    { code: "zh-TW", name: "繁體中文", eng: "Chinese (Traditional)" },
+    { code: "co", name: "Corsu", eng: "Corsican" },
+    { code: "hr", name: "Hrvatski", eng: "Croatian" },
+    { code: "cs", name: "Čeština", eng: "Czech" },
+    { code: "da", name: "Dansk", eng: "Danish" },
+    { code: "dv", name: "ދިވެހި", eng: "Dhivehi" },
+    { code: "nl", name: "Nederlands", eng: "Dutch" },
+    { code: "eo", name: "Esperanto", eng: "Esperanto" },
+    { code: "et", name: "Eesti", eng: "Estonian" },
+    { code: "ee", name: "Eʋegbe", eng: "Ewe" },
+    { code: "tl", name: "Filipino (Tagalog)", eng: "Filipino" },
+    { code: "fi", name: "Suomi", eng: "Finnish" },
+    { code: "fr", name: "Français", eng: "French" },
+    { code: "fy", name: "Frysk", eng: "Frisian" },
+    { code: "gl", name: "Galego", eng: "Galician" },
+    { code: "ka", name: "ქართული", eng: "Georgian" },
+    { code: "de", name: "Deutsch", eng: "German" },
+    { code: "el", name: "Ελληνικά", eng: "Greek" },
+    { code: "gn", name: "Avañe'ẽ", eng: "Guarani" },
+    { code: "ht", name: "Kreyòl Ayisyen", eng: "Haitian Creole" },
+    { code: "ha", name: "Hausa", eng: "Hausa" },
+    { code: "haw", name: "ʻŌlelo Hawaiʻi", eng: "Hawaiian" },
+    { code: "iw", name: "עברית", eng: "Hebrew" },
+    { code: "hmn", name: "Hmoob", eng: "Hmong" },
+    { code: "hu", name: "Magyar", eng: "Hungarian" },
+    { code: "is", name: "Íslenska", eng: "Icelandic" },
+    { code: "ig", name: "Igbo", eng: "Igbo" },
+    { code: "ilo", name: "Ilokano", eng: "Ilocano" },
+    { code: "id", name: "Bahasa Indonesia", eng: "Indonesian" },
+    { code: "ga", name: "Gaeilge", eng: "Irish" },
+    { code: "it", name: "Italiano", eng: "Italian" },
+    { code: "ja", name: "日本語", eng: "Japanese" },
+    { code: "jw", name: "Basa Jawa", eng: "Javanese" },
+    { code: "kk", name: "Қазақ тілі", eng: "Kazakh" },
+    { code: "km", name: "ភាសាខ្មែរ", eng: "Khmer" },
+    { code: "rw", name: "Ikinyarwanda", eng: "Kinyarwanda" },
+    { code: "ko", name: "한국어", eng: "Korean" },
+    { code: "kri", name: "Krio", eng: "Krio" },
+    { code: "ku", name: "Kurdî", eng: "Kurdish (Kurmanji)" },
+    { code: "ckb", name: "کوردیی ناوەندی", eng: "Kurdish (Sorani)" },
+    { code: "ky", name: "Кыргызча", eng: "Kyrgyz" },
+    { code: "lo", name: "ພາສາລາວ", eng: "Lao" },
+    { code: "la", name: "Latina", eng: "Latin" },
+    { code: "lv", name: "Latviešu", eng: "Latvian" },
+    { code: "ln", name: "Lingála", eng: "Lingala" },
+    { code: "lt", name: "Lietuvių", eng: "Lithuanian" },
+    { code: "lg", name: "Luganda", eng: "Luganda" },
+    { code: "lb", name: "Lëtzebuergesch", eng: "Luxembourgish" },
+    { code: "mk", name: "Македонски", eng: "Macedonian" },
+    { code: "mg", name: "Malagasy", eng: "Malagasy" },
+    { code: "ms", name: "Bahasa Melayu", eng: "Malay" },
+    { code: "mt", name: "Malti", eng: "Maltese" },
+    { code: "mi", name: "Te Reo Māori", eng: "Maori" },
+    { code: "mn", name: "Монгол", eng: "Mongolian" },
     { code: "my", name: "မြန်မာ", eng: "Burmese" },
-    { code: "sw", name: "Kiswahili", eng: "Swahili" }
+    { code: "ny", name: "Chichewa", eng: "Nyanja (Chichewa)" },
+    { code: "no", name: "Norsk", eng: "Norwegian" },
+    { code: "om", name: "Oromoo", eng: "Oromo" },
+    { code: "ps", name: "پښتو", eng: "Pashto" },
+    { code: "fa", name: "فارسی", eng: "Persian" },
+    { code: "pl", name: "Polski", eng: "Polish" },
+    { code: "pt", name: "Português", eng: "Portuguese" },
+    { code: "qu", name: "Runa Simi", eng: "Quechua" },
+    { code: "ro", name: "Română", eng: "Romanian" },
+    { code: "ru", name: "Русский", eng: "Russian" },
+    { code: "sm", name: "Gagana Samoa", eng: "Samoan" },
+    { code: "gd", name: "Gàidhlig", eng: "Scots Gaelic" },
+    { code: "nso", name: "Sepedi", eng: "Sepedi" },
+    { code: "sr", name: "Српски", eng: "Serbian" },
+    { code: "st", name: "Sesotho", eng: "Sesotho" },
+    { code: "sn", name: "Shona", eng: "Shona" },
+    { code: "si", name: "සිංහල", eng: "Sinhala" },
+    { code: "sk", name: "Slovenčina", eng: "Slovak" },
+    { code: "sl", name: "Slovenščina", eng: "Slovenian" },
+    { code: "so", name: "Soomaali", eng: "Somali" },
+    { code: "es", name: "Español", eng: "Spanish" },
+    { code: "su", name: "Basa Sunda", eng: "Sundanese" },
+    { code: "sw", name: "Kiswahili", eng: "Swahili" },
+    { code: "sv", name: "Svenska", eng: "Swedish" },
+    { code: "tg", name: "Тоҷикӣ", eng: "Tajik" },
+    { code: "tt", name: "Татар теле", eng: "Tatar" },
+    { code: "th", name: "ไทย", eng: "Thai" },
+    { code: "ti", name: "ትግርኛ", eng: "Tigrinya" },
+    { code: "ts", name: "Xitsonga", eng: "Tsonga" },
+    { code: "tr", name: "Türkçe", eng: "Turkish" },
+    { code: "tk", name: "Türkmençe", eng: "Turkmen" },
+    { code: "ak", name: "Twi", eng: "Twi (Akan)" },
+    { code: "uk", name: "Українська", eng: "Ukrainian" },
+    { code: "ug", name: "ئۇيغۇرچە", eng: "Uyghur" },
+    { code: "uz", name: "Oʻzbekcha", eng: "Uzbek" },
+    { code: "vi", name: "Tiếng Việt", eng: "Vietnamese" },
+    { code: "cy", name: "Cymraeg", eng: "Welsh" },
+    { code: "xh", name: "isiXhosa", eng: "Xhosa" },
+    { code: "yi", name: "ייִדיש", eng: "Yiddish" },
+    { code: "yo", name: "Èdè Yorùbá", eng: "Yoruba" },
+    { code: "zu", name: "isiZulu", eng: "Zulu" }
   ];
 
   function getLanguageLabel(code) {
@@ -2169,8 +2268,13 @@
       lbl.innerText = getLanguageLabel(lang);
     }
     let sel = document.getElementById("appLanguageSelect");
-    if (sel && sel.value !== lang) {
-      sel.value = lang;
+    if (sel) {
+      if (sel.options.length < APP_LANGUAGES.length) {
+        sel.innerHTML = APP_LANGUAGES.map(l => `<option value="${l.code}">${l.name} (${l.eng})</option>`).join("");
+      }
+      if (sel.value !== lang) {
+        sel.value = lang;
+      }
     }
   }
 
