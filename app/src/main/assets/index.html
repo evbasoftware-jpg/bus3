@@ -5923,9 +5923,15 @@
 
       if (isNaN(sLat) || isNaN(sLon) || sLat === 0) continue;
 
-      // স্টপটি ইতিমধ্যেই বাসের সিলেক্টেড স্টপেজে থাকলে বা ব্যবহারকারী এড়িয়ে গেলে বাদ দিন
+      // স্টপটি ইতিমধ্যেই বাসের সিলেক্টেড স্টপেজে থাকলে (নাম বা কো-অর্ডিনেট দ্বারা) অথবা ব্যবহারকারী এড়িয়ে গেলে বাদ দিন
       let isAlreadyAdded = allowedStops.some(allowed => areStopsEquivalent(allowed, cleanName));
-      if (isAlreadyAdded || promptDismissedStops.has(cleanName)) {
+      let isAlreadyInBusCoords = currentBusStopsList && currentBusStopsList.length > 0 && currentBusStopsList.some(cb => {
+        let cbLat = Number(cb.lat || cb.latitude);
+        let cbLon = Number(cb.lon || cb.longitude);
+        return !isNaN(cbLat) && !isNaN(cbLon) && cbLat !== 0 && getDistanceMeters(sLat, sLon, cbLat, cbLon) <= 40;
+      });
+
+      if (isAlreadyAdded || isAlreadyInBusCoords || promptDismissedStops.has(cleanName)) {
         continue;
       }
 
