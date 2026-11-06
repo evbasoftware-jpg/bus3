@@ -171,17 +171,32 @@ object VoiceAnnouncementManager {
     }
   }
 
+  private var lastSpokenText: String = ""
+  private var lastSpokenTimestamp: Long = 0L
+
   fun speak(text: String, langCode: String = "bn") {
     if (text.isBlank()) return
     val preparedText = formatTextForTts(text)
     val curLang = if (langCode.isBlank()) "bn" else langCode
+
+    val now = System.currentTimeMillis()
+    // একই টেক্সট ১০ সেকেন্ডের মধ্যে পুনরাবৃত্তি করবেন না (নন-স্টপ লুপ প্রতিরোধ)
+    if (preparedText == lastSpokenText && (now - lastSpokenTimestamp < 10000L)) {
+      return
+    }
+
+    lastSpokenText = preparedText
+    lastSpokenTimestamp = now
+
+    // কিউতে আগের জমে থাকা ঘোষণা পরিষ্কার করুন যাতে ব্যাকলগ নন-স্টপ না বাজে
+    speechQueue.clear()
+    speechQueue.add(Pair(preparedText, curLang))
 
     // Acquire WakeLock so CPU does not sleep during announcement
     try {
       wakeLock?.acquire(10000L) // 10 seconds max safety
     } catch (_: Exception) {}
 
-    speechQueue.add(Pair(preparedText, curLang))
     mainHandler.post {
       processNextSpeech()
     }
@@ -361,6 +376,8 @@ object VoiceAnnouncementManager {
   fun clearQueue() {
     speechQueue.clear()
     isAnnouncing = false
+    lastSpokenText = ""
+    lastSpokenTimestamp = 0L
     try {
       audioPlayer?.stop()
       audioPlayer?.release()

@@ -2532,6 +2532,9 @@
   let voiceAnnouncementEnabled = true;
   let lastAnnouncedArrivalStop = null;
   let lastAnnouncedNextStop = null;
+  let lastAnnouncedScreenCurrent = "";
+  let lastAnnouncedScreenNext = "";
+  let nextAnnouncementTimer = null;
   let arrivalAlertTimeout = null;
 
   // ==========================================
@@ -2781,7 +2784,13 @@
     if (!cleanText) return;
     let curLang = lang || getCurrentAppLanguage() || "bn";
 
-    // কিউতে যোগ করুন যাতে ঘোষণাগুলো একটার পর একটা ধারাবাহিকভাবে বাজে
+    // অ্যান্ড্রয়েড অ্যাপ্লিকেশনে চললে সরাসরি নেটিভ অ্যান্ড্রয়েড ব্রিজের মাধ্যমে মিষ্টি অনলাইন/অফলাইন টিটিএস ব্যবহার করুন
+    if (window.AndroidBridge && window.AndroidBridge.speakAnnouncement) {
+      window.AndroidBridge.speakAnnouncement(cleanText, curLang);
+      return;
+    }
+
+    // ব্রাউজারে চললে কেবল ওয়েব স্পিচ সিন্থেসিস ব্যবহার করুন
     voiceQueue.push({ text: cleanText, lang: curLang });
     processVoiceQueue();
   }
@@ -5095,6 +5104,12 @@
     hasTriggeredWakeAlarm = false;
     lastAnnouncedArrivalStop = null;
     lastAnnouncedNextStop = null;
+    lastAnnouncedScreenCurrent = "";
+    lastAnnouncedScreenNext = "";
+    if (nextAnnouncementTimer) {
+      clearTimeout(nextAnnouncementTimer);
+      nextAnnouncementTimer = null;
+    }
     announcedArrivalStopsSet.clear();
     announcedNextStopsSet.clear();
 
@@ -5740,6 +5755,12 @@
     activeApproachingStop = null;
     lastAnnouncedArrivalStop = null;
     lastAnnouncedNextStop = null;
+    lastAnnouncedScreenCurrent = "";
+    lastAnnouncedScreenNext = "";
+    if (nextAnnouncementTimer) {
+      clearTimeout(nextAnnouncementTimer);
+      nextAnnouncementTimer = null;
+    }
     announcedArrivalStopsSet.clear();
     announcedNextStopsSet.clear();
     
@@ -6632,45 +6653,48 @@
     }
 
     // ==========================================
-    // ২ নম্বর নির্দেশনা সংশোধন: প্রতিটি স্টপেজের ৫০ মিটারের কাছে এলে আগমন ঘোষণা (কোনো পুরানো স্টপ রিপিট হবে না)
+    // স্ক্রিনে প্রদর্শিত বর্তমান ও পরবর্তী স্টপেজের নাম ঘোষণা:
+    // ১) শুধুমাত্র স্ক্রিনে প্রদর্শিত বর্তমান ও পরবর্তী স্টপেজের নাম একবার ঘোষণা হবে
+    // ২) নাম পরিবর্তন হলে তবেই পুনরায় একবার ঘোষণা হবে
+    // ৩) বারবার একসঙ্গে নন-স্টপ কোনো ঘোষণা হবে না
     // ==========================================
     try {
       let cleanCurStop = cleanStopName(baseStopName);
+      let cleanNextStop = cleanStopName(nextStopName);
       let isDestination = (nearest.index >= targetDestIndex) || (targetDestName && cleanCurStop === targetDestName);
 
-      // প্রতিটি স্টপেজের ৫০ মিটার কাছে এলে বলবে "বর্তমান স্টপেজ [স্টপ নাম]"
-      // ২ নম্বর নির্দেশনা: কোনো পুরানো স্টপেজ বারবার রিপিট হবে না, প্রতিটি স্টপ কেবল একবারই ঘোষণা হবে
-      if (isAtStop && minStopDist <= 50 && cleanCurStop && !announcedArrivalStopsSet.has(cleanCurStop)) {
-        announcedArrivalStopsSet.add(cleanCurStop);
-        lastAnnouncedArrivalStop = cleanCurStop;
-        
-        // বর্তমান স্টপ সহ পেছনের সকল স্টপকে ঘোষিত হিসেবে চিহ্নিত করা যাতে ফোন কল শেষে ফিরে এলেও আগের স্টপ না বাজে
-        for (let k = 0; k <= activeStopIndex; k++) {
-          if (validStops[k]) {
-            let pName = cleanStopName(validStops[k].name || validStops[k].stopName);
-            if (pName) announcedArrivalStopsSet.add(pName);
-          }
-        }
-
-        // স্ক্রিনে স্টপে পৌঁছানোর নোটিশ ব্যানার
+      // ১. স্ক্রিনের বর্তমান স্টপেজের নাম একবার ঘোষণা (শুধুমাত্র নাম পরিবর্তিত হলে তবেই নতুন ঘোষণা)
+      if (cleanCurStop && cleanCurStop !== "--" && cleanCurStop !== "সিগন্যাল খোঁজা হচ্ছে..." && cleanCurStop !== lastAnnouncedScreenCurrent) {
+        lastAnnouncedScreenCurrent = cleanCurStop;
         showArrivalAlertBanner(baseStopName, nextStopName, isDestination);
         
-        // নির্বাচিত অ্যাপের ভাষায় স্পষ্ট স্টপ আগমন ঘোষণা (বাংলায় স্পষ্ট উচ্চারণ)
         let curLang = getCurrentAppLanguage();
-        let arrivalSpeech = getArrivalAnnouncement(baseStopName, nextStopName, isDestination, curLang);
-        playVoiceAnnouncement(arrivalSpeech, curLang);
+        let cleanCurSpoken = getSpokenStopName(baseStopName, curLang);
+        let curSpeech = "";
+        if (isDestination) {
+          curSpeech = (curLang === "hi") ? `हम गंतव्य ${cleanCurSpoken} पहुँच चुके हैं। यात्रा के लिए धन्यवाद!` :
+                      (curLang === "en") ? `We have arrived at destination ${cleanCurSpoken}. Thank you for traveling with us!` :
+                      `আমরা গন্তব্য ${cleanCurSpoken}-এ পৌঁছে গেছি। আমাদের সাথে ভ্রমণের জন্য ধন্যবাদ!`;
+        } else {
+          curSpeech = (curLang === "hi") ? `वर्तमान स्टॉप ${cleanCurSpoken}।` :
+                      (curLang === "en") ? `Current stop ${cleanCurSpoken}.` :
+                      `বর্তমান স্টপেজ ${cleanCurSpoken}।`;
+        }
+        playVoiceAnnouncement(curSpeech, curLang);
       }
 
-      // পরবর্তী স্টপেজের নাম ঘোষণা (বর্তমান স্টপ ছেড়ে ৭০ মিটার অতিক্রম করলে, কেবল একবার)
-      let cleanNext = cleanStopName(nextStopName);
-      if (cleanNext && cleanNext !== "--" && !isAtStop && distPastMeters > 70 && !announcedNextStopsSet.has(cleanNext)) {
-        announcedNextStopsSet.add(cleanNext);
-        lastAnnouncedNextStop = cleanNext;
-        let curLang = getCurrentAppLanguage();
-        let nextSpeech = getNextStopAnnouncement(nextStopName, curLang);
-        setTimeout(() => {
+      // ২. স্ক্রিনের পরবর্তী স্টপেজের নাম একবার ঘোষণা (শুধুমাত্র পরবর্তী স্টপ পরিবর্তিত হলে তবেই নতুন ঘোষণা)
+      if (cleanNextStop && cleanNextStop !== "--" && cleanNextStop !== "গন্তব্যের কাছাকাছি" && cleanNextStop !== "গন্তব্যে পৌঁছে গেছেন" && cleanNextStop !== lastAnnouncedScreenNext) {
+        lastAnnouncedScreenNext = cleanNextStop;
+        if (nextAnnouncementTimer) clearTimeout(nextAnnouncementTimer);
+        nextAnnouncementTimer = setTimeout(() => {
+          let curLang = getCurrentAppLanguage();
+          let cleanNextSpoken = getSpokenStopName(nextStopName, curLang);
+          let nextSpeech = (curLang === "hi") ? `अगला स्टॉप ${cleanNextSpoken} है।` :
+                           (curLang === "en") ? `Next stop is ${cleanNextSpoken}.` :
+                           `পরবর্তী স্টপেজ ${cleanNextSpoken}।`;
           playVoiceAnnouncement(nextSpeech, curLang);
-        }, 1200);
+        }, 3200);
       }
     } catch (_) {}
 
