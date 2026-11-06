@@ -4094,6 +4094,43 @@
     return isStopEqual(q, s);
   }
 
+  // যথাযথ নির্দিষ্ট স্টপ ম্যাচিং (সাবস্ট্রিং বা শুরু/শেষ অংশ বাদ দিয়ে হুবহু নাম অথবা নির্দিষ্ট অনুবাদ মিল)
+  function isExactStopMatch(q, s) {
+    if (!q || !s) return false;
+    let a = cleanStopName(q);
+    let b = cleanStopName(s);
+    if (!a || !b) return false;
+    if (a === b) return true;
+    if (a.replace(/[\s\-_.,/]+/g, '') === b.replace(/[\s\-_.,/]+/g, '')) return true;
+
+    // বাংলা বনাম ইংরেজি ক্রস-ম্যাচিং (Bilingual exact dictionary cross-matching)
+    let isABn = /[\u0980-\u09FF]/.test(a);
+    let isBBn = /[\u0980-\u09FF]/.test(b);
+    if (isABn !== isBBn) {
+      let en = isABn ? b : a;
+      let bn = isABn ? a : b;
+      if (typeof BENGALI_STOP_DICTIONARY !== "undefined" && BENGALI_STOP_DICTIONARY[en]) {
+        let dictVal = cleanStopName(BENGALI_STOP_DICTIONARY[en]);
+        if (dictVal === bn || dictVal.replace(/\s+/g, '') === bn.replace(/\s+/g, '')) return true;
+      }
+      if (typeof BENGALI_STOP_DICTIONARY !== "undefined") {
+        for (let [k, v] of Object.entries(BENGALI_STOP_DICTIONARY)) {
+          let cleanV = cleanStopName(v);
+          if (cleanV === bn && (cleanStopName(k) === en || cleanStopName(k).replace(/\s+/g, '') === en.replace(/\s+/g, ''))) return true;
+        }
+      }
+      if (typeof transliterateEnglishToBengali === "function") {
+        let bnTrans = cleanStopName(transliterateEnglishToBengali(en));
+        if (bnTrans === bn || bnTrans.replace(/\s+/g, '') === bn.replace(/\s+/g, '')) return true;
+      }
+    } else if (isABn && isBBn) {
+      let n1 = a.replace(/য়/g, 'য').replace(/ড়/g, 'ড').replace(/ঢ়/g, 'ঢ').replace(/\s+/g, '');
+      let n2 = b.replace(/য়/g, 'য').replace(/ড়/g, 'ড').replace(/ঢ়/g, 'ঢ').replace(/\s+/g, '');
+      if (n1 === n2) return true;
+    }
+    return false;
+  }
+
   // প্রত্যক্ষ রুট স্টপেজ ক্রমানুসারে অনুসন্ধান (Direct Sequential Stop Match)
   function findStopIndexInList(query, list) {
     if (!query || !list || list.length === 0) return -1;
@@ -5078,6 +5115,7 @@
       }
     }
 
+    syncRouteStopsToAndroid();
     updateDistanceAndTracking();
     fetchBusLive(busNo);
     trackingInterval = setInterval(() => fetchBusLive(busNo), 5000);
@@ -5098,6 +5136,7 @@
 
       if (data.stops && data.stops.length > 0) {
         currentBusStopsList = data.stops;
+        syncRouteStopsToAndroid();
       }
 
       if (data.selectedStops && data.selectedStops.length > 0) {
@@ -5825,11 +5864,16 @@
   }
 
   // বাসের রুটের ভেতরের স্টপ কি না তা নিশ্চিতকরণ (বাংলা ও ইংরেজি নাম নির্বিশেষে এবং সক্রিয় রুটের করিডোর মেলানো)
-  function isStopOnBusRoute(stopObj, bus) {
+  function isStopOnBusRoute(stopObj, bus, directDist) {
     if (!stopObj || !bus) return false;
     let sLat = Number(stopObj.latitude || stopObj.lat);
     let sLon = Number(stopObj.longitude || stopObj.lon);
     if (isNaN(sLat) || isNaN(sLon) || sLat === 0) return false;
+
+    // বাস যদি ইতিমধ্যে এই স্টপের ১৪০ মিটারের একদম কাছে অবস্থান করে, তবে এটি সরাসরি রুটের স্টপ
+    if (directDist !== undefined && directDist <= 140) {
+      return true;
+    }
 
     let routePoints = [];
 
@@ -5923,12 +5967,12 @@
 
       if (isNaN(sLat) || isNaN(sLon) || sLat === 0) continue;
 
-      // স্টপটি ইতিমধ্যেই বাসের সিলেক্টেড স্টপেজে থাকলে (নাম বা কো-অর্ডিনেট দ্বারা) অথবা ব্যবহারকারী এড়িয়ে গেলে বাদ দিন
-      let isAlreadyAdded = allowedStops.some(allowed => areStopsEquivalent(allowed, cleanName));
+      // স্টপটি ইতিমধ্যেই বাসের সিলেক্টেড স্টপেজে থাকলে (হুবহু নির্দিষ্ট নাম মিল) অথবা কো-অর্ডিনেট দ্বারা বাদ দিন
+      let isAlreadyAdded = allowedStops.some(allowed => isExactStopMatch(allowed, cleanName));
       let isAlreadyInBusCoords = currentBusStopsList && currentBusStopsList.length > 0 && currentBusStopsList.some(cb => {
         let cbLat = Number(cb.lat || cb.latitude);
         let cbLon = Number(cb.lon || cb.longitude);
-        return !isNaN(cbLat) && !isNaN(cbLon) && cbLat !== 0 && getDistanceMeters(sLat, sLon, cbLat, cbLon) <= 40;
+        return !isNaN(cbLat) && !isNaN(cbLon) && cbLat !== 0 && getDistanceMeters(sLat, sLon, cbLat, cbLon) <= 30;
       });
 
       if (isAlreadyAdded || isAlreadyInBusCoords || promptDismissedStops.has(cleanName)) {
@@ -5937,8 +5981,8 @@
 
       let dist = getDistanceMeters(busLat, busLon, sLat, sLon);
 
-      // ৮৫ মিটারের মধ্যে পৌঁছালে এবং বাসের রুটের স্টপ হলে পপআপ প্রম্পট দেখানো হবে
-      if (dist <= 85 && isStopOnBusRoute(s, trackingBus)) {
+      // ১৪০ মিটারের মধ্যে পৌঁছালে এবং বাসের রুটের স্টপ হলে পপআপ প্রম্পট দেখানো হবে
+      if (dist <= 140 && isStopOnBusRoute(s, trackingBus, dist)) {
         foundNearby = { stop: s, name: sName, cleanName: cleanName, lat: sLat, lon: sLon };
         break;
       }
@@ -5952,10 +5996,45 @@
     } else {
       if (activeApproachingStop) {
         let currentDist = getDistanceMeters(busLat, busLon, activeApproachingStop.lat, activeApproachingStop.lon);
-        if (currentDist > 95) {
+        if (currentDist > 160) {
           closeSmartStopPrompt(false);
         }
       }
+    }
+  }
+
+  // বাসের সমস্ত স্টপেজের রুট সিকোয়েন্স অ্যান্ড্রয়েড ব্যাকগ্রাউন্ড সার্ভিসে পাঠানো
+  function syncRouteStopsToAndroid() {
+    if (!window.AndroidBridge || !window.AndroidBridge.setFullRouteStops) return;
+    if (!trackingBus) return;
+    let list = [];
+    if (currentBusStopsList && currentBusStopsList.length > 0) {
+      list = currentBusStopsList.map((st, idx) => ({
+        name: st.name || st.stopName || "",
+        lat: Number(st.lat || st.latitude || 0),
+        lon: Number(st.lon || st.longitude || 0),
+        index: idx
+      })).filter(s => s.name && s.lat !== 0 && s.lon !== 0);
+    }
+    if (list.length === 0 && trackingBus.selectedStops) {
+      let raw = Array.isArray(trackingBus.selectedStops) ? trackingBus.selectedStops : trackingBus.selectedStops.split(",");
+      raw.forEach((sName, idx) => {
+        let cl = cleanStopName(sName);
+        let f = (masterStopsList || []).find(ms => isExactStopMatch(ms.name || ms.stopName, cl));
+        if (f) {
+          list.push({
+            name: sName.trim(),
+            lat: Number(f.latitude || f.lat || 0),
+            lon: Number(f.longitude || f.lon || 0),
+            index: idx
+          });
+        }
+      });
+    }
+    if (list.length > 0) {
+      try {
+        window.AndroidBridge.setFullRouteStops(JSON.stringify(list));
+      } catch(e) {}
     }
   }
 

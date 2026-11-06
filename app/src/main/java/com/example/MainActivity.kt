@@ -62,6 +62,12 @@ import java.util.Locale
 
 class MainActivity : ComponentActivity() {
 
+  companion object {
+    var isActivityResumed = false
+    var latestLocation: Location? = null
+    var latestSpeedKmh: Float = 0f
+  }
+
   private var locationManager: LocationManager? = null
   internal var webView: WebView? = null
   private var webViewContainer: android.widget.FrameLayout? = null
@@ -120,11 +126,15 @@ class MainActivity : ComponentActivity() {
   private val locationListener = object : LocationListener {
     override fun onLocationChanged(location: Location) {
       val speedKmH = if (location.hasSpeed()) (location.speed * 3.6f) else 0f
-      webView?.post {
-        webView?.evaluateJavascript(
-          "if (typeof updateNativeGPS === 'function') { updateNativeGPS(${location.latitude}, ${location.longitude}, ${location.accuracy}, ${speedKmH}); }",
-          null
-        )
+      latestLocation = location
+      latestSpeedKmh = speedKmH
+      if (isActivityResumed) {
+        webView?.post {
+          webView?.evaluateJavascript(
+            "if (typeof updateNativeGPS === 'function') { updateNativeGPS(${location.latitude}, ${location.longitude}, ${location.accuracy}, ${speedKmH}); }",
+            null
+          )
+        }
       }
     }
     override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {}
@@ -141,11 +151,15 @@ class MainActivity : ComponentActivity() {
     getOrCreateWebView(this)
 
     BusTrackingService.onLocationReceived = { location, speedKmH ->
-      webView?.post {
-        webView?.evaluateJavascript(
-          "if (typeof updateNativeGPS === 'function') { updateNativeGPS(${location.latitude}, ${location.longitude}, ${location.accuracy}, ${speedKmH}); }",
-          null
-        )
+      latestLocation = location
+      latestSpeedKmh = speedKmH
+      if (isActivityResumed) {
+        webView?.post {
+          webView?.evaluateJavascript(
+            "if (typeof updateNativeGPS === 'function') { updateNativeGPS(${location.latitude}, ${location.longitude}, ${location.accuracy}, ${speedKmH}); }",
+            null
+          )
+        }
       }
     }
 
@@ -189,19 +203,10 @@ class MainActivity : ComponentActivity() {
                 webViewContainer = this
               }
             },
-            update = { container ->
-              val wv = getOrCreateWebView(container.context)
-              if (wv.parent != container) {
-                (wv.parent as? ViewGroup)?.removeView(wv)
-                container.removeAllViews()
-                container.addView(wv)
-              }
-              wv.onResume()
-              wv.resumeTimers()
-              wv.post {
-                wv.requestLayout()
-                wv.invalidate()
-              }
+            update = { _ ->
+              // Never detach and re-add webView on Compose update, this causes blank/white screen on wake
+              webView?.onResume()
+              webView?.resumeTimers()
             },
             modifier = Modifier.fillMaxSize()
           )
@@ -418,6 +423,7 @@ class MainActivity : ComponentActivity() {
 
   override fun onResume() {
     super.onResume()
+    isActivityResumed = true
     try {
       val wv = getOrCreateWebView(this)
       if (wv.url.isNullOrBlank() || wv.url == "about:blank") {
@@ -428,6 +434,12 @@ class MainActivity : ComponentActivity() {
         wv.post {
           wv.requestLayout()
           wv.invalidate()
+          latestLocation?.let { loc ->
+            wv.evaluateJavascript(
+              "if (typeof updateNativeGPS === 'function') { updateNativeGPS(${loc.latitude}, ${loc.longitude}, ${loc.accuracy}, ${latestSpeedKmh}); }",
+              null
+            )
+          }
           wv.evaluateJavascript("if (typeof onAppResumeState === 'function') { onAppResumeState(); }", null)
         }
       }
@@ -436,6 +448,7 @@ class MainActivity : ComponentActivity() {
   }
 
   override fun onPause() {
+    isActivityResumed = false
     super.onPause()
     // ট্র্যাকিং চলাকালীন বা স্ক্রিন অফ থাকাকালীন কখনোই ঘোষণা কিউ মুছবেন না এবং ব্যাকগ্রাউন্ড প্রসেসিং চালু রাখুন
     if (!BusTrackingService.isRunning) {
@@ -569,6 +582,11 @@ class MainActivity : ComponentActivity() {
 }
 
 class WebAppInterface(private val activity: MainActivity) {
+  @JavascriptInterface
+  fun setFullRouteStops(stopsJson: String) {
+    BusTrackingService.setFullRouteStops(stopsJson)
+  }
+
   @JavascriptInterface
   fun clearSpeechQueue() {
     activity.clearSpeechQueueAndStop()

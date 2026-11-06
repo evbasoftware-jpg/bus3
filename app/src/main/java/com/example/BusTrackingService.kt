@@ -75,6 +75,32 @@ class BusTrackingService : Service() {
 
     // ট্র্যাকিং বন্ধ হলে অ্যাপের ইন্টারফেস ও ওয়েবভিউকে অবহিত করার কলব্যাক
     var onTrackingStopped: (() -> Unit)? = null
+
+    data class RouteStop(
+      val name: String,
+      val lat: Double,
+      val lon: Double,
+      val index: Int
+    )
+
+    var activeRouteStops: List<RouteStop> = emptyList()
+
+    fun setFullRouteStops(stopsJson: String) {
+      try {
+        val jsonArray = org.json.JSONArray(stopsJson)
+        val list = mutableListOf<RouteStop>()
+        for (i in 0 until jsonArray.length()) {
+          val obj = jsonArray.getJSONObject(i)
+          val name = obj.optString("name", obj.optString("stopName", "")).trim()
+          val lat = obj.optDouble("lat", obj.optDouble("latitude", 0.0))
+          val lon = obj.optDouble("lon", obj.optDouble("longitude", 0.0))
+          if (name.isNotBlank() && lat != 0.0 && lon != 0.0) {
+            list.add(RouteStop(name, lat, lon, i))
+          }
+        }
+        activeRouteStops = list
+      } catch (_: Exception) {}
+    }
   }
 
   private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -234,6 +260,137 @@ class BusTrackingService : Service() {
 
   private fun updateDynamicDistancesFromGps(location: Location, speedKmh: Float) {
     val effSpeed = if (speedKmh > 5f) speedKmh else (if (lastSpeedKmh > 5f) lastSpeedKmh else 28f)
+
+    if (activeRouteStops.isNotEmpty()) {
+      var minDistance = Float.MAX_VALUE
+      var closestIndex = 0
+      for (i in activeRouteStops.indices) {
+        val st = activeRouteStops[i]
+        val stLoc = Location("").apply {
+          latitude = st.lat
+          longitude = st.lon
+        }
+        val dist = location.distanceTo(stLoc)
+        if (dist < minDistance) {
+          minDistance = dist
+          closestIndex = i
+        }
+      }
+
+      val closestStop = activeRouteStops[closestIndex]
+      if (minDistance < 80f) {
+        currentStopText = closestStop.name
+        if (lastAnnouncedArriveStop != closestStop.name) {
+          lastAnnouncedArriveStop = closestStop.name
+          val annText = when (currentLangCode.lowercase()) {
+            "en" -> "Approaching ${closestStop.name}"
+            "hi" -> "${closestStop.name} पहुँच रहे हैं"
+            else -> "বাসটি ${closestStop.name} পৌঁছাচ্ছে"
+          }
+          VoiceAnnouncementManager.speak(annText, currentLangCode)
+        }
+      } else if (currentStopText == "--") {
+        currentStopText = closestStop.name
+      }
+
+      // পরবর্তী স্টপেজ নির্ধারণ
+      val nextIdx = if (minDistance < 80f) closestIndex + 1 else closestIndex
+      if (nextIdx < activeRouteStops.size) {
+        val nextStop = activeRouteStops[nextIdx]
+        nextName = nextStop.name
+        nextLat = nextStop.lat
+        nextLon = nextStop.lon
+
+        val nextLoc = Location("").apply {
+          latitude = nextStop.lat
+          longitude = nextStop.lon
+        }
+        val distToNextM = location.distanceTo(nextLoc)
+        val nextKm = distToNextM / 1000f
+        val hours = nextKm / effSpeed
+        val mins = Math.round(hours * 60)
+        val nextEtaStr = if (distToNextM < 60f) {
+          when (currentLangCode.lowercase()) {
+            "en" -> "Arrived"
+            "hi" -> "पहुँच गया"
+            else -> "পৌঁছে গেছে"
+          }
+        } else if (mins < 1) {
+          "< 1 MIN"
+        } else {
+          "$mins MINS"
+        }
+        val distStr = if (nextKm < 1f) {
+          "${distToNextM.toInt()} M"
+        } else {
+          String.format(Locale.US, "%.1f KM (%d M)", nextKm, distToNextM.toInt())
+        }
+        nextStopText = "${nextStop.name} ($distStr • ETA: $nextEtaStr)"
+
+        if (distToNextM in 80f..500f && lastAnnouncedApproachStop != nextStop.name) {
+          lastAnnouncedApproachStop = nextStop.name
+          val annText = when (currentLangCode.lowercase()) {
+            "en" -> "Next stop: ${nextStop.name}"
+            "hi" -> "अगला स्टॉप: ${nextStop.name}"
+            else -> "পরবর্তী স্টপেজ: ${nextStop.name}"
+          }
+          VoiceAnnouncementManager.speak(annText, currentLangCode)
+        }
+      } else {
+        nextStopText = when (currentLangCode.lowercase()) {
+          "en" -> "Final Stop"
+          "hi" -> "अंतिम स्टॉप"
+          else -> "গন্তব্যের শেষ স্টপেজ"
+        }
+      }
+
+      // গন্তব্য দূরত্ব ও ইটিএ হিসাব
+      val destStop = activeRouteStops.last()
+      val targetDestName = if (destName.isNotBlank()) destName else destStop.name
+      val targetDestLat = if (destLat != 0.0) destLat else destStop.lat
+      val targetDestLon = if (destLon != 0.0) destLon else destStop.lon
+
+      val finalLoc = Location("").apply {
+        latitude = targetDestLat
+        longitude = targetDestLon
+      }
+      val directMeters = location.distanceTo(finalLoc)
+      val roadDistKm = (directMeters * 1.12f) / 1000f
+      val totalMeters = (roadDistKm * 1000).toInt()
+      val hours = roadDistKm / effSpeed
+      val mins = Math.round(hours * 60)
+      val etaStr = if (directMeters < 60f) {
+        when (currentLangCode.lowercase()) {
+          "en" -> "Arrived"
+          "hi" -> "पहुँच गया"
+          else -> "পৌঁছে গেছে"
+        }
+      } else if (mins < 1) {
+        "< 1 MIN"
+      } else if (mins < 60) {
+        "$mins MINS"
+      } else {
+        "${mins / 60} HR ${mins % 60} MINS"
+      }
+      val distStr = if (roadDistKm < 1f) {
+        "${totalMeters} M"
+      } else {
+        String.format(Locale.US, "%.1f KM (%d M)", roadDistKm, totalMeters)
+      }
+      val targetLabel = targetDestName.uppercase()
+      destDistEtaText = "$targetLabel ($distStr • ETA: $etaStr)"
+
+      if (directMeters < 100f && lastAnnouncedDestStop != targetLabel) {
+        lastAnnouncedDestStop = targetLabel
+        val annText = when (currentLangCode.lowercase()) {
+          "en" -> "Destination $targetLabel arrived"
+          "hi" -> "गंतव्य $targetLabel आ गया है"
+          else -> "গন্তব্য $targetLabel পৌঁছানো হয়েছে"
+        }
+        VoiceAnnouncementManager.speak(annText, currentLangCode)
+      }
+      return
+    }
 
     if (destLat != 0.0 && destLon != 0.0) {
       val destLoc = Location("").apply {
@@ -706,6 +863,7 @@ class BusTrackingService : Service() {
     lastAnnouncedApproachStop = ""
     lastAnnouncedArriveStop = ""
     lastAnnouncedDestStop = ""
+    activeRouteStops = emptyList()
     VoiceAnnouncementManager.clearQueue()
 
     try {

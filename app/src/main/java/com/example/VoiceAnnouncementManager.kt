@@ -203,8 +203,11 @@ object VoiceAnnouncementManager {
       }
     }
 
-    // স্ক্রিন অন এবং দ্রুত ইন্টারনেট থাকলে অনলাইন মিষ্টি নারী কণ্ঠ, অন্যথায় সরাসরি নেটিভ টিটিএস (স্ক্রিন অফেও নির্ভরযোগ্য)
-    if (isNetworkAvailable() && preparedText.length < 250) {
+    // স্ক্রিন অন থাকলে এবং দ্রুত ইন্টারনেট থাকলে অনলাইন মিষ্টি নারী কণ্ঠ,
+    // কিন্তু স্ক্রিন অফ থাকলে (!MainActivity.isActivityResumed) কোনোভাবেই নেটওয়ার্ক রিকোয়েস্ট ঝুলিয়ে রাখবেন না,
+    // সরাসরি অন-ডিভাইস নেটিভ টিটিএস ব্যবহার করুন যাতে অ্যান্ড্রয়েড ব্যাকগ্রাউন্ড/ডোজ মোডে কোনো ঘোষণা বাদ না পড়ে
+    val isScreenOn = MainActivity.isActivityResumed
+    if (isScreenOn && isNetworkAvailable() && preparedText.length < 250) {
       playGoogleOnlineFemaleVoice(preparedText, curLang) { success ->
         if (!success) {
           speakViaNativeTts(preparedText, curLang, onDoneCallback)
@@ -319,6 +322,17 @@ object VoiceAnnouncementManager {
       return
     }
 
+    try {
+      wakeLock?.acquire(12000L)
+    } catch (_: Exception) {}
+
+    val safeDone: () -> Unit = {
+      try {
+        if (wakeLock?.isHeld == true) wakeLock?.release()
+      } catch (_: Exception) {}
+      onDone()
+    }
+
     setupTtsVoice(langCode)
 
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
@@ -327,10 +341,10 @@ object VoiceAnnouncementManager {
       }
       tts.setOnUtteranceProgressListener(object : android.speech.tts.UtteranceProgressListener() {
         override fun onStart(utteranceId: String?) {}
-        override fun onDone(utteranceId: String?) { onDone() }
+        override fun onDone(utteranceId: String?) { safeDone() }
         @Deprecated("Deprecated in Java")
-        override fun onError(utteranceId: String?) { onDone() }
-        override fun onError(utteranceId: String?, errorCode: Int) { onDone() }
+        override fun onError(utteranceId: String?) { safeDone() }
+        override fun onError(utteranceId: String?, errorCode: Int) { safeDone() }
       })
       tts.speak(text, TextToSpeech.QUEUE_FLUSH, params, "native_${System.currentTimeMillis()}")
     } else {
@@ -340,7 +354,7 @@ object VoiceAnnouncementManager {
       }
       tts.speak(text, TextToSpeech.QUEUE_FLUSH, params)
       val estimatedMs = (text.length * 110L).coerceIn(1200L, 7000L)
-      mainHandler.postDelayed({ onDone() }, estimatedMs)
+      mainHandler.postDelayed({ safeDone() }, estimatedMs)
     }
   }
 
