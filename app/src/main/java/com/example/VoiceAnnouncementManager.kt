@@ -145,11 +145,11 @@ object VoiceAnnouncementManager {
       }
 
       if (isFemaleSelected) {
-        tts.setPitch(1.18f)
+        tts.setPitch(1.22f)
         tts.setSpeechRate(0.92f)
       } else {
-        tts.setPitch(1.02f)
-        tts.setSpeechRate(0.95f)
+        tts.setPitch(1.25f)
+        tts.setSpeechRate(0.92f)
       }
     } catch (_: Exception) {}
   }
@@ -218,11 +218,8 @@ object VoiceAnnouncementManager {
       }
     }
 
-    // স্ক্রিন অন থাকলে এবং দ্রুত ইন্টারনেট থাকলে অনলাইন মিষ্টি নারী কণ্ঠ,
-    // কিন্তু স্ক্রিন অফ থাকলে (!MainActivity.isActivityResumed) কোনোভাবেই নেটওয়ার্ক রিকোয়েস্ট ঝুলিয়ে রাখবেন না,
-    // সরাসরি অন-ডিভাইস নেটিভ টিটিএস ব্যবহার করুন যাতে অ্যান্ড্রয়েড ব্যাকগ্রাউন্ড/ডোজ মোডে কোনো ঘোষণা বাদ না পড়ে
-    val isScreenOn = MainActivity.isActivityResumed
-    if (isScreenOn && isNetworkAvailable() && preparedText.length < 250) {
+    // দ্রুত ও মিষ্টি সুরেলা অনলাইন নারী কণ্ঠ অগ্রাধিকার দিন (অ্যাপ মিনিমাইজ বা স্ক্রিন অফ থাকলেও কাজ করবে)
+    if (isNetworkAvailable() && preparedText.length < 250) {
       playGoogleOnlineFemaleVoice(preparedText, curLang) { success ->
         if (!success) {
           speakViaNativeTts(preparedText, curLang, onDoneCallback)

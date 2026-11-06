@@ -6025,11 +6025,18 @@
   }
 
   // বাসের সমস্ত স্টপেজের রুট সিকোয়েন্স অ্যান্ড্রয়েড ব্যাকগ্রাউন্ড সার্ভিসে পাঠানো
-  function syncRouteStopsToAndroid() {
+  function syncRouteStopsToAndroid(overrideList) {
     if (!window.AndroidBridge || !window.AndroidBridge.setFullRouteStops) return;
     if (!trackingBus) return;
     let list = [];
-    if (currentBusStopsList && currentBusStopsList.length > 0) {
+    if (overrideList && overrideList.length > 0) {
+      list = overrideList.map((st, idx) => ({
+        name: st.name || st.stopName || "",
+        lat: Number(st.lat || st.latitude || 0),
+        lon: Number(st.lon || st.longitude || 0),
+        index: idx
+      })).filter(s => s.name && s.lat !== 0 && s.lon !== 0);
+    } else if (currentBusStopsList && currentBusStopsList.length > 0) {
       list = currentBusStopsList.map((st, idx) => ({
         name: st.name || st.stopName || "",
         lat: Number(st.lat || st.latitude || 0),
@@ -6331,6 +6338,7 @@
     });
 
     if (validStops.length === 0) return;
+    syncRouteStopsToAndroid(validStops);
 
     // যদি refLat না থাকে, রুটের প্রথম যে স্টপে কো-অর্ডিনেট আছে সেটি নেওয়া
     if (!refLat || !refLon) {
@@ -6475,7 +6483,16 @@
 
     renderStopsOnMapAndTimeline(validStops, nearest.index, isLiveBus ? busPos.lat : null, isLiveBus ? busPos.lon : null);
 
-    let nextValidStop = (nearest.index + 1 < validStops.length) ? validStops[nearest.index + 1] : null;
+    let nextValidStop = null;
+    let cleanCurForNext = cleanStopName(baseStopName);
+    for (let ni = nearest.index + 1; ni < validStops.length; ni++) {
+      let cand = validStops[ni];
+      let candClean = cleanStopName(cand.name || cand.stopName);
+      if (candClean && candClean !== cleanCurForNext) {
+        nextValidStop = cand;
+        break;
+      }
+    }
 
     let nextStopElem = document.getElementById("infoNextStop");
     let nextStopName = "--";

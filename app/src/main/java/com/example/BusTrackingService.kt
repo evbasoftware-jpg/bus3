@@ -128,6 +128,15 @@ class BusTrackingService : Service() {
   private var lastAnnouncedServiceCurrent: String = ""
   private var lastAnnouncedServiceNext: String = ""
   private var lastAnnouncedServiceDest: String = ""
+  private var lastAnnouncementTime: Long = 0L
+
+  private fun getCleanStopBaseName(s: String): String {
+    if (s.isBlank() || s == "--") return ""
+    return s.substringBefore("(")
+      .substringBefore("|")
+      .replace(Regex("(?i)মিটার|পেরিয়ে|পেরিয়ে|গেছে|পৌঁছে|গেছেন|আসছে|স্টপ|স্টপেজ|eta|mins|min|km|m|final stop|গন্তব্যের শেষ স্টপেজ"), "")
+      .trim()
+  }
 
   private val locationListener = object : LocationListener {
     override fun onLocationChanged(location: Location) {
@@ -190,14 +199,26 @@ class BusTrackingService : Service() {
       if (busNumber.isNotBlank()) activeBusNumber = busNumber
       if (busName.isNotBlank()) activeBusName = busName
       if (curStop.isNotBlank()) currentStopText = curStop
-      if (nextStop.isNotBlank()) nextStopText = nextStop
+      if (nextStop.isNotBlank()) {
+        val cleanCur = getCleanStopBaseName(curStop.ifBlank { currentStopText })
+        val cleanNext = getCleanStopBaseName(nextStop)
+        if (cleanNext.isNotBlank() && !cleanNext.equals(cleanCur, ignoreCase = true)) {
+          nextStopText = nextStop
+        }
+      }
       if (destInfo.isNotBlank()) destDistEtaText = destInfo
       if (lang.isNotBlank()) currentLangCode = lang
 
       if (dName.isNotBlank()) destName = dName
       if (dLat != 0.0) destLat = dLat
       if (dLon != 0.0) destLon = dLon
-      if (nName.isNotBlank()) nextName = nName
+      if (nName.isNotBlank()) {
+        val cleanCur = getCleanStopBaseName(curStop.ifBlank { currentStopText })
+        val cleanNextName = getCleanStopBaseName(nName)
+        if (cleanNextName.isNotBlank() && !cleanNextName.equals(cleanCur, ignoreCase = true)) {
+          nextName = nName
+        }
+      }
       if (nLat != 0.0) nextLat = nLat
       if (nLon != 0.0) nextLon = nLon
 
@@ -278,15 +299,28 @@ class BusTrackingService : Service() {
       }
 
       val closestStop = activeRouteStops[closestIndex]
-      if (minDistance < 80f) {
+      val cleanClosest = getCleanStopBaseName(closestStop.name)
+      val cleanCur = getCleanStopBaseName(currentStopText)
+
+      if (minDistance < 60f) {
         currentStopText = closestStop.name
-      } else if (currentStopText == "--") {
+      } else if (currentStopText == "--" || cleanCur.isBlank()) {
         currentStopText = closestStop.name
       }
 
-      // পরবর্তী স্টপেজ নির্ধারণ
-      val nextIdx = if (minDistance < 80f) closestIndex + 1 else closestIndex
-      if (nextIdx < activeRouteStops.size) {
+      // পরবর্তী স্টপেজ নির্ধারণ (বর্তমান স্টপ ও পরবর্তী স্টপ যেন কখনোই এক না হয়)
+      val curIdx = activeRouteStops.indexOfFirst {
+        getCleanStopBaseName(it.name).equals(getCleanStopBaseName(currentStopText), ignoreCase = true)
+      }
+      val nextIdx = if (curIdx >= 0) {
+        curIdx + 1
+      } else {
+        if (minDistance < 60f) closestIndex + 1 else {
+          if (cleanClosest.equals(cleanCur, ignoreCase = true)) closestIndex + 1 else closestIndex
+        }
+      }
+
+      if (nextIdx in activeRouteStops.indices) {
         val nextStop = activeRouteStops[nextIdx]
         nextName = nextStop.name
         nextLat = nextStop.lat
@@ -318,11 +352,15 @@ class BusTrackingService : Service() {
         }
         nextStopText = "${nextStop.name} ($distStr • ETA: $nextEtaStr)"
       } else {
-        nextStopText = when (currentLangCode.lowercase()) {
-          "en" -> "Final Stop"
-          "hi" -> "अंतिम स्टॉप"
-          else -> "গন্তব্যের শেষ স্টপেজ"
+        val finalLabel = if (destName.isNotBlank()) destName.uppercase() else {
+          when (currentLangCode.lowercase()) {
+            "en" -> "Final Stop"
+            "hi" -> "अंतिम स्टॉप"
+            else -> "গন্তব্যের শেষ স্টপেজ"
+          }
         }
+        nextStopText = finalLabel
+        nextName = finalLabel
       }
 
       // গন্তব্য দূরত্ব ও ইটিএ হিসাব
@@ -441,30 +479,39 @@ class BusTrackingService : Service() {
     // সার্ভিস শুধুমাত্র স্ক্রিন অফ থাকলে (!MainActivity.isActivityResumed) নাম পরিবর্তনের সময় একবার ঘোষণা করবে।
     if (MainActivity.isActivityResumed) return
 
-    val cleanCur = currentStopText.trim()
+    val now = System.currentTimeMillis()
+    if (now - lastAnnouncementTime < 6000L) return
+
+    val cleanCur = getCleanStopBaseName(currentStopText)
+    val cleanNext = getCleanStopBaseName(nextName.ifBlank { nextStopText })
+
     if (cleanCur.isNotBlank() && cleanCur != "--" && cleanCur != lastAnnouncedServiceCurrent) {
       lastAnnouncedServiceCurrent = cleanCur
+      lastAnnouncementTime = now
       val annText = when (currentLangCode.lowercase()) {
         "en" -> "Current stop: $cleanCur"
         "hi" -> "वर्तमान स्टॉप: $cleanCur"
         else -> "বর্তমান স্টপেজ: $cleanCur"
       }
       VoiceAnnouncementManager.speak(annText, currentLangCode)
+      return
     }
 
-    val cleanNext = nextName.trim()
-    if (cleanNext.isNotBlank() && cleanNext != "--" && cleanNext != lastAnnouncedServiceNext) {
+    if (cleanNext.isNotBlank() && cleanNext != "--" && !cleanNext.equals(cleanCur, ignoreCase = true) && cleanNext != lastAnnouncedServiceNext) {
       lastAnnouncedServiceNext = cleanNext
+      lastAnnouncementTime = now
       val annText = when (currentLangCode.lowercase()) {
         "en" -> "Next stop: $cleanNext"
         "hi" -> "अगला स्टॉप: $cleanNext"
         else -> "পরবর্তী স্টপেজ: $cleanNext"
       }
       VoiceAnnouncementManager.speak(annText, currentLangCode)
+      return
     }
 
     if (destMeters in 1f..80f && destName.isNotBlank() && destName != lastAnnouncedServiceDest) {
       lastAnnouncedServiceDest = destName
+      lastAnnouncementTime = now
       val annText = when (currentLangCode.lowercase()) {
         "en" -> "Destination $destName arrived"
         "hi" -> "गंतव्य $destName आ गया है"
@@ -748,8 +795,33 @@ class BusTrackingService : Service() {
     val stopActionText = getTranslation(currentLangCode, "stopTracking")
 
     val curDisplay = if (currentStopText.isNotBlank() && currentStopText != "--") currentStopText else getTranslation(currentLangCode, "waiting")
-    val nextDisplay = if (nextStopText.isNotBlank() && nextStopText != "--") nextStopText else getTranslation(currentLangCode, "waiting")
+    var nextDisplay = if (nextStopText.isNotBlank() && nextStopText != "--") nextStopText else getTranslation(currentLangCode, "waiting")
     val destDisplay = if (destDistEtaText.isNotBlank() && destDistEtaText != "--") destDistEtaText else getTranslation(currentLangCode, "waiting")
+
+    val cleanCurDisp = getCleanStopBaseName(curDisplay)
+    val cleanNextDisp = getCleanStopBaseName(nextDisplay)
+
+    if (cleanCurDisp.isNotBlank() && cleanCurDisp.equals(cleanNextDisp, ignoreCase = true)) {
+      if (activeRouteStops.isNotEmpty()) {
+        val curIdx = activeRouteStops.indexOfFirst {
+          getCleanStopBaseName(it.name).equals(cleanCurDisp, ignoreCase = true)
+        }
+        if (curIdx >= 0 && curIdx + 1 < activeRouteStops.size) {
+          val nextSt = activeRouteStops[curIdx + 1]
+          nextDisplay = nextSt.name
+        } else if (destName.isNotBlank() && !getCleanStopBaseName(destName).equals(cleanCurDisp, ignoreCase = true)) {
+          nextDisplay = destName
+        } else {
+          nextDisplay = when (currentLangCode.lowercase()) {
+            "en" -> "Final Destination"
+            "hi" -> "अंतिम गंतव्य"
+            else -> "গন্তব্যের শেষ স্টপেজ"
+          }
+        }
+      } else if (destName.isNotBlank() && !getCleanStopBaseName(destName).equals(cleanCurDisp, ignoreCase = true)) {
+        nextDisplay = destName
+      }
+    }
 
     // সংক্ষেপিত ভিউ (Custom RemoteViews Collapsed)
     val remoteViewsCollapsed = RemoteViews(packageName, R.layout.notification_custom_collapsed).apply {
@@ -845,6 +917,7 @@ class BusTrackingService : Service() {
     lastAnnouncedServiceCurrent = ""
     lastAnnouncedServiceNext = ""
     lastAnnouncedServiceDest = ""
+    lastAnnouncementTime = 0L
     activeRouteStops = emptyList()
     VoiceAnnouncementManager.clearQueue()
 
