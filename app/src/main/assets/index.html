@@ -1648,8 +1648,18 @@
     </button>
   </div>
 
+  <!-- বিজ্ঞাপনের জন্য WhatsApp এ যোগাযোগ করুন -->
+  <div style="margin: 16px 0 10px 0; text-align: center;">
+    <button type="button" onclick="openGeneralAdContactWhatsApp()" style="background: linear-gradient(135deg, #25D366 0%, #128C7E 100%); color: #ffffff; border: none; font-size: 14.5px; font-weight: 800; padding: 13px 18px; border-radius: 12px; width: 100%; box-shadow: 0 4px 14px rgba(37, 211, 102, 0.4); cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; transition: transform 0.15s ease;">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="#ffffff" style="flex-shrink:0;">
+        <path d="M12.031 2C6.51 2 2.029 6.48 2.029 12C2.029 13.79 2.509 15.47 3.339 16.92L2.019 21.8L7.029 20.49C8.429 21.26 10.159 21.71 12.029 21.71C17.55 21.71 22.03 17.23 22.03 11.71C22.03 6.19 17.55 2 12.031 2ZM17.159 16.48C16.949 17.07 15.919 17.62 15.359 17.69C14.869 17.75 14.239 17.78 12.059 16.88C9.279 15.73 7.489 12.91 7.349 12.72C7.219 12.53 6.229 11.22 6.229 9.86C6.229 8.5 6.939 7.84 7.219 7.55C7.449 7.31 7.789 7.22 8.129 7.22C8.239 7.22 8.339 7.22 8.429 7.23C8.689 7.24 8.819 7.26 8.989 7.68C9.209 8.21 9.749 9.53 9.819 9.68C9.889 9.83 9.949 10.02 9.849 10.21C9.759 10.4 9.689 10.49 9.549 10.65C9.409 10.81 9.279 10.94 9.139 11.11C8.989 11.27 8.839 11.45 9.009 11.75C9.179 12.04 9.779 13.02 10.649 13.79C11.779 14.8 12.709 15.12 13.019 15.26C13.319 15.39 13.499 15.36 13.679 15.15C13.859 14.94 14.449 14.25 14.659 13.95C14.869 13.65 15.089 13.7 15.379 13.81C15.679 13.92 17.259 14.7 17.589 14.86C17.919 15.02 18.139 15.1 18.219 15.24C18.299 15.38 18.299 16.03 17.159 16.48Z"/>
+      </svg>
+      <span>বিজ্ঞাপনের জন্য WhatsApp এ যোগাযোগ করুন</span>
+    </button>
+  </div>
+
   <!-- কাজ শেষ? অ্যাপ সম্পূর্ণ বন্ধ করুন (Exit App) অপশন -->
-  <div style="margin: 18px 0 28px 0; text-align: center;">
+  <div style="margin: 0 0 28px 0; text-align: center;">
     <button type="button" onclick="confirmAndExitApp()" style="background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%); color: #334155; border: 1.5px solid #cbd5e1; font-size: 13.5px; font-weight: 800; padding: 12px 20px; border-radius: 12px; width: 100%; box-shadow: 0 2px 6px rgba(0,0,0,0.06); cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;">
       <span style="font-size: 18px;">🚪</span>
       <span>কাজ শেষ? অ্যাপ সম্পূর্ণ বন্ধ করুন (Exit App)</span>
@@ -2232,6 +2242,39 @@
 
       <button type="button" class="btn" style="width:100%;background:linear-gradient(135deg,#0288d1 0%,#0369a1 100%);color:#fff;font-weight:bold;padding:11px;font-size:14px;border-radius:8px;" onclick="submitModalBusStopTime()">
         💾 BusStops শিটে সময় সেভ করুন
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- বিজ্ঞাপনে ক্লিক অ্যাকশন মডাল (WhatsApp ও Call অপশন) -->
+<div id="adContactModal" class="app-feature-modal hidden" onclick="if(event.target===this)closeAdContactModal()">
+  <div class="feature-modal-content" style="max-width: 360px; text-align: center; padding: 22px 18px; border-radius: 16px;">
+    <div style="font-size: 38px; margin-bottom: 6px;">📢</div>
+    <div style="font-size: 17px; font-weight: 800; color: #0f172a; margin-bottom: 4px;">বিজ্ঞাপন যোগাযোগ</div>
+    <div id="adContactPhoneDisplay" style="font-size: 15px; font-weight: 700; color: #0284c7; margin-bottom: 14px;"></div>
+    <p style="font-size: 13px; color: #475569; margin-bottom: 18px; line-height: 1.45;">
+      বিজ্ঞাপনদাতার সাথে কীভাবে যোগাযোগ করতে চান তা নির্বাচন করুন:
+    </p>
+
+    <div style="display: flex; flex-direction: column; gap: 10px;">
+      <!-- WhatsApp বাটন -->
+      <button type="button" onclick="doAdWhatsAppChat()" style="background: linear-gradient(135deg, #25D366 0%, #128C7E 100%); color: #ffffff; border: none; font-size: 14.5px; font-weight: 800; padding: 12px 16px; border-radius: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 3px 10px rgba(37,211,102,0.35);">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="#ffffff" style="flex-shrink:0;">
+          <path d="M12.031 2C6.51 2 2.029 6.48 2.029 12C2.029 13.79 2.509 15.47 3.339 16.92L2.019 21.8L7.029 20.49C8.429 21.26 10.159 21.71 12.029 21.71C17.55 21.71 22.03 17.23 22.03 11.71C22.03 6.19 17.55 2 12.031 2ZM17.159 16.48C16.949 17.07 15.919 17.62 15.359 17.69C14.869 17.75 14.239 17.78 12.059 16.88C9.279 15.73 7.489 12.91 7.349 12.72C7.219 12.53 6.229 11.22 6.229 9.86C6.229 8.5 6.939 7.84 7.219 7.55C7.449 7.31 7.789 7.22 8.129 7.22C8.239 7.22 8.339 7.22 8.429 7.23C8.689 7.24 8.819 7.26 8.989 7.68C9.209 8.21 9.749 9.53 9.819 9.68C9.889 9.83 9.949 10.02 9.849 10.21C9.759 10.4 9.689 10.49 9.549 10.65C9.409 10.81 9.279 10.94 9.139 11.11C8.989 11.27 8.839 11.45 9.009 11.75C9.179 12.04 9.779 13.02 10.649 13.79C11.779 14.8 12.709 15.12 13.019 15.26C13.319 15.39 13.499 15.36 13.679 15.15C13.859 14.94 14.449 14.25 14.659 13.95C14.869 13.65 15.089 13.7 15.379 13.81C15.679 13.92 17.259 14.7 17.589 14.86C17.919 15.02 18.139 15.1 18.219 15.24C18.299 15.38 18.299 16.03 17.159 16.48Z"/>
+        </svg>
+        <span>WhatsApp এ বার্তা পাঠান</span>
+      </button>
+
+      <!-- সরাসরি কল বাটন -->
+      <button type="button" onclick="doAdDirectCall()" style="background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); color: #ffffff; border: none; font-size: 14.5px; font-weight: 800; padding: 12px 16px; border-radius: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 3px 10px rgba(2,132,199,0.3);">
+        <span style="font-size: 18px;">📞</span>
+        <span>সরাসরি ফোন কল করুন</span>
+      </button>
+
+      <!-- বন্ধ করুন বাটন -->
+      <button type="button" onclick="closeAdContactModal()" style="background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; font-size: 13.5px; font-weight: 700; padding: 10px; border-radius: 10px; cursor: pointer; margin-top: 4px;">
+        বাতিল (বন্ধ করুন)
       </button>
     </div>
   </div>
@@ -8109,15 +8152,14 @@ https://aionline.in.net`;
     let startM = parseAdTimeToMinutes(startTimeStr);
     let stopM = parseAdTimeToMinutes(stopTimeStr);
 
-    // সময় খালি থাকলে, অথবা 0 হলে, অথবা দুটি সময় একই হলে (যেমন 00:00 থেকে 00:00) বিজ্ঞাপন সারাদিন সক্রিয়
+    // সময় খালি থাকলে অথবা 0 হলে বিজ্ঞাপন সারাদিন সক্রিয়
     if (startM === null && stopM === null) return true;
-    if (startM !== null && stopM !== null && startM === stopM) return true;
 
     let now = new Date();
     let currentM = now.getHours() * 60 + now.getMinutes();
 
     if (startM !== null && stopM !== null) {
-      if (startM < stopM) {
+      if (startM <= stopM) {
         return currentM >= startM && currentM <= stopM;
       } else {
         // রাত থেকে পরের সকাল পর্যন্ত (Overnight)
@@ -8340,7 +8382,9 @@ https://aionline.in.net`;
     if (container) container.style.display = "block";
   }
 
-  // ৮. বিজ্ঞাপনে ক্লিক অ্যাকশন (Contact_Number হ্যান্ডলিং)
+  // ৮. বিজ্ঞাপনে ক্লিক অ্যাকশন (WhatsApp ও Direct Call হ্যান্ডলিং)
+  let currentAdContactPhone = "";
+
   function onAppAdClicked(slot) {
     let state = appSlotState[slot];
     if (!state || !state.currentAd) return;
@@ -8352,20 +8396,52 @@ https://aionline.in.net`;
       return;
     }
 
-    if (contact.startsWith("http://") || contact.startsWith("https://") || contact.includes("wa.me")) {
-      window.open(contact, "_blank");
+    if (contact.startsWith("http://") || contact.startsWith("https://") || contact.includes("wa.me") || contact.includes("whatsapp.com")) {
+      window.location.href = contact;
       return;
     }
 
-    let cleanPhone = contact.replace(/[^0-9+]/g, '');
-    if (cleanPhone) {
-      let isConfirmed = confirm(`📞 বিজ্ঞাপন যোগাযোগ:\nযোগাযোগ নম্বর: ${contact}\n\nআপনি কি সরাসরি কল বা হোয়াটসঅ্যাপে যোগাযোগ করতে চান?`);
-      if (isConfirmed) {
-        window.location.href = `tel:${cleanPhone}`;
-      }
-    } else {
+    let cleanPhone = contact.replace(/[^0-9]/g, '');
+    if (!cleanPhone) {
       showAppAlert(`বিজ্ঞাপন যোগাযোগ: ${contact}`, "বিজ্ঞাপন");
+      return;
     }
+
+    currentAdContactPhone = cleanPhone;
+    let disp = document.getElementById("adContactPhoneDisplay");
+    if (disp) disp.innerText = `যোগাযোগ নম্বর: ${contact}`;
+    let modal = document.getElementById("adContactModal");
+    if (modal) modal.classList.remove("hidden");
+  }
+
+  function closeAdContactModal() {
+    let modal = document.getElementById("adContactModal");
+    if (modal) modal.classList.add("hidden");
+  }
+
+  function doAdWhatsAppChat() {
+    if (!currentAdContactPhone) return;
+    let phone = currentAdContactPhone;
+    if (phone.length === 10) phone = "91" + phone;
+    let msg = encodeURIComponent("নমস্কার, আমি আপনার বাসের বিজ্ঞাপনটি দেখে যোগাযোগ করছি।");
+    let url = `https://api.whatsapp.com/send?phone=${phone}&text=${msg}`;
+    closeAdContactModal();
+    window.location.href = url;
+  }
+
+  function doAdDirectCall() {
+    if (!currentAdContactPhone) return;
+    let phone = currentAdContactPhone;
+    closeAdContactModal();
+    window.location.href = `tel:${phone}`;
+  }
+
+  // ৯. সাধারণ বিজ্ঞাপন যোগাযোগ বোতাম (হোয়াটসঅ্যাপে 9800044626)
+  function openGeneralAdContactWhatsApp() {
+    let phone = "919800044626";
+    let msg = encodeURIComponent("নমস্কার, বাস ট্র্যাকিং অ্যাপে বিজ্ঞাপন দেওয়ার জন্য যোগাযোগ করছি।");
+    let url = `https://api.whatsapp.com/send?phone=${phone}&text=${msg}`;
+    window.location.href = url;
   }
 
   // ৯. জিপিএস পরিবর্তনের সাথে বিজ্ঞাপনের এলাকা আপডেট

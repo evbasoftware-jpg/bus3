@@ -398,9 +398,13 @@ class MainActivity : ComponentActivity() {
       }
 
       private fun handleCustomUri(url: String): Boolean {
-        if (url.startsWith("whatsapp:") || url.startsWith("intent:") || url.startsWith("tel:") || url.startsWith("mailto:") || url.startsWith("https://api.whatsapp.com/")) {
+        if (url.startsWith("whatsapp:") || url.startsWith("intent:") || url.startsWith("tel:") || url.startsWith("mailto:") || url.startsWith("https://api.whatsapp.com/") || url.startsWith("https://wa.me/")) {
           try {
-            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+            val intent = if (url.startsWith("tel:")) {
+              Intent(Intent.ACTION_DIAL, Uri.parse(url))
+            } else {
+              Intent(Intent.ACTION_VIEW, Uri.parse(url))
+            }
             startActivity(intent)
           } catch (_: Exception) {}
           return true
