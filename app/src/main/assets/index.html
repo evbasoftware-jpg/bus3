@@ -410,6 +410,22 @@
       box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
       touch-action: pan-x pan-y pinch-zoom;
     }
+    .route-distance-badge {
+      background: #1565c0 !important;
+      color: #ffffff !important;
+      font-weight: 700 !important;
+      font-size: 13px !important;
+      padding: 5px 12px !important;
+      border-radius: 20px !important;
+      border: 2px solid #ffffff !important;
+      box-shadow: 0 3px 10px rgba(0, 0, 0, 0.35) !important;
+      white-space: nowrap !important;
+      pointer-events: none !important;
+      display: inline-block !important;
+    }
+    .route-distance-badge::before {
+      display: none !important;
+    }
     .live-map-wrapper {
       position: relative;
       margin-top: 6px;
@@ -3574,13 +3590,25 @@
       let distM = getDistanceMeters(userPos.lat, userPos.lon, busPos.lat, busPos.lon);
       distKm = (distM / 1000).toFixed(2);
 
-      if (distM > 100) {
+      let distDisplay = distM >= 1000 ? `${(distM / 1000).toFixed(1)} KM` : `${Math.round(distM)} মিটার`;
+      let tooltipContent = `🚌 বাসের দূরত্ব: ${distDisplay}`;
+
+      if (distM > 50) {
         if (!routeLine) {
           routeLine = L.polyline([[userPos.lat, userPos.lon], [busPos.lat, busPos.lon]], {
-            color: '#1565c0', weight: 4, opacity: 0.7, dashArray: '5, 10'
+            color: '#1565c0', weight: 4, opacity: 0.85, dashArray: '6, 8'
           }).addTo(map);
+          routeLine.bindTooltip(tooltipContent, {
+            permanent: true,
+            direction: 'center',
+            className: 'route-distance-badge'
+          }).openTooltip();
         } else {
           routeLine.setLatLngs([[userPos.lat, userPos.lon], [busPos.lat, busPos.lon]]);
+          routeLine.setTooltipContent(tooltipContent);
+          if (!routeLine.isTooltipOpen()) {
+            routeLine.openTooltip();
+          }
         }
       } else if (routeLine) {
         map.removeLayer(routeLine);
@@ -7925,8 +7953,9 @@ https://aionline.in.net`;
 
     for (let sName of sheetNames) {
       try {
-        let url = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:json&sheet=${sName}`;
-        let res = await fetch(url);
+        let ts = Date.now();
+        let url = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:json&sheet=${sName}&_t=${ts}`;
+        let res = await fetch(url, { cache: "no-store" });
         if (!res.ok) continue;
         let text = await res.text();
         let start = text.indexOf("{");
@@ -7957,14 +7986,20 @@ https://aionline.in.net`;
 
             rows.forEach((r, idx) => {
               if (!r.c) return;
-              let getVal = (col) => (r.c[col] ? (r.c[col].f !== undefined ? r.c[col].f : (r.c[col].v !== undefined ? r.c[col].v : "")) : "");
-              let imgName = String(getVal(cImg)).trim();
+              let getCellVal = (col) => {
+                if (!r.c[col]) return "";
+                let item = r.c[col];
+                if (item.f !== undefined && item.f !== null) return item.f;
+                if (item.v !== undefined && item.v !== null) return item.v;
+                return "";
+              };
+
+              let imgName = String(getCellVal(cImg)).trim();
               if (!imgName) return;
 
-              let rawArea = String(getVal(cArea)).trim();
+              let rawArea = String(getCellVal(cArea)).trim();
               let cleanArea = rawArea.toLowerCase().replace(/[^a-z0-9]/g, '');
               if (!cleanArea || !['ads1', 'ads2', 'ads3', 'ads4'].includes(cleanArea)) {
-                // ডিফল্ট বা ম্যাপিং
                 if (cleanArea === 'ads' || cleanArea === 'ad1') cleanArea = 'ads1';
                 else if (cleanArea === 'ad2') cleanArea = 'ads2';
                 else if (cleanArea === 'ad3') cleanArea = 'ads3';
@@ -7972,12 +8007,22 @@ https://aionline.in.net`;
                 else cleanArea = 'ads1';
               }
 
-              let lat = Number(getVal(cLat)) || 0;
-              let lon = Number(getVal(cLon)) || 0;
-              let rad = Number(getVal(cRad)) || 0;
-              let contact = String(getVal(cPhone)).trim();
-              let startTime = String(getVal(cStart)).trim();
-              let stopTime = String(getVal(cStop)).trim();
+              let rawLat = String(getCellVal(cLat)).trim();
+              let rawLon = String(getCellVal(cLon)).trim();
+              let rawRad = String(getCellVal(cRad)).trim();
+
+              // সংখ্যা সঠিক ভাবে নিষ্কাশন
+              let lat = parseFloat(rawLat.replace(/[^0-9.-]/g, ''));
+              let lon = parseFloat(rawLon.replace(/[^0-9.-]/g, ''));
+              let rad = parseFloat(rawRad.replace(/[^0-9.]/g, ''));
+
+              if (isNaN(lat)) lat = 0;
+              if (isNaN(lon)) lon = 0;
+              if (isNaN(rad)) rad = 0;
+
+              let contact = String(getCellVal(cPhone)).trim();
+              let startTime = String(getCellVal(cStart)).trim();
+              let stopTime = String(getCellVal(cStop)).trim();
 
               ads.push({
                 id: `ad_${idx}`,
@@ -8003,7 +8048,7 @@ https://aionline.in.net`;
 
     // Apps Script API ফলব্যাক
     try {
-      let res = await fetch(`${API_URL}?action=getAds`);
+      let res = await fetch(`${API_URL}?action=getAds&_t=${Date.now()}`, { cache: "no-store" });
       let data = await res.json();
       if (data && data.ok && Array.isArray(data.ads) && data.ads.length > 0) {
         return data.ads;
@@ -8015,17 +8060,33 @@ https://aionline.in.net`;
     return ads;
   }
 
-  // ৩. সময় ও লোকেশন পরীক্ষা
+  // ৩. ভৌগোলিক দূরত্ব নির্ণয় ফাংশন (কিলোমিটারে)
+  function getDistanceFromLatLonInKm(lat1, lon1, lat2, lon2) {
+    if (!lat1 || !lon1 || !lat2 || !lon2) return 999999;
+    let m = getDistanceMeters(Number(lat1), Number(lon1), Number(lat2), Number(lon2));
+    return isNaN(m) ? 999999 : m / 1000;
+  }
+
+  // ৪. সময় ও লোকেশন পরীক্ষা
   function parseAdTimeToMinutes(timeStr) {
-    if (!timeStr) return null;
-    let s = String(timeStr).trim().toUpperCase();
-    if (!s) return null;
+    if (timeStr === null || timeStr === undefined) return null;
+    let s = String(timeStr).trim();
+    if (!s || s === "0" || s === "00:00" || s === "0:00" || s === "null") return null;
 
-    let isPM = s.indexOf("PM") !== -1;
-    let isAM = s.indexOf("AM") !== -1;
-    s = s.replace(/AM|PM/g, "").trim();
+    // GViz Date format: Date(1899,11,30,22,18,0)
+    let dateMatch = s.match(/Date\(\s*\d+\s*,\s*\d+\s*,\s*\d+\s*,\s*(\d+)\s*,\s*(\d+)/i);
+    if (dateMatch) {
+      let h = parseInt(dateMatch[1], 10);
+      let m = parseInt(dateMatch[2], 10);
+      return h * 60 + m;
+    }
 
-    let parts = s.split(":");
+    let upper = s.toUpperCase();
+    let isPM = upper.indexOf("PM") !== -1;
+    let isAM = upper.indexOf("AM") !== -1;
+    let clean = upper.replace(/AM|PM/g, "").trim();
+
+    let parts = clean.split(":");
     if (parts.length >= 2) {
       let h = parseInt(parts[0], 10);
       let m = parseInt(parts[1], 10);
@@ -8033,23 +8094,33 @@ https://aionline.in.net`;
       if (isPM && h < 12) h += 12;
       if (isAM && h === 12) h = 0;
       return h * 60 + m;
+    } else if (parts.length === 1) {
+      let num = parseInt(parts[0], 10);
+      if (!isNaN(num) && num > 0) {
+        if (isPM && num < 12) num += 12;
+        if (isAM && num === 12) num = 0;
+        return num * 60;
+      }
     }
     return null;
   }
 
   function isAdWithinActiveTime(startTimeStr, stopTimeStr) {
-    if (!startTimeStr && !stopTimeStr) return true;
     let startM = parseAdTimeToMinutes(startTimeStr);
     let stopM = parseAdTimeToMinutes(stopTimeStr);
+
+    // সময় খালি থাকলে, অথবা 0 হলে, অথবা দুটি সময় একই হলে (যেমন 00:00 থেকে 00:00) বিজ্ঞাপন সারাদিন সক্রিয়
     if (startM === null && stopM === null) return true;
+    if (startM !== null && stopM !== null && startM === stopM) return true;
 
     let now = new Date();
     let currentM = now.getHours() * 60 + now.getMinutes();
 
     if (startM !== null && stopM !== null) {
-      if (startM <= stopM) {
+      if (startM < stopM) {
         return currentM >= startM && currentM <= stopM;
       } else {
+        // রাত থেকে পরের সকাল পর্যন্ত (Overnight)
         return currentM >= startM || currentM <= stopM;
       }
     } else if (startM !== null) {
@@ -8060,12 +8131,11 @@ https://aionline.in.net`;
     return true;
   }
 
-  // ৪. বিজ্ঞাপন ইঞ্জিন ইনিশিয়ালাইজেশন
-  async function initSmartAdSystem() {
+  // ৫. লাইভ বিজ্ঞাপন ব্যাকগ্রাউন্ড সিঙ্ক (অ্যাপ চালু থাকা অবস্থায় শিটের পরিবর্তন স্বয়ংক্রিয় আপডেট)
+  async function refreshAdsFromSheet(forceEval = true) {
     try {
       let adsFromSheet = await fetchSpreadsheetAds();
       if (!adsFromSheet || adsFromSheet.length === 0) {
-        // ফলব্যাক: যদি শিটে এখনও কিছু না থাকে, লোকাল img1 চেক
         let defaultSrc = await resolveAdImageSource("img1.png");
         if (defaultSrc) {
           adsFromSheet = [
@@ -8085,39 +8155,53 @@ https://aionline.in.net`;
         }
       }
 
-      // ছবির সোর্স নিশ্চিত করা
-      let prepared = [];
-      for (let ad of adsFromSheet) {
-        let src = await resolveAdImageSource(ad.imageName);
-        if (src) {
-          ad.src = src;
-          prepared.push(ad);
+      if (adsFromSheet && adsFromSheet.length > 0) {
+        let prepared = [];
+        for (let ad of adsFromSheet) {
+          let src = await resolveAdImageSource(ad.imageName);
+          if (src) {
+            ad.src = src;
+            prepared.push(ad);
+          }
         }
+        allSheetAdsList = prepared;
       }
 
-      allSheetAdsList = prepared;
-      evaluateAllAdSlots();
+      if (forceEval) {
+        evaluateAllAdSlots();
+      }
+    } catch (e) {
+      console.warn("refreshAdsFromSheet error:", e);
+    }
+  }
 
-      // প্রতি ১ মিনিট অন্তর স্বয়ংক্রিয়ভাবে সময় অনুযায়ী বিজ্ঞাপন রিফ্রেশ
-      if (!window._adTimeCheckInterval) {
-        window._adTimeCheckInterval = setInterval(() => {
-          evaluateAllAdSlots();
-        }, 60000);
+  // ৬. বিজ্ঞাপন ইঞ্জিন ইনিশিয়ালাইজেশন
+  async function initSmartAdSystem() {
+    try {
+      await refreshAdsFromSheet(true);
+
+      // প্রতি ২৫ সেকেন্ড অন্তর ব্যাকগ্রাউন্ডে গুগল শিট থেকে লাইভ তথ্য চেক হবে
+      // অ্যাপ নতুন করে ওপেন না করেই সব পরিবর্তন সাথে সাথে দৃশ্যমান হবে
+      if (!window._adLiveSyncInterval) {
+        window._adLiveSyncInterval = setInterval(() => {
+          refreshAdsFromSheet(true);
+        }, 25000);
       }
     } catch (e) {
       console.warn("initSmartAdSystem caught:", e);
     }
   }
 
-  // ৫. প্রতিটি স্লটের (ads1, ads2, ads3, ads4) জন্য উপযুক্ত বিজ্ঞাপন নির্ধারণ
+  // ৭. প্রতিটি স্লটের (ads1, ads2, ads3, ads4) জন্য উপযুক্ত বিজ্ঞাপন নির্ধারণ
   function evaluateAllAdSlots(userLat, userLon) {
-    let lat = userLat !== undefined ? userLat : (userPos ? userPos.lat : 0);
-    let lon = userLon !== undefined ? userLon : (userPos ? userPos.lon : 0);
+    let lat = userLat !== undefined ? Number(userLat) : (userPos && userPos.lat ? Number(userPos.lat) : 0);
+    let lon = userLon !== undefined ? Number(userLon) : (userPos && userPos.lon ? Number(userPos.lon) : 0);
 
     let slots = ['ads1', 'ads2', 'ads3', 'ads4'];
 
     slots.forEach(slot => {
       let state = appSlotState[slot];
+      if (!state) return;
       let candidateAds = allSheetAdsList.filter(ad => ad.area === slot);
 
       let eligible = [];
@@ -8134,6 +8218,9 @@ https://aionline.in.net`;
             if (dist <= ad.radiusKm) {
               eligible.push({ ...ad, isGeoMatch: true, distanceKm: dist });
             }
+          } else {
+            // জিপিএস এখনও প্রস্তুত না হলে বিজ্ঞাপন সাময়িকভাবে দৃশ্যমান রাখা (জিপিএস এলে দূরত্ব দিয়ে ফিল্টার হবে)
+            eligible.push({ ...ad, isGeoMatch: false, distanceKm: null });
           }
         } else {
           // কোনো lat/long উল্লেখ না থাকলে সকল এলাকার জন্য সক্রিয়
