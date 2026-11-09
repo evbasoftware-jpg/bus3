@@ -1329,31 +1329,20 @@
 </div>
 
 <div class="container">
-  <!-- স্মার্ট অ্যাডভার্টাইজমেন্ট ব্যানার ও স্লাইডশো (Smart Geo-targeted & Slideshow Ads) -->
-  <div id="smartAdBannerContainer" class="smart-ad-container" style="display:none; width: 100%; margin: 4px 0 12px 0;">
-    <div class="smart-ad-card" style="position: relative; overflow: hidden; border-radius: 12px; background: #ffffff; box-shadow: 0 2px 8px rgba(0,0,0,0.08); border: 1px solid #e2e8f0; text-align: center;">
-      <div style="position: absolute; top: 6px; right: 8px; z-index: 10; background: rgba(15, 23, 42, 0.72); backdrop-filter: blur(4px); color: #ffffff; font-size: 10px; font-weight: bold; padding: 2px 8px; border-radius: 6px; letter-spacing: 0.3px;">
-        📢 <span id="smartAdBadgeText">বিজ্ঞাপন</span>
+  <!-- ১ নং বিজ্ঞাপন স্লট: ads1 (বাস লাইভ লোকেশন এর উপরে থাকবে) -->
+  <div id="ad_slot_ads1" class="app-ad-slot-container" style="display: none; width: 100%; margin: 4px 0 12px 0;">
+    <div class="app-ad-card" style="position: relative; overflow: hidden; border-radius: 12px; background: #ffffff; box-shadow: 0 2px 8px rgba(0,0,0,0.08); border: 1px solid #e2e8f0; text-align: center;">
+      <div style="position: absolute; top: 6px; right: 8px; z-index: 10; background: rgba(15, 23, 42, 0.72); backdrop-filter: blur(4px); color: #ffffff; font-size: 10px; font-weight: bold; padding: 2px 8px; border-radius: 6px;">
+        📢 <span id="ad_badge_text_ads1">বিজ্ঞাপন</span>
       </div>
-      <div id="smartAdLocationBadge" style="display:none; position: absolute; top: 6px; left: 8px; z-index: 10; background: rgba(2, 136, 209, 0.9); backdrop-filter: blur(4px); color: #ffffff; font-size: 10.5px; font-weight: bold; padding: 3px 8px; border-radius: 6px;">
-        📍 <span id="smartAdLocationText">নিকটস্থ অফার</span>
+      <div id="ad_geo_badge_ads1" style="display:none; position: absolute; top: 6px; left: 8px; z-index: 10; background: rgba(2, 136, 209, 0.9); backdrop-filter: blur(4px); color: #ffffff; font-size: 10.5px; font-weight: bold; padding: 3px 8px; border-radius: 6px;">
+        📍 <span id="ad_geo_text_ads1">নিকটস্থ অফার</span>
       </div>
-      <a id="smartAdLink" href="javascript:void(0)" onclick="onSmartAdClick()" style="display: block; width: 100%; text-decoration: none; cursor: pointer;">
-        <img id="smartAdImage" src="" alt="Advertisement" onerror="handleSmartAdImgError(this)" onload="handleSmartAdImgSuccess(this)" style="width: 100%; max-height: 165px; object-fit: contain; display: block; margin: 0 auto; transition: opacity 0.35s ease;">
+      <a id="ad_link_ads1" href="javascript:void(0)" onclick="onAppAdClicked('ads1')" style="display: block; width: 100%; text-decoration: none; cursor: pointer;">
+        <img id="ad_img_ads1" src="" alt="Advertisement" onerror="handleAdSlotImgError('ads1')" onload="handleAdSlotImgSuccess('ads1')" style="width: 100%; max-height: 165px; object-fit: contain; display: block; margin: 0 auto; transition: opacity 0.3s ease;">
       </a>
-      <div id="smartAdDots" style="display: none; justify-content: center; gap: 6px; padding: 6px 0; background: #f8fafc; border-top: 1px solid #f1f5f9;">
-      </div>
+      <div id="ad_dots_ads1" style="display: none; justify-content: center; gap: 6px; padding: 6px 0; background: #f8fafc; border-top: 1px solid #f1f5f9;"></div>
     </div>
-  </div>
-
-  <!-- ১ নং ছবি: img1.png (বাস লাইভ লোকেশন এর উপরে থাকবে) -->
-  <div id="container_img1" class="dynamic-img-container" style="display: none; width: 100%; text-align: center; margin: 0; padding: 0; border: none; outline: none; background: transparent;">
-    <img id="dynamic_img1"
-         alt=""
-         onerror="handleDynamicImgError(this)" 
-         onload="handleDynamicImgSuccess(this)" 
-         class="dynamic-banner-img" 
-         style="width: 100%; max-height: 165px; object-fit: contain; border-radius: 10px; display: none; margin: 0 auto; border: none; outline: none; background: transparent; box-shadow: none;">
   </div>
 
   <h2>🚌 বাস লাইভ লোকেশন (ভারত)</h2>
@@ -1500,9 +1489,20 @@
   </div>
 
   <div class="card-grid">
-    <!-- ২ নং ছবি: img2.png (বর্তমান স্টপেজ এর উপরে থাকবে) -->
-    <div id="container_img2" class="dynamic-img-container" style="display: none; grid-column: 1 / -1; width: 100%; text-align: center; margin: 0; padding: 0; border: none; outline: none; background: transparent;">
-      <img id="dynamic_img2" alt="" onerror="handleDynamicImgError(this)" onload="handleDynamicImgSuccess(this)" class="dynamic-banner-img" style="width: 100%; max-height: 165px; object-fit: contain; border-radius: 10px; display: none; margin: 0 auto; border: none; outline: none; background: transparent; box-shadow: none;">
+    <!-- ২ নং বিজ্ঞাপন স্লট: ads2 (বর্তমান স্টপেজ এর উপরে থাকবে) -->
+    <div id="ad_slot_ads2" class="app-ad-slot-container" style="display: none; grid-column: 1 / -1; width: 100%; margin: 2px 0 6px 0;">
+      <div class="app-ad-card" style="position: relative; overflow: hidden; border-radius: 10px; background: #ffffff; box-shadow: 0 2px 6px rgba(0,0,0,0.06); border: 1px solid #e2e8f0; text-align: center;">
+        <div style="position: absolute; top: 4px; right: 6px; z-index: 10; background: rgba(15, 23, 42, 0.72); backdrop-filter: blur(4px); color: #ffffff; font-size: 9.5px; font-weight: bold; padding: 2px 6px; border-radius: 5px;">
+          📢 <span id="ad_badge_text_ads2">বিজ্ঞাপন</span>
+        </div>
+        <div id="ad_geo_badge_ads2" style="display:none; position: absolute; top: 4px; left: 6px; z-index: 10; background: rgba(2, 136, 209, 0.9); backdrop-filter: blur(4px); color: #ffffff; font-size: 9.5px; font-weight: bold; padding: 2px 6px; border-radius: 5px;">
+          📍 <span id="ad_geo_text_ads2">নিকটস্থ অফার</span>
+        </div>
+        <a id="ad_link_ads2" href="javascript:void(0)" onclick="onAppAdClicked('ads2')" style="display: block; width: 100%; text-decoration: none; cursor: pointer;">
+          <img id="ad_img_ads2" src="" alt="Advertisement" onerror="handleAdSlotImgError('ads2')" onload="handleAdSlotImgSuccess('ads2')" style="width: 100%; max-height: 165px; object-fit: contain; display: block; margin: 0 auto; transition: opacity 0.3s ease;">
+        </a>
+        <div id="ad_dots_ads2" style="display: none; justify-content: center; gap: 5px; padding: 4px 0; background: #f8fafc; border-top: 1px solid #f1f5f9;"></div>
+      </div>
     </div>
     <div class="card card-cur-stop"><b>📍 বর্তমান স্টপেজ:</b> <span id="infoCurStop">--</span></div>
     <div class="card card-next-stop"><b>⏩ পরবর্তী স্টপেজ:</b> <span id="infoNextStop">--</span></div>
@@ -1514,10 +1514,21 @@
     <div class="card"><b>📶 GPS সংকেত:</b> <span id="infoConfidence">--</span></div>
   </div>
   
-  <!-- ৩ নং ছবি: img3.png (বাসের গতিবেগ এর উপরে থাকবে) -->
-    <div id="container_img3" class="dynamic-img-container" style="display: none; grid-column: 1 / -1; width: 100%; text-align: center; margin: 0; padding: 0; border: none; outline: none; background: transparent;">
-      <img id="dynamic_img3" alt="" onerror="handleDynamicImgError(this)" onload="handleDynamicImgSuccess(this)" class="dynamic-banner-img" style="width: 100%; max-height: 165px; object-fit: contain; border-radius: 10px; display: none; margin: 0 auto; border: none; outline: none; background: transparent; box-shadow: none;">
+  <!-- ৩ নং বিজ্ঞাপন স্লট: ads3 (ম্যাপের উপরে থাকবে) -->
+  <div id="ad_slot_ads3" class="app-ad-slot-container" style="display: none; width: 100%; margin: 6px 0 10px 0;">
+    <div class="app-ad-card" style="position: relative; overflow: hidden; border-radius: 10px; background: #ffffff; box-shadow: 0 2px 6px rgba(0,0,0,0.06); border: 1px solid #e2e8f0; text-align: center;">
+      <div style="position: absolute; top: 4px; right: 6px; z-index: 10; background: rgba(15, 23, 42, 0.72); backdrop-filter: blur(4px); color: #ffffff; font-size: 9.5px; font-weight: bold; padding: 2px 6px; border-radius: 5px;">
+        📢 <span id="ad_badge_text_ads3">বিজ্ঞাপন</span>
+      </div>
+      <div id="ad_geo_badge_ads3" style="display:none; position: absolute; top: 4px; left: 6px; z-index: 10; background: rgba(2, 136, 209, 0.9); backdrop-filter: blur(4px); color: #ffffff; font-size: 9.5px; font-weight: bold; padding: 2px 6px; border-radius: 5px;">
+        📍 <span id="ad_geo_text_ads3">নিকটস্থ অফার</span>
+      </div>
+      <a id="ad_link_ads3" href="javascript:void(0)" onclick="onAppAdClicked('ads3')" style="display: block; width: 100%; text-decoration: none; cursor: pointer;">
+        <img id="ad_img_ads3" src="" alt="Advertisement" onerror="handleAdSlotImgError('ads3')" onload="handleAdSlotImgSuccess('ads3')" style="width: 100%; max-height: 165px; object-fit: contain; display: block; margin: 0 auto; transition: opacity 0.3s ease;">
+      </a>
+      <div id="ad_dots_ads3" style="display: none; justify-content: center; gap: 5px; padding: 4px 0; background: #f8fafc; border-top: 1px solid #f1f5f9;"></div>
     </div>
+  </div>
   
   <!-- লাইভ ম্যাপ সেকশন (দুই আঙুল দিয়ে সহজে জুম ও প্যান করা যাবে) -->
   <div class="live-map-wrapper" id="liveMapWrapper">
@@ -1544,7 +1555,23 @@
     <span id="mapAddStopBtnText">ম্যাপে ক্লিক করে সরাসরি নতুন স্টপ যোগ করুন (অফলাইন মোড)</span>
   </button>
     
-  <!-- ব্যবহারকারীর নির্দেশনা: ৭টি ফিচার ম্যাপের নিচে একদম লাস্টে যুক্ত করা হলো -->
+  <!-- ৪ নং বিজ্ঞাপন স্লট: ads4 (ফিচার বোতাম সমূহের উপরে থাকবে) -->
+  <div id="ad_slot_ads4" class="app-ad-slot-container" style="display: none; width: 100%; margin: 6px 0 10px 0;">
+    <div class="app-ad-card" style="position: relative; overflow: hidden; border-radius: 10px; background: #ffffff; box-shadow: 0 2px 6px rgba(0,0,0,0.06); border: 1px solid #e2e8f0; text-align: center;">
+      <div style="position: absolute; top: 4px; right: 6px; z-index: 10; background: rgba(15, 23, 42, 0.72); backdrop-filter: blur(4px); color: #ffffff; font-size: 9.5px; font-weight: bold; padding: 2px 6px; border-radius: 5px;">
+        📢 <span id="ad_badge_text_ads4">বিজ্ঞাপন</span>
+      </div>
+      <div id="ad_geo_badge_ads4" style="display:none; position: absolute; top: 4px; left: 6px; z-index: 10; background: rgba(2, 136, 209, 0.9); backdrop-filter: blur(4px); color: #ffffff; font-size: 9.5px; font-weight: bold; padding: 2px 6px; border-radius: 5px;">
+        📍 <span id="ad_geo_text_ads4">নিকটস্থ অফার</span>
+      </div>
+      <a id="ad_link_ads4" href="javascript:void(0)" onclick="onAppAdClicked('ads4')" style="display: block; width: 100%; text-decoration: none; cursor: pointer;">
+        <img id="ad_img_ads4" src="" alt="Advertisement" onerror="handleAdSlotImgError('ads4')" onload="handleAdSlotImgSuccess('ads4')" style="width: 100%; max-height: 165px; object-fit: contain; display: block; margin: 0 auto; transition: opacity 0.3s ease;">
+      </a>
+      <div id="ad_dots_ads4" style="display: none; justify-content: center; gap: 5px; padding: 4px 0; background: #f8fafc; border-top: 1px solid #f1f5f9;"></div>
+    </div>
+  </div>
+
+  <!-- ব্যবহারকারীর নির্দেশনা: ফিচার বাটনসমূহ -->
   <div class="features-quick-grid">
     <button type="button" class="feature-action-btn btn-wake-alarm" onclick="openWakeAlarmModal()" title="গন্তব্যের ৫০০ মিটার পূর্বে ওয়েক-আপ অ্যালার্ট">
       <span class="feat-icon">⏰</span>
@@ -1594,78 +1621,6 @@
       <span class="feat-sub">BusStops শিটে UP/DOWN সময়</span>
       <span class="feat-badge" style="background:#e0f2fe;color:#0369a1;">⏱️ সময় যুক্ত করুন</span>
     </button>
-    <button type="button" class="feature-action-btn btn-ad-settings" onclick="openAdSettingsModal()" title="বিজ্ঞাপন ছবি ও এলাকা (Lat/Long) সেটিংস">
-      <span class="feat-icon">📢</span>
-      <span class="feat-label">৯) বিজ্ঞাপন এলাকা</span>
-      <span class="feat-sub">ছবির Lat/Long নির্ধারণ</span>
-      <span class="feat-badge" style="background:#fef3c7;color:#92400e;">⚙️ বিজ্ঞাপন কনফিগ</span>
-    </button>
-  </div>
-
-  <!-- বাসের নির্দিষ্ট স্টপের নির্ধারিত সময় (BusStops শিট) অপশন - অ্যাপের সবচেয়ে নিচে -->
-  <div class="box" id="busStopScheduleBox" style="margin: 18px 0 16px 0; border: 1.5px solid #38bdf8; background: #f0f9ff; border-radius: 14px; padding: 14px; box-shadow: 0 2px 8px rgba(2,136,209,0.08);">
-    <div style="display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="toggleBusStopScheduleForm()">
-      <div style="display:flex; align-items:center; gap:10px;">
-        <span style="font-size:24px;">⏱️</span>
-        <div>
-          <h3 style="margin:0; font-size:14.5px; font-weight:800; color:#0369a1;">BusStops শিটে স্টপেজের সময় যুক্ত করুন</h3>
-          <span style="font-size:11.5px; color:#0284c7;">বাসের UP বা DOWN রুটের নির্দিষ্ট স্টপেজে পৌঁছানোর সময় সেভ করুন</span>
-        </div>
-      </div>
-      <span id="busStopScheduleToggleIcon" style="font-size:16px; color:#0288d1; font-weight:bold; background:#e0f2fe; padding:4px 9px; border-radius:8px;">▼</span>
-    </div>
-
-    <div id="busStopScheduleForm" class="hidden" style="margin-top:14px; border-top:1px dashed #93c5fd; padding-top:12px;">
-      <!-- ১. বাস নির্বাচন -->
-      <div style="margin-bottom:12px;">
-        <label style="font-size:12.5px; font-weight:bold; color:#0f172a; display:block; margin-bottom:4px;">১) বাস নির্বাচন করুন:</label>
-        <select id="scheduleBusSelect" onchange="onScheduleBusSelected()" style="width:100%; padding:10px; border-radius:8px; border:1.5px solid #94a3b8; font-size:13.5px; box-sizing:border-box; background:#ffffff;">
-          <option value="">-- তালিকা থেকে বাস বাছুন --</option>
-        </select>
-      </div>
-
-      <!-- ২. অভিমুখ / ট্রিপ (UP নাকি DOWN) -->
-      <div style="margin-bottom:12px;">
-        <label style="font-size:12.5px; font-weight:bold; color:#0f172a; display:block; margin-bottom:4px;">২) অভিমুখ / ট্রিপ (UP নাকি DOWN):</label>
-        <div style="display:flex; gap:10px; margin-bottom:8px;">
-          <label style="flex:1; display:flex; align-items:center; gap:6px; background:#f0fdf4; padding:8px 12px; border-radius:8px; border:1.5px solid #86efac; cursor:pointer;">
-            <input type="radio" name="scheduleDirectionRadio" value="UP" checked onchange="onScheduleDirectionChanged('UP')">
-            <span style="font-weight:bold; color:#166534; font-size:13px;">🟢 UP ট্রিপ</span>
-          </label>
-          <label style="flex:1; display:flex; align-items:center; gap:6px; background:#eff6ff; padding:8px 12px; border-radius:8px; border:1.5px solid #93c5fd; cursor:pointer;">
-            <input type="radio" name="scheduleDirectionRadio" value="DOWN" onchange="onScheduleDirectionChanged('DOWN')">
-            <span style="font-weight:bold; color:#1e40af; font-size:13px;">🔵 DOWN ট্রিপ</span>
-          </label>
-        </div>
-        <select id="scheduleTripSelect" onchange="onScheduleTripSelected()" style="width:100%; padding:9px; border-radius:8px; border:1.5px solid #94a3b8; font-size:13px; box-sizing:border-box; background:#ffffff;">
-          <option value="">-- নির্দিষ্ট ট্রিপ ছাড়ার সময় ও রুট --</option>
-        </select>
-      </div>
-
-      <!-- ৩. স্টপেজের নাম -->
-      <div style="margin-bottom:12px;">
-        <label style="font-size:12.5px; font-weight:bold; color:#0f172a; display:block; margin-bottom:4px;">৩) স্টপেজের নাম:</label>
-        <input type="text" id="scheduleStopName" placeholder="স্টপের নাম লিখুন বা নিচের বোতাম থেকে চাপুন..." list="scheduleStopSuggestions" autocomplete="off" oninput="onScheduleStopInput()" style="width:100%; padding:10px; border-radius:8px; border:1.5px solid #94a3b8; font-size:13.5px; box-sizing:border-box; background:#ffffff;">
-        <datalist id="scheduleStopSuggestions"></datalist>
-        <div id="scheduleQuickStops" style="display:flex; flex-wrap:wrap; gap:5px; margin-top:8px; max-height:90px; overflow-y:auto;"></div>
-      </div>
-
-      <!-- ৪. নির্ধারিত সময় -->
-      <div style="margin-bottom:14px;">
-        <label style="font-size:12.5px; font-weight:bold; color:#0f172a; display:block; margin-bottom:4px;">৪) স্টপেজে বাস পৌঁছানোর নির্ধারিত সময়:</label>
-        <div class="time-picker-row" style="display:flex; gap:8px;">
-          <input type="text" id="scheduleTimeVal" placeholder="যেমন: 08:30 বা 11:15" style="flex:2; padding:10px; border-radius:8px; border:1.5px solid #94a3b8; font-size:14px; box-sizing:border-box; background:#ffffff;">
-          <select id="scheduleTimeAmpm" class="ampm-select" style="flex:1; padding:10px; border-radius:8px; border:1.5px solid #94a3b8; font-size:14px; box-sizing:border-box; background:#ffffff;">
-            <option value="AM">AM</option>
-            <option value="PM">PM</option>
-          </select>
-        </div>
-      </div>
-
-      <button type="button" class="btn" style="width:100%; background: linear-gradient(135deg, #0288d1 0%, #0369a1 100%); color:#fff; font-weight:bold; padding:12px; font-size:14.5px; border-radius:8px; box-shadow:0 3px 10px rgba(2,136,209,0.3);" onclick="submitBusStopTime()">
-        💾 BusStops শিটে সময় সেভ করুন
-      </button>
-    </div>
   </div>
 
   <!-- কাজ শেষ? অ্যাপ সম্পূর্ণ বন্ধ করুন (Exit App) অপশন -->
@@ -2209,12 +2164,17 @@
       নির্দিষ্ট কোনো বাসের নির্দিষ্ট স্টপেজে (UP বা DOWN ট্রিপ) পৌঁছানোর সময় BusStops শিটে সেভ করুন।
     </p>
     <div style="background:#f0f9ff;border:1.5px solid #93c5fd;border-radius:10px;padding:12px;margin-bottom:12px;">
-      <!-- ১. বাস নির্বাচন -->
+      <!-- ১. বাসের নাম বা নম্বর দিয়ে খুঁজুন ও নির্বাচন করুন -->
       <div style="margin-bottom:10px;">
-        <label style="font-size:12.5px;font-weight:bold;color:#0f172a;display:block;margin-bottom:4px;">১) বাস নির্বাচন করুন:</label>
-        <select id="modalScheduleBusSelect" onchange="onModalScheduleBusSelected()" style="width:100%;padding:9px;border-radius:8px;border:1.5px solid #94a3b8;font-size:13.5px;box-sizing:border-box;background:#fff;">
-          <option value="">-- তালিকা থেকে বাস বাছুন --</option>
+        <label style="font-size:12.5px;font-weight:bold;color:#0f172a;display:block;margin-bottom:4px;">১) বাসের নাম বা নম্বর দিয়ে খুঁজুন ও নির্বাচন করুন:</label>
+        <div style="position:relative; margin-bottom:6px;">
+          <input type="text" id="modalScheduleBusSearchInput" placeholder="🔍 বাসের নাম বা নম্বর দিয়ে খুঁজুন (যেমন: SREE, 121, SURI)..." autocomplete="off" oninput="onFilterModalScheduleBuses(this.value)" style="width:100%;padding:9px 32px 9px 10px;border-radius:8px;border:1.5px solid #0288d1;font-size:13.5px;box-sizing:border-box;background:#ffffff;">
+          <span id="modalScheduleBusSearchClear" onclick="clearModalScheduleBusSearch()" style="position:absolute; right:10px; top:9px; font-size:16px; color:#94a3b8; cursor:pointer; display:none;">✕</span>
+        </div>
+        <select id="modalScheduleBusSelect" onchange="onModalScheduleBusSelected()" style="width:100%;padding:9px;border-radius:8px;border:1.5px solid #94a3b8;font-size:13px;box-sizing:border-box;background:#fff;">
+          <option value="">-- বাসের তালিকা থেকে বাছুন --</option>
         </select>
+        <div id="modalScheduleBusSearchResults" style="display:none; max-height:120px; overflow-y:auto; background:#fff; border:1px solid #cbd5e1; border-radius:8px; margin-top:4px; box-shadow:0 3px 8px rgba(0,0,0,0.08);"></div>
       </div>
 
       <!-- ২. অভিমুখ / ট্রিপ (UP নাকি DOWN) -->
@@ -2261,31 +2221,6 @@
     </div>
   </div>
 </div>
-
-<!-- ৯) বিজ্ঞাপন ছবি ও এলাকা (Lat/Long) সেটিংস মডাল -->
-<div id="adSettingsModal" class="app-feature-modal hidden">
-  <div class="feature-modal-content" style="max-height: 85vh; overflow-y: auto;">
-    <div class="feature-modal-header">
-      <div class="feature-modal-title">📢 বিজ্ঞাপন ছবি ও এলাকা সেটিংস</div>
-      <button type="button" class="modal-close-x" onclick="closeAdSettingsModal()">&times;</button>
-    </div>
-    <p style="font-size:13px;color:#334155;margin-top:0;line-height:1.45;">
-      img1.png, img2.png, img3.png, img4.png ছবিগুলোর জন্য নির্দিষ্ট এলাকা (Lat/Long) ও লিংক নির্ধারণ করুন। নির্দিষ্ট এলাকায় পৌঁছালে সংশ্লিষ্ট ছবিটি অগ্রাধিকার পাবে।
-    </p>
-
-    <div id="adConfigListContainer" style="display:flex;flex-direction:column;gap:12px;margin-bottom:14px;">
-    </div>
-
-    <button type="button" class="btn" style="width:100%;background:#15803d;color:#fff;font-weight:bold;padding:11px;font-size:14px;border-radius:8px;" onclick="saveAdSettingsFromModal()">
-      💾 বিজ্ঞাপন সেটিংস সেভ করুন
-    </button>
-  </div>
-</div>
-
-  <!-- ৪ নং ছবি: img4.png (ওয়েক-আপ এলার্ট এর উপরে থাকবে) -->
-    <div id="container_img4" class="dynamic-img-container" style="display: none; grid-column: 1 / -1; width: 100%; text-align: center; margin: 0; padding: 0; border: none; outline: none; background: transparent;">
-      <img id="dynamic_img4" alt="" onerror="handleDynamicImgError(this)" onload="handleDynamicImgSuccess(this)" class="dynamic-banner-img" style="width: 100%; max-height: 165px; object-fit: contain; border-radius: 10px; display: none; margin: 0 auto; border: none; outline: none; background: transparent; box-shadow: none;">
-    </div>
   
 <script type="text/javascript">
   function googleTranslateElementInit() {
@@ -7912,442 +7847,464 @@ https://aionline.in.net`;
     }
   }
 
+  // ==========================================
+  // স্মার্ট অ্যাডভার্টাইজমেন্ট ইঞ্জিন (ads শিট ও ৪টি নির্দিষ্ট অবস্থান: ads1, ads2, ads3, ads4)
+  // ==========================================
+  let allSheetAdsList = []; // [ { id, imageName, area, latitude, longitude, radiusKm, contactNumber, startTime, stopTime, src } ]
+  
+  let appSlotState = {
+    ads1: { ads: [], index: 0, timer: null, currentAd: null },
+    ads2: { ads: [], index: 0, timer: null, currentAd: null },
+    ads3: { ads: [], index: 0, timer: null, currentAd: null },
+    ads4: { ads: [], index: 0, timer: null, currentAd: null }
+  };
+
   async function syncRemoteDynamicImages() {
-    let imgNames = ['img1', 'img2', 'img3', 'img4'];
-    let ts = Date.now();
-
-    for (let name of imgNames) {
-      let container = document.getElementById("container_" + name);
-      let imgElem = document.getElementById("dynamic_" + name);
-      if (!imgElem) continue;
-
-      // ১. evbasoft GitHub রিপোজিটরি পরীক্ষা
-      let url1 = `https://raw.githubusercontent.com/evbasoft/bus3/main/app/src/main/assets/${name}.png?t=${ts}`;
-      let blobUrl = await checkRemoteImageExists(url1);
-
-      // ২. evbasoftware-jpg GitHub রিপোজিটরি পরীক্ষা
-      if (!blobUrl) {
-        let url2 = `https://raw.githubusercontent.com/evbasoftware-jpg/bus3/main/app/src/main/assets/${name}.png?t=${ts}`;
-        blobUrl = await checkRemoteImageExists(url2);
-      }
-
-      if (blobUrl) {
-        imgElem.src = blobUrl;
-        imgElem.style.setProperty("display", "block", "important");
-        if (container) {
-          container.style.setProperty("display", "block", "important");
-          container.style.setProperty("margin", "6px 0 10px 0", "important");
-        }
-        continue;
-      }
-
-      // ৩. লোকাল Android assets ফাইল পরীক্ষা (AndroidBridge.assetExists)
-      let localExists = false;
-      try {
-        if (window.AndroidBridge && typeof window.AndroidBridge.assetExists === "function") {
-          localExists = window.AndroidBridge.assetExists(name + ".png");
-        }
-      } catch (_) {}
-
-      if (localExists) {
-        imgElem.src = "file:///android_asset/" + name + ".png?t=" + ts;
-        imgElem.style.setProperty("display", "block", "important");
-        if (container) {
-          container.style.setProperty("display", "block", "important");
-          container.style.setProperty("margin", "6px 0 10px 0", "important");
-        }
-      } else {
-        handleDynamicImgError(imgElem);
-      }
-    }
+    await initSmartAdSystem();
   }
 
-  // ==========================================
-  // স্মার্ট অ্যাডভার্টাইজমেন্ট ব্যানার, স্লাইডশো ও নির্দিষ্ট এলাকা (Lat/Long) ভিত্তিক বিজ্ঞাপন ইঞ্জিন
-  // ==========================================
-  let activeAdList = []; // [ { id, title, imgName, src, lat, lon, radiusKm, link, isGeo } ]
-  let currentAdIndex = 0;
-  let adSlideshowTimer = null;
-  let currentGeoLockedAdId = null;
-
-  const AD_GEO_CONFIGS_KEY = "app_ad_geo_configs_v1";
-
-  function getStoredAdGeoConfigs() {
-    try {
-      let raw = localStorage.getItem(AD_GEO_CONFIGS_KEY);
-      if (raw) {
-        let parsed = JSON.parse(raw);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      }
-    } catch (_) {}
-    return [
-      { id: "img1", imgName: "img1.png", title: "বিজ্ঞাপন ১", locationName: "সাধারণ / সকল এলাকা", lat: 0, lon: 0, radiusKm: 0, link: "" },
-      { id: "img2", imgName: "img2.png", title: "বিজ্ঞাপন ২", locationName: "সাধারণ / সকল এলাকা", lat: 0, lon: 0, radiusKm: 0, link: "" },
-      { id: "img3", imgName: "img3.png", title: "বিজ্ঞাপন ৩", locationName: "সাধারণ / সকল এলাকা", lat: 0, lon: 0, radiusKm: 0, link: "" },
-      { id: "img4", imgName: "img4.png", title: "বিজ্ঞাপন ৪", locationName: "সাধারণ / সকল এলাকা", lat: 0, lon: 0, radiusKm: 0, link: "" }
-    ];
-  }
-
-  function saveStoredAdGeoConfigs(list) {
-    try {
-      localStorage.setItem(AD_GEO_CONFIGS_KEY, JSON.stringify(list));
-    } catch (_) {}
-  }
-
+  // ১. Ads ফোল্ডার বা অনলাইন থেকে ছবির সোর্স নিশ্চিত করা
   async function resolveAdImageSource(imgRef) {
     if (!imgRef) return null;
-    if (imgRef.startsWith("http://") || imgRef.startsWith("https://") || imgRef.startsWith("data:")) {
-      let blobUrl = await checkRemoteImageExists(imgRef);
-      return blobUrl || imgRef;
+    let clean = String(imgRef).trim();
+    if (clean.startsWith("http://") || clean.startsWith("https://") || clean.startsWith("data:")) {
+      let blobUrl = await checkRemoteImageExists(clean);
+      return blobUrl || clean;
     }
-    let baseName = imgRef.replace(/\.png$/i, '');
+
+    clean = clean.replace(/^\/+/, '');
+    if (clean.toLowerCase().startsWith("ads/")) {
+      clean = clean.substring(4);
+    }
     let ts = Date.now();
 
-    // ১. evbasoft GitHub
-    let url1 = `https://raw.githubusercontent.com/evbasoft/bus3/main/app/src/main/assets/${baseName}.png?t=${ts}`;
-    let blob = await checkRemoteImageExists(url1);
-    if (blob) return blob;
-
-    // ২. evbasoftware-jpg GitHub
-    let url2 = `https://raw.githubusercontent.com/evbasoftware-jpg/bus3/main/app/src/main/assets/${baseName}.png?t=${ts}`;
-    blob = await checkRemoteImageExists(url2);
-    if (blob) return blob;
-
-    // ৩. লোকাল Android Assets
-    let localExists = false;
+    // ১) Android Assets - Ads/ ফোল্ডার
+    let inAdsFolder = false;
+    let inRootFolder = false;
     try {
       if (window.AndroidBridge && typeof window.AndroidBridge.assetExists === "function") {
-        localExists = window.AndroidBridge.assetExists(baseName + ".png");
-      }
-    } catch (_) {}
-
-    if (localExists) {
-      return "file:///android_asset/" + baseName + ".png?t=" + ts;
-    }
-    return null;
-  }
-
-  async function initSmartAdSystem() {
-    let adConfigs = getStoredAdGeoConfigs();
-    let validAds = [];
-
-    // প্রতিটি কনফিগার করা ছবির সোর্স যাচাই
-    for (let cfg of adConfigs) {
-      let resolvedSrc = await resolveAdImageSource(cfg.imgName || (cfg.id + ".png"));
-      if (resolvedSrc) {
-        validAds.push({
-          id: cfg.id,
-          imgName: cfg.imgName || (cfg.id + ".png"),
-          title: cfg.title || cfg.id,
-          locationName: cfg.locationName || "",
-          lat: Number(cfg.lat || 0),
-          lon: Number(cfg.lon || 0),
-          radiusKm: Number(cfg.radiusKm || 0),
-          link: cfg.link || "",
-          src: resolvedSrc
-        });
-      }
-    }
-
-    // গুগল শীটে Ads শীট থাকলে সেখান থেকে রিমোট বিজ্ঞাপন আনা (ঐচ্ছিক)
-    try {
-      let sheetAds = await fetchSpreadsheetAds();
-      if (sheetAds && sheetAds.length > 0) {
-        for (let sAd of sheetAds) {
-          let sSrc = await resolveAdImageSource(sAd.imgName);
-          if (sSrc) {
-            sAd.src = sSrc;
-            validAds.push(sAd);
-          }
+        inAdsFolder = window.AndroidBridge.assetExists("Ads/" + clean);
+        if (!inAdsFolder) {
+          inRootFolder = window.AndroidBridge.assetExists(clean);
         }
       }
     } catch (_) {}
 
-    activeAdList = validAds;
-
-    let banner = document.getElementById("smartAdBannerContainer");
-    if (validAds.length > 0) {
-      if (banner) banner.style.display = "block";
-      currentAdIndex = 0;
-      displayAd(validAds[0], false);
-      renderSmartAdDots();
-      startAdSlideshow();
-    } else {
-      if (banner) banner.style.display = "none";
+    if (inAdsFolder) {
+      return "file:///android_asset/Ads/" + clean + "?t=" + ts;
     }
+    if (inRootFolder) {
+      return "file:///android_asset/" + clean + "?t=" + ts;
+    }
+
+    // ২) evbasoft GitHub রিপোজিটরি (Ads/ ফোল্ডার ও রুট)
+    let urlAds1 = `https://raw.githubusercontent.com/evbasoft/bus3/main/app/src/main/assets/Ads/${clean}?t=${ts}`;
+    let blob = await checkRemoteImageExists(urlAds1);
+    if (blob) return blob;
+
+    let urlRoot1 = `https://raw.githubusercontent.com/evbasoft/bus3/main/app/src/main/assets/${clean}?t=${ts}`;
+    blob = await checkRemoteImageExists(urlRoot1);
+    if (blob) return blob;
+
+    // ৩) evbasoftware-jpg GitHub রিপোজিটরি
+    let urlAds2 = `https://raw.githubusercontent.com/evbasoftware-jpg/bus3/main/app/src/main/assets/Ads/${clean}?t=${ts}`;
+    blob = await checkRemoteImageExists(urlAds2);
+    if (blob) return blob;
+
+    let urlRoot2 = `https://raw.githubusercontent.com/evbasoftware-jpg/bus3/main/app/src/main/assets/${clean}?t=${ts}`;
+    blob = await checkRemoteImageExists(urlRoot2);
+    if (blob) return blob;
+
+    // রিলেটিভ ফলব্যাক
+    return "Ads/" + clean;
   }
 
+  // ২. গুগল স্প্রেডশিটের ads শিট থেকে লাইভ তথ্য আনা
   async function fetchSpreadsheetAds() {
-    try {
-      let url = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:json&sheet=Ads`;
-      let res = await fetch(url);
-      if (!res.ok) return null;
-      let text = await res.text();
-      let start = text.indexOf("{");
-      let end = text.lastIndexOf("}");
-      if (start !== -1 && end !== -1) {
-        let json = JSON.parse(text.substring(start, end + 1));
-        let rows = (json.table && json.table.rows) ? json.table.rows : [];
-        let list = [];
-        rows.forEach((r, idx) => {
-          if (!r.c) return;
-          let getCol = (c) => (r.c[c] ? (r.c[c].f !== undefined ? r.c[c].f : (r.c[c].v !== undefined ? r.c[c].v : "")) : "");
-          let img = String(getCol(0)).trim();
-          let title = String(getCol(1)).trim();
-          let locName = String(getCol(2)).trim();
-          let lat = Number(getCol(3)) || 0;
-          let lon = Number(getCol(4)) || 0;
-          let radius = Number(getCol(5)) || 5;
-          let link = String(getCol(6)).trim();
-          let status = String(getCol(7) || "active").trim().toLowerCase();
-          if (img && (status === "active" || status === "")) {
-            list.push({
-              id: "sheet_ad_" + idx,
-              imgName: img,
-              title: title || ("বিজ্ঞাপন " + (idx + 1)),
-              locationName: locName,
-              lat: lat,
-              lon: lon,
-              radiusKm: radius,
-              link: link
+    let ads = [];
+    let sheetNames = ["ads", "Ads", "ADS"];
+
+    for (let sName of sheetNames) {
+      try {
+        let url = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:json&sheet=${sName}`;
+        let res = await fetch(url);
+        if (!res.ok) continue;
+        let text = await res.text();
+        let start = text.indexOf("{");
+        let end = text.lastIndexOf("}");
+        if (start !== -1 && end !== -1) {
+          let json = JSON.parse(text.substring(start, end + 1));
+          let cols = (json.table && json.table.cols) ? json.table.cols : [];
+          let rows = (json.table && json.table.rows) ? json.table.rows : [];
+          if (rows && rows.length > 0) {
+            let header = cols.map(c => String(c ? (c.label || c.id || "") : "").toLowerCase());
+            let findCol = (keywords, defaultIdx) => {
+              for (let i = 0; i < header.length; i++) {
+                for (let k of keywords) {
+                  if (header[i].indexOf(k) !== -1) return i;
+                }
+              }
+              return defaultIdx;
+            };
+
+            let cImg = findCol(["image", "img"], 0);
+            let cArea = findCol(["area", "app", "slot"], 1);
+            let cLat = findCol(["lat"], 2);
+            let cLon = findCol(["lon", "lng"], 3);
+            let cRad = findCol(["radius", "rad", "km"], 4);
+            let cPhone = findCol(["contact", "phone", "number", "mobile"], 5);
+            let cStart = findCol(["start"], 6);
+            let cStop = findCol(["stop", "end"], 7);
+
+            rows.forEach((r, idx) => {
+              if (!r.c) return;
+              let getVal = (col) => (r.c[col] ? (r.c[col].f !== undefined ? r.c[col].f : (r.c[col].v !== undefined ? r.c[col].v : "")) : "");
+              let imgName = String(getVal(cImg)).trim();
+              if (!imgName) return;
+
+              let rawArea = String(getVal(cArea)).trim();
+              let cleanArea = rawArea.toLowerCase().replace(/[^a-z0-9]/g, '');
+              if (!cleanArea || !['ads1', 'ads2', 'ads3', 'ads4'].includes(cleanArea)) {
+                // ডিফল্ট বা ম্যাপিং
+                if (cleanArea === 'ads' || cleanArea === 'ad1') cleanArea = 'ads1';
+                else if (cleanArea === 'ad2') cleanArea = 'ads2';
+                else if (cleanArea === 'ad3') cleanArea = 'ads3';
+                else if (cleanArea === 'ad4') cleanArea = 'ads4';
+                else cleanArea = 'ads1';
+              }
+
+              let lat = Number(getVal(cLat)) || 0;
+              let lon = Number(getVal(cLon)) || 0;
+              let rad = Number(getVal(cRad)) || 0;
+              let contact = String(getVal(cPhone)).trim();
+              let startTime = String(getVal(cStart)).trim();
+              let stopTime = String(getVal(cStop)).trim();
+
+              ads.push({
+                id: `ad_${idx}`,
+                imageName: imgName,
+                area: cleanArea,
+                rawArea: rawArea,
+                latitude: lat,
+                longitude: lon,
+                radiusKm: rad,
+                contactNumber: contact,
+                startTime: startTime,
+                stopTime: stopTime
+              });
             });
+
+            if (ads.length > 0) return ads;
           }
-        });
-        if (list.length > 0) return list;
+        }
+      } catch (e) {
+        console.warn(`GViz fetch ads error for ${sName}:`, e);
       }
-    } catch (_) {}
+    }
+
+    // Apps Script API ফলব্যাক
+    try {
+      let res = await fetch(`${API_URL}?action=getAds`);
+      let data = await res.json();
+      if (data && data.ok && Array.isArray(data.ads) && data.ads.length > 0) {
+        return data.ads;
+      }
+    } catch (e) {
+      console.warn("Apps Script getAds API fallback error:", e);
+    }
+
+    return ads;
+  }
+
+  // ৩. সময় ও লোকেশন পরীক্ষা
+  function parseAdTimeToMinutes(timeStr) {
+    if (!timeStr) return null;
+    let s = String(timeStr).trim().toUpperCase();
+    if (!s) return null;
+
+    let isPM = s.indexOf("PM") !== -1;
+    let isAM = s.indexOf("AM") !== -1;
+    s = s.replace(/AM|PM/g, "").trim();
+
+    let parts = s.split(":");
+    if (parts.length >= 2) {
+      let h = parseInt(parts[0], 10);
+      let m = parseInt(parts[1], 10);
+      if (isNaN(h) || isNaN(m)) return null;
+      if (isPM && h < 12) h += 12;
+      if (isAM && h === 12) h = 0;
+      return h * 60 + m;
+    }
     return null;
   }
 
-  function displayAd(ad, isGeoLocked) {
-    if (!ad) return;
-    let img = document.getElementById("smartAdImage");
-    let locBadge = document.getElementById("smartAdLocationBadge");
-    let locText = document.getElementById("smartAdLocationText");
-    let badgeText = document.getElementById("smartAdBadgeText");
+  function isAdWithinActiveTime(startTimeStr, stopTimeStr) {
+    if (!startTimeStr && !stopTimeStr) return true;
+    let startM = parseAdTimeToMinutes(startTimeStr);
+    let stopM = parseAdTimeToMinutes(stopTimeStr);
+    if (startM === null && stopM === null) return true;
 
-    if (img) {
-      img.style.opacity = "0.2";
-      setTimeout(() => {
-        img.src = ad.src;
-        img.style.opacity = "1";
-      }, 150);
-    }
+    let now = new Date();
+    let currentM = now.getHours() * 60 + now.getMinutes();
 
-    if (locBadge && locText) {
-      if (isGeoLocked && ad.locationName) {
-        locBadge.style.display = "block";
-        locText.innerText = `নিকটস্থ অফার: ${ad.locationName}`;
-      } else if (isGeoLocked) {
-        locBadge.style.display = "block";
-        locText.innerText = `নিকটস্থ এলাকার বিজ্ঞাপন`;
+    if (startM !== null && stopM !== null) {
+      if (startM <= stopM) {
+        return currentM >= startM && currentM <= stopM;
       } else {
-        locBadge.style.display = "none";
+        return currentM >= startM || currentM <= stopM;
       }
+    } else if (startM !== null) {
+      return currentM >= startM;
+    } else if (stopM !== null) {
+      return currentM <= stopM;
     }
-
-    if (badgeText) {
-      badgeText.innerText = ad.title ? `${ad.title}` : "বিজ্ঞাপন";
-    }
-
-    currentGeoLockedAdId = isGeoLocked ? ad.id : null;
-    updateSmartAdDots();
+    return true;
   }
 
-  function startAdSlideshow() {
-    if (adSlideshowTimer) clearInterval(adSlideshowTimer);
-    if (activeAdList.length <= 1) return;
-    adSlideshowTimer = setInterval(() => {
-      if (!currentGeoLockedAdId) {
-        currentAdIndex = (currentAdIndex + 1) % activeAdList.length;
-        displayAd(activeAdList[currentAdIndex], false);
+  // ৪. বিজ্ঞাপন ইঞ্জিন ইনিশিয়ালাইজেশন
+  async function initSmartAdSystem() {
+    try {
+      let adsFromSheet = await fetchSpreadsheetAds();
+      if (!adsFromSheet || adsFromSheet.length === 0) {
+        // ফলব্যাক: যদি শিটে এখনও কিছু না থাকে, লোকাল img1 চেক
+        let defaultSrc = await resolveAdImageSource("img1.png");
+        if (defaultSrc) {
+          adsFromSheet = [
+            {
+              id: "fallback_img1",
+              imageName: "img1.png",
+              area: "ads1",
+              rawArea: "ads1",
+              latitude: 0,
+              longitude: 0,
+              radiusKm: 0,
+              contactNumber: "",
+              startTime: "",
+              stopTime: ""
+            }
+          ];
+        }
       }
-    }, 6000);
-  }
 
-  function renderSmartAdDots() {
-    let dots = document.getElementById("smartAdDots");
-    if (!dots) return;
-    if (activeAdList.length <= 1) {
-      dots.style.display = "none";
-      return;
+      // ছবির সোর্স নিশ্চিত করা
+      let prepared = [];
+      for (let ad of adsFromSheet) {
+        let src = await resolveAdImageSource(ad.imageName);
+        if (src) {
+          ad.src = src;
+          prepared.push(ad);
+        }
+      }
+
+      allSheetAdsList = prepared;
+      evaluateAllAdSlots();
+
+      // প্রতি ১ মিনিট অন্তর স্বয়ংক্রিয়ভাবে সময় অনুযায়ী বিজ্ঞাপন রিফ্রেশ
+      if (!window._adTimeCheckInterval) {
+        window._adTimeCheckInterval = setInterval(() => {
+          evaluateAllAdSlots();
+        }, 60000);
+      }
+    } catch (e) {
+      console.warn("initSmartAdSystem caught:", e);
     }
-    dots.style.display = "flex";
-    dots.innerHTML = activeAdList.map((_, i) => `
-      <span class="ad-dot" 
-            onclick="selectAdSlide(${i})" 
-            style="width: 8px; height: 8px; border-radius: 50%; background: ${i === currentAdIndex ? '#0288d1' : '#cbd5e1'}; cursor: pointer; transition: all 0.25s ease;">
-      </span>
-    `).join("");
   }
 
-  function updateSmartAdDots() {
-    let dots = document.getElementById("smartAdDots");
-    if (!dots || activeAdList.length <= 1) return;
-    let dotSpans = dots.querySelectorAll(".ad-dot");
-    dotSpans.forEach((d, i) => {
-      d.style.background = (i === currentAdIndex ? '#0288d1' : '#cbd5e1');
-      d.style.transform = (i === currentAdIndex ? 'scale(1.3)' : 'scale(1)');
+  // ৫. প্রতিটি স্লটের (ads1, ads2, ads3, ads4) জন্য উপযুক্ত বিজ্ঞাপন নির্ধারণ
+  function evaluateAllAdSlots(userLat, userLon) {
+    let lat = userLat !== undefined ? userLat : (userPos ? userPos.lat : 0);
+    let lon = userLon !== undefined ? userLon : (userPos ? userPos.lon : 0);
+
+    let slots = ['ads1', 'ads2', 'ads3', 'ads4'];
+
+    slots.forEach(slot => {
+      let state = appSlotState[slot];
+      let candidateAds = allSheetAdsList.filter(ad => ad.area === slot);
+
+      let eligible = [];
+      for (let ad of candidateAds) {
+        // ক) সময় ফিল্টার
+        if (!isAdWithinActiveTime(ad.startTime, ad.stopTime)) {
+          continue;
+        }
+
+        // খ) এলাকা ও দূরত্বের ফিল্টার
+        if (ad.latitude && ad.longitude && ad.radiusKm > 0) {
+          if (lat && lon) {
+            let dist = getDistanceFromLatLonInKm(lat, lon, ad.latitude, ad.longitude);
+            if (dist <= ad.radiusKm) {
+              eligible.push({ ...ad, isGeoMatch: true, distanceKm: dist });
+            }
+          }
+        } else {
+          // কোনো lat/long উল্লেখ না থাকলে সকল এলাকার জন্য সক্রিয়
+          eligible.push({ ...ad, isGeoMatch: false });
+        }
+      }
+
+      // নিকটস্থ বিজ্ঞাপনকে অগ্রাধিকার দিন
+      eligible.sort((a, b) => {
+        if (a.isGeoMatch && !b.isGeoMatch) return -1;
+        if (!a.isGeoMatch && b.isGeoMatch) return 1;
+        return (a.distanceKm || 0) - (b.distanceKm || 0);
+      });
+
+      state.ads = eligible;
+      let slotElem = document.getElementById("ad_slot_" + slot);
+
+      if (eligible.length === 0) {
+        if (slotElem) slotElem.style.display = "none";
+        if (state.timer) { clearInterval(state.timer); state.timer = null; }
+        state.currentAd = null;
+      } else {
+        if (slotElem) {
+          // গ্রিডের ক্ষেত্রে স্প্যান সঠিক রাখা
+          if (slot === 'ads2' || slot === 'ads3') {
+            slotElem.style.gridColumn = "1 / -1";
+          }
+          slotElem.style.display = "block";
+        }
+        if (state.index >= eligible.length) state.index = 0;
+        displaySlotAd(slot, state.index);
+        setupSlotSlideshow(slot);
+      }
     });
   }
 
-  function selectAdSlide(idx) {
-    if (idx >= 0 && idx < activeAdList.length) {
-      currentAdIndex = idx;
-      currentGeoLockedAdId = null;
-      displayAd(activeAdList[idx], false);
-      startAdSlideshow();
+  // ৬. নির্দিষ্ট স্লটে বিজ্ঞাপন প্রদর্শন
+  function displaySlotAd(slot, index) {
+    let state = appSlotState[slot];
+    if (!state || !state.ads || state.ads.length === 0) return;
+
+    let ad = state.ads[index % state.ads.length];
+    state.currentAd = ad;
+    state.index = index % state.ads.length;
+
+    let img = document.getElementById("ad_img_" + slot);
+    let geoBadge = document.getElementById("ad_geo_badge_" + slot);
+    let badgeText = document.getElementById("ad_badge_text_" + slot);
+
+    if (img) {
+      img.style.opacity = "0.3";
+      setTimeout(() => {
+        img.src = ad.src;
+        img.style.opacity = "1";
+        img.style.display = "block";
+      }, 120);
+    }
+
+    if (geoBadge) {
+      geoBadge.style.display = ad.isGeoMatch ? "block" : "none";
+    }
+
+    if (badgeText) {
+      badgeText.innerText = ad.isGeoMatch ? "নিকটস্থ অফার" : "বিজ্ঞাপন";
+    }
+
+    renderSlotDots(slot);
+  }
+
+  // ৭. স্লাইডশো ব্যবস্থাপনা
+  function setupSlotSlideshow(slot) {
+    let state = appSlotState[slot];
+    if (state.timer) { clearInterval(state.timer); state.timer = null; }
+    if (!state.ads || state.ads.length <= 1) return;
+
+    state.timer = setInterval(() => {
+      state.index = (state.index + 1) % state.ads.length;
+      displaySlotAd(slot, state.index);
+    }, 5000);
+  }
+
+  function renderSlotDots(slot) {
+    let state = appSlotState[slot];
+    let dotsBox = document.getElementById("ad_dots_" + slot);
+    if (!dotsBox) return;
+
+    if (!state.ads || state.ads.length <= 1) {
+      dotsBox.style.display = "none";
+      return;
+    }
+
+    dotsBox.style.display = "flex";
+    dotsBox.innerHTML = state.ads.map((_, i) => `
+      <span style="width: 7px; height: 7px; border-radius: 50%; background: ${i === state.index ? '#0288d1' : '#cbd5e1'}; cursor: pointer; transition: all 0.2s;" onclick="selectSlotAdSlide('${slot}', ${i})"></span>
+    `).join("");
+  }
+
+  function selectSlotAdSlide(slot, idx) {
+    let state = appSlotState[slot];
+    if (state && state.ads && idx >= 0 && idx < state.ads.length) {
+      displaySlotAd(slot, idx);
+      setupSlotSlideshow(slot);
     }
   }
 
-  function handleSmartAdImgError(img) {
-    if (!img) return;
-    img.style.display = "none";
-    let p = img.closest(".smart-ad-container");
-    if (p) p.style.display = "none";
+  function handleAdSlotImgError(slot) {
+    let elem = document.getElementById("ad_img_" + slot);
+    if (elem) elem.style.display = "none";
+    let container = document.getElementById("ad_slot_" + slot);
+    if (container) container.style.display = "none";
   }
 
-  function handleSmartAdImgSuccess(img) {
-    if (!img) return;
-    img.style.display = "block";
-    let p = img.closest(".smart-ad-container");
-    if (p) p.style.display = "block";
+  function handleAdSlotImgSuccess(slot) {
+    let elem = document.getElementById("ad_img_" + slot);
+    if (elem) elem.style.display = "block";
+    let container = document.getElementById("ad_slot_" + slot);
+    if (container) container.style.display = "block";
   }
 
-  function checkGeoTargetedAds(lat, lon) {
-    if (!lat || !lon || activeAdList.length === 0) return;
-    let matchedAd = null;
-    let minD = 999999;
+  // ৮. বিজ্ঞাপনে ক্লিক অ্যাকশন (Contact_Number হ্যান্ডলিং)
+  function onAppAdClicked(slot) {
+    let state = appSlotState[slot];
+    if (!state || !state.currentAd) return;
+    let ad = state.currentAd;
+    let contact = (ad.contactNumber || "").trim();
 
-    for (let ad of activeAdList) {
-      if (ad.lat && ad.lon && ad.radiusKm > 0) {
-        let d = getDistanceFromLatLonInKm(lat, lon, ad.lat, ad.lon);
-        if (d <= ad.radiusKm && d < minD) {
-          minD = d;
-          matchedAd = ad;
-        }
-      }
+    if (!contact) {
+      showAppAlert("বিজ্ঞাপনের বিস্তারিত তথ্যের জন্য আমাদের সাথে যোগাযোগ করুন।", "বিজ্ঞাপন");
+      return;
     }
 
-    if (matchedAd) {
-      if (currentGeoLockedAdId !== matchedAd.id) {
-        displayAd(matchedAd, true);
+    if (contact.startsWith("http://") || contact.startsWith("https://") || contact.includes("wa.me")) {
+      window.open(contact, "_blank");
+      return;
+    }
+
+    let cleanPhone = contact.replace(/[^0-9+]/g, '');
+    if (cleanPhone) {
+      let isConfirmed = confirm(`📞 বিজ্ঞাপন যোগাযোগ:\nযোগাযোগ নম্বর: ${contact}\n\nআপনি কি সরাসরি কল বা হোয়াটসঅ্যাপে যোগাযোগ করতে চান?`);
+      if (isConfirmed) {
+        window.location.href = `tel:${cleanPhone}`;
       }
     } else {
-      if (currentGeoLockedAdId) {
-        currentGeoLockedAdId = null;
-        startAdSlideshow();
-      }
+      showAppAlert(`বিজ্ঞাপন যোগাযোগ: ${contact}`, "বিজ্ঞাপন");
     }
   }
 
-  function onSmartAdClick() {
-    let curAd = activeAdList[currentAdIndex];
-    if (!curAd) return;
-    if (curAd.link) {
-      if (curAd.link.startsWith("tel:") || curAd.link.startsWith("http://") || curAd.link.startsWith("https://")) {
-        window.open(curAd.link, "_blank");
-        return;
-      }
-    }
-    showAppAlert(`📢 ${curAd.title || 'বিজ্ঞাপন'}\n${curAd.locationName ? 'এলাকা: ' + curAd.locationName : ''}\n\nআপনার ব্যবসার বিজ্ঞাপনের জন্য আমাদের সাথে যোগাযোগ করুন।`, "বিজ্ঞাপন বিবরণ");
-  }
-
-  // বিজ্ঞাপন কনফিগারেশন মডাল
-  function openAdSettingsModal() {
-    let modal = document.getElementById("adSettingsModal");
-    let container = document.getElementById("adConfigListContainer");
-    if (!modal || !container) return;
-
-    let configs = getStoredAdGeoConfigs();
-    container.innerHTML = configs.map(c => `
-      <div style="background:#ffffff; border:1.5px solid #cbd5e1; border-radius:10px; padding:12px; box-shadow:0 1px 4px rgba(0,0,0,0.05);">
-        <div style="font-weight:bold; color:#0f172a; font-size:13.5px; margin-bottom:8px;">🖼️ ছবি: <span style="color:#0288d1;">${c.imgName}</span></div>
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px;">
-          <div>
-            <label style="font-size:11px; font-weight:bold; color:#475569;">বিজ্ঞাপন শিরোনাম:</label>
-            <input type="text" id="ad_title_${c.id}" value="${c.title || ''}" placeholder="যেমন: বোলপুর স্পেশাল সেল" style="width:100%; padding:6px; font-size:12.5px; border:1px solid #cbd5e1; border-radius:6px; box-sizing:border-box;">
-          </div>
-          <div>
-            <label style="font-size:11px; font-weight:bold; color:#475569;">এলাকার নাম:</label>
-            <input type="text" id="ad_loc_${c.id}" value="${c.locationName || ''}" placeholder="যেমন: বোলপুর / সাঁইথিয়া" style="width:100%; padding:6px; font-size:12.5px; border:1px solid #cbd5e1; border-radius:6px; box-sizing:border-box;">
-          </div>
-        </div>
-        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px; margin-bottom:8px;">
-          <div>
-            <label style="font-size:11px; font-weight:bold; color:#475569;">Latitude:</label>
-            <input type="number" step="0.0001" id="ad_lat_${c.id}" value="${c.lat || ''}" placeholder="23.669" style="width:100%; padding:6px; font-size:12px; border:1px solid #cbd5e1; border-radius:6px; box-sizing:border-box;">
-          </div>
-          <div>
-            <label style="font-size:11px; font-weight:bold; color:#475569;">Longitude:</label>
-            <input type="number" step="0.0001" id="ad_lon_${c.id}" value="${c.lon || ''}" placeholder="87.684" style="width:100%; padding:6px; font-size:12px; border:1px solid #cbd5e1; border-radius:6px; box-sizing:border-box;">
-          </div>
-          <div>
-            <label style="font-size:11px; font-weight:bold; color:#475569;">ব্যাসার্ধ (কিমি):</label>
-            <input type="number" id="ad_rad_${c.id}" value="${c.radiusKm || 5}" placeholder="5" style="width:100%; padding:6px; font-size:12px; border:1px solid #cbd5e1; border-radius:6px; box-sizing:border-box;">
-          </div>
-        </div>
-        <div>
-          <label style="font-size:11px; font-weight:bold; color:#475569;">লিংক / ফোন নম্বর (ঐচ্ছিক):</label>
-          <input type="text" id="ad_link_${c.id}" value="${c.link || ''}" placeholder="tel:9876543210 বা https://..." style="width:100%; padding:6px; font-size:12.5px; border:1px solid #cbd5e1; border-radius:6px; box-sizing:border-box;">
-        </div>
-      </div>
-    `).join("");
-
-    modal.classList.remove("hidden");
-  }
-
-  function closeAdSettingsModal() {
-    let modal = document.getElementById("adSettingsModal");
-    if (modal) modal.classList.add("hidden");
-  }
-
-  function saveAdSettingsFromModal() {
-    let configs = getStoredAdGeoConfigs();
-    for (let c of configs) {
-      let tInput = document.getElementById(`ad_title_${c.id}`);
-      let locInput = document.getElementById(`ad_loc_${c.id}`);
-      let latInput = document.getElementById(`ad_lat_${c.id}`);
-      let lonInput = document.getElementById(`ad_lon_${c.id}`);
-      let radInput = document.getElementById(`ad_rad_${c.id}`);
-      let linkInput = document.getElementById(`ad_link_${c.id}`);
-
-      if (tInput) c.title = tInput.value.trim();
-      if (locInput) c.locationName = locInput.value.trim();
-      if (latInput) c.lat = Number(latInput.value) || 0;
-      if (lonInput) c.lon = Number(lonInput.value) || 0;
-      if (radInput) c.radiusKm = Number(radInput.value) || 0;
-      if (linkInput) c.link = linkInput.value.trim();
-    }
-
-    saveStoredAdGeoConfigs(configs);
-    closeAdSettingsModal();
-    initSmartAdSystem();
-    showAppAlert("✅ বিজ্ঞাপন এলাকা ও সেটিংস সফলভাবে সংরক্ষিত হয়েছে!", "বিজ্ঞাপন কনফিগ সম্পন্ন");
+  // ৯. জিপিএস পরিবর্তনের সাথে বিজ্ঞাপনের এলাকা আপডেট
+  function checkGeoTargetedAds(lat, lon) {
+    evaluateAllAdSlots(lat, lon);
   }
 
   // ==========================================
   // বাসের নির্দিষ্ট স্টপের নির্ধারিত সময় (BusStops শিট) ইঞ্জিন
   // ==========================================
-  function toggleBusStopScheduleForm(forceState) {
-    let form = document.getElementById("busStopScheduleForm");
-    let icon = document.getElementById("busStopScheduleToggleIcon");
-    if (!form) return;
-    let shouldOpen = (forceState !== undefined) ? forceState : form.classList.contains("hidden");
-    if (shouldOpen) {
-      form.classList.remove("hidden");
-      if (icon) icon.innerText = "▲";
-      populateScheduleBusDropdown("scheduleBusSelect");
-    } else {
-      form.classList.add("hidden");
-      if (icon) icon.innerText = "▼";
-    }
+  function toggleBusStopScheduleForm() {
+    openBusStopScheduleModal();
   }
 
   function openBusStopScheduleModal() {
     let modal = document.getElementById("busStopScheduleModal");
     if (modal) {
       modal.classList.remove("hidden");
+      let searchInput = document.getElementById("modalScheduleBusSearchInput");
+      let searchRes = document.getElementById("modalScheduleBusSearchResults");
+      let clearBtn = document.getElementById("modalScheduleBusSearchClear");
+      if (searchInput) searchInput.value = "";
+      if (searchRes) { searchRes.style.display = "none"; searchRes.innerHTML = ""; }
+      if (clearBtn) clearBtn.style.display = "none";
+
       populateScheduleBusDropdown("modalScheduleBusSelect");
     }
   }
@@ -8355,6 +8312,81 @@ https://aionline.in.net`;
   function closeBusStopScheduleModal() {
     let modal = document.getElementById("busStopScheduleModal");
     if (modal) modal.classList.add("hidden");
+  }
+
+  function onFilterModalScheduleBuses(query) {
+    let q = (query || "").trim().toUpperCase();
+    let sel = document.getElementById("modalScheduleBusSelect");
+    let resBox = document.getElementById("modalScheduleBusSearchResults");
+    let clearBtn = document.getElementById("modalScheduleBusSearchClear");
+
+    if (clearBtn) clearBtn.style.display = q ? "block" : "none";
+
+    let buses = globalBusesCatalog || [];
+    let uniqueMap = new Map();
+    buses.forEach(b => {
+      let key = b.number || b.name;
+      if (key && !uniqueMap.has(key)) {
+        uniqueMap.set(key, b);
+      }
+    });
+    let list = Array.from(uniqueMap.values());
+
+    let filtered = list;
+    if (q) {
+      filtered = list.filter(b => {
+        let name = (b.name || "").toUpperCase();
+        let num = (b.number || "").toUpperCase();
+        let src = (b.source || "").toUpperCase();
+        let dst = (b.dest || "").toUpperCase();
+        return name.includes(q) || num.includes(q) || src.includes(q) || dst.includes(q);
+      });
+    }
+
+    if (sel) {
+      sel.innerHTML = `<option value="">-- বাসের তালিকা (${filtered.length}টি) --</option>` +
+        filtered.map(b => `<option value="${b.number}">🚌 ${b.name} (${b.number}) [${b.source || ''} ➔ ${b.dest || ''}]</option>`).join("");
+    }
+
+    if (resBox) {
+      if (!q || filtered.length === 0) {
+        resBox.style.display = "none";
+        resBox.innerHTML = "";
+      } else {
+        resBox.style.display = "block";
+        resBox.innerHTML = filtered.slice(0, 10).map(b => `
+          <div onclick="selectModalScheduleBusFromSearch('${b.number}', '${(b.name || '').replace(/'/g, "\\'")}')" 
+               style="padding: 8px 10px; border-bottom: 1px solid #f1f5f9; cursor: pointer; font-size: 13px; display: flex; justify-content: space-between; align-items: center;"
+               onmouseover="this.style.background='#f0f9ff'" onmouseout="this.style.background='#fff'">
+            <div>
+              <span style="font-weight: bold; color: #0369a1;">🚌 ${b.name}</span>
+              <span style="font-size: 11.5px; color: #64748b; margin-left: 5px;">(${b.number})</span>
+            </div>
+            <div style="font-size: 11px; color: #0284c7;">
+              ${b.source || ''} ➔ ${b.dest || ''}
+            </div>
+          </div>
+        `).join("");
+      }
+    }
+  }
+
+  function selectModalScheduleBusFromSearch(busNumber, busName) {
+    let input = document.getElementById("modalScheduleBusSearchInput");
+    let sel = document.getElementById("modalScheduleBusSelect");
+    let resBox = document.getElementById("modalScheduleBusSearchResults");
+    if (input) input.value = busName ? `${busName} (${busNumber})` : busNumber;
+    if (resBox) { resBox.style.display = "none"; resBox.innerHTML = ""; }
+    if (sel) {
+      sel.value = busNumber;
+      onModalScheduleBusSelected();
+    }
+  }
+
+  function clearModalScheduleBusSearch() {
+    let input = document.getElementById("modalScheduleBusSearchInput");
+    if (input) input.value = "";
+    onFilterModalScheduleBuses("");
   }
 
   async function populateScheduleBusDropdown(selectId) {
@@ -8375,7 +8407,7 @@ https://aionline.in.net`;
       }
     });
 
-    sel.innerHTML = `<option value="">-- তালিকা থেকে বাস বাছুন --</option>` +
+    sel.innerHTML = `<option value="">-- বাসের তালিকা থেকে বাছুন --</option>` +
       Array.from(uniqueMap.values()).map(b => {
         let bNum = b.number ? ` (${b.number})` : "";
         let isSel = (trackingBus && trackingBus.number === b.number);

@@ -37,6 +37,8 @@ function doGet(e) {
     return handleAddStop(e.parameter);
   } else if (action === "addBusStopTime") {
     return handleAddBusStopTime(e.parameter);
+  } else if (action === "getAds") {
+    return handleGetAds();
   }
 
   return createJsonResponse({ ok: false, error: "Invalid GET action" });
@@ -69,6 +71,8 @@ function doPost(e) {
     return handleUpdateGPS(data);
   } else if (action === "updateBusClosedStatus") {
     return handleUpdateBusClosedStatus(data);
+  } else if (action === "getAds") {
+    return handleGetAds();
   }
 
   return createJsonResponse({ ok: false, error: "Unknown POST action: " + action });
@@ -669,6 +673,76 @@ function handleAddBusStopTime(data) {
       message: "New stop schedule added to BusStops sheet successfully"
     });
   }
+}
+
+// -------------------------------------------------------------
+// ১০. বিজ্ঞাপন তালিকা আনা (ads শিট)
+// -------------------------------------------------------------
+function handleGetAds() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName("ads") || ss.getSheetByName("Ads");
+  if (!sheet) {
+    return createJsonResponse({ ok: true, ads: [] });
+  }
+
+  var rows = sheet.getDataRange().getValues();
+  if (!rows || rows.length <= 1) {
+    return createJsonResponse({ ok: true, ads: [] });
+  }
+
+  var header = rows[0].map(function(h) {
+    return String(h || "").trim().toLowerCase();
+  });
+
+  function findCol(keywords, defaultIdx) {
+    for (var i = 0; i < header.length; i++) {
+      for (var k = 0; k < keywords.length; k++) {
+        if (header[i].indexOf(keywords[k]) !== -1) return i;
+      }
+    }
+    return defaultIdx;
+  }
+
+  var colImage = findCol(["image", "img"], 0);
+  var colArea = findCol(["area", "app", "slot"], 1);
+  var colLat = findCol(["lat"], 2);
+  var colLon = findCol(["lon", "lng"], 3);
+  var colRadius = findCol(["radius", "rad", "km"], 4);
+  var colContact = findCol(["contact", "phone", "number", "mobile"], 5);
+  var colStart = findCol(["start"], 6);
+  var colStop = findCol(["stop", "end"], 7);
+
+  var adList = [];
+  for (var r = 1; r < rows.length; r++) {
+    var row = rows[r];
+    var imgName = String(row[colImage] || "").trim();
+    if (!imgName) continue;
+
+    var areaRaw = String(row[colArea] || "").trim();
+    var cleanArea = areaRaw.toLowerCase().replace(/[^a-z0-9]/g, ''); // "ads 1" -> "ads1"
+    if (!cleanArea) cleanArea = "ads1";
+
+    var lat = Number(row[colLat]) || 0;
+    var lon = Number(row[colLon]) || 0;
+    var radiusKm = Number(row[colRadius]) || 0;
+    var contact = String(row[colContact] || "").trim();
+    var startTime = String(row[colStart] || "").trim();
+    var stopTime = String(row[colStop] || "").trim();
+
+    adList.push({
+      imageName: imgName,
+      area: cleanArea,
+      rawArea: areaRaw,
+      latitude: lat,
+      longitude: lon,
+      radiusKm: radiusKm,
+      contactNumber: contact,
+      startTime: startTime,
+      stopTime: stopTime
+    });
+  }
+
+  return createJsonResponse({ ok: true, ads: adList });
 }
 
 // -------------------------------------------------------------
