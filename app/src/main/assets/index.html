@@ -2186,20 +2186,10 @@
         <div id="modalScheduleBusSearchResults" style="display:none; max-height:120px; overflow-y:auto; background:#fff; border:1px solid #cbd5e1; border-radius:8px; margin-top:4px; box-shadow:0 3px 8px rgba(0,0,0,0.08);"></div>
       </div>
 
-      <!-- ২. অভিমুখ / ট্রিপ (UP নাকি DOWN) -->
+      <!-- ২. বাসের রুট ও ট্রিপ (UP / DOWN) নির্বাচন -->
       <div style="margin-bottom:10px;">
-        <label style="font-size:12.5px;font-weight:bold;color:#0f172a;display:block;margin-bottom:4px;">২) অভিমুখ / ট্রিপ (UP নাকি DOWN):</label>
-        <div style="display:flex;gap:10px;margin-bottom:6px;">
-          <label style="flex:1;display:flex;align-items:center;gap:6px;background:#f0fdf4;padding:8px 10px;border-radius:8px;border:1.5px solid #86efac;cursor:pointer;">
-            <input type="radio" name="modalScheduleDirectionRadio" value="UP" checked onchange="onModalScheduleDirectionChanged('UP')">
-            <span style="font-weight:bold;color:#166534;font-size:12.5px;">🟢 UP ট্রিপ</span>
-          </label>
-          <label style="flex:1;display:flex;align-items:center;gap:6px;background:#eff6ff;padding:8px 10px;border-radius:8px;border:1.5px solid #93c5fd;cursor:pointer;">
-            <input type="radio" name="modalScheduleDirectionRadio" value="DOWN" onchange="onModalScheduleDirectionChanged('DOWN')">
-            <span style="font-weight:bold;color:#1e40af;font-size:12.5px;">🔵 DOWN ট্রিপ</span>
-          </label>
-        </div>
-        <select id="modalScheduleTripSelect" onchange="onModalScheduleTripSelected()" style="width:100%;padding:9px;border-radius:8px;border:1.5px solid #94a3b8;font-size:12.5px;box-sizing:border-box;background:#fff;">
+        <label style="font-size:12.5px;font-weight:bold;color:#0f172a;display:block;margin-bottom:4px;">২) বাসের রুট ও ট্রিপ (UP / DOWN) নির্বাচন করুন:</label>
+        <select id="modalScheduleTripSelect" onchange="onModalScheduleTripSelected()" style="width:100%;padding:9px;border-radius:8px;border:1.5px solid #94a3b8;font-size:13px;box-sizing:border-box;background:#fff;font-weight:600;color:#0f172a;">
           <option value="">-- নির্দিষ্ট ট্রিপ ছাড়ার সময় ও রুট --</option>
         </select>
       </div>
@@ -8484,6 +8474,10 @@ https://aionline.in.net`;
         </button>
       `).join("");
     }
+
+    if (isModal) {
+      onModalScheduleTripSelected();
+    }
   }
 
   function onScheduleDirectionChanged(dir) {
@@ -8507,7 +8501,43 @@ https://aionline.in.net`;
   }
 
   function onScheduleTripSelected() {}
-  function onModalScheduleTripSelected() {}
+  function onModalScheduleTripSelected() {
+    let bSel = document.getElementById("modalScheduleBusSelect");
+    let tSel = document.getElementById("modalScheduleTripSelect");
+    let sDatalist = document.getElementById("modalScheduleStopSuggestions");
+    let qDiv = document.getElementById("modalScheduleQuickStops");
+    if (!bSel || !tSel) return;
+
+    let busNo = bSel.value;
+    let selectedTripOpt = tSel.selectedOptions[0];
+    let selectedTripId = selectedTripOpt ? selectedTripOpt.value : null;
+
+    let matchingBuses = (globalBusesCatalog || []).filter(b => b.number === busNo);
+    let chosenBus = matchingBuses.find(b => String(b.id) === String(selectedTripId)) || matchingBuses[0];
+
+    let stops = (chosenBus && Array.isArray(chosenBus.selectedStops) && chosenBus.selectedStops.length > 0)
+      ? chosenBus.selectedStops
+      : [];
+
+    if (stops.length === 0) {
+      let allStopsSet = new Set();
+      matchingBuses.forEach(b => {
+        if (Array.isArray(b.selectedStops)) b.selectedStops.forEach(s => allStopsSet.add(s));
+      });
+      stops = Array.from(allStopsSet);
+    }
+
+    if (sDatalist) {
+      sDatalist.innerHTML = stops.map(s => `<option value="${s}"></option>`).join("");
+    }
+    if (qDiv) {
+      qDiv.innerHTML = stops.map(s => `
+        <button type="button" onclick="selectQuickScheduleStop('${s}', true)" style="background:#e0f2fe; border:1px solid #7dd3fc; color:#0369a1; padding:4px 8px; border-radius:6px; font-size:11.5px; font-weight:600; cursor:pointer;">
+          + ${s}
+        </button>
+      `).join("");
+    }
+  }
   function onScheduleStopInput() {}
   function onModalScheduleStopInput() {}
 
@@ -8558,11 +8588,8 @@ https://aionline.in.net`;
     let tInput = document.getElementById("modalScheduleTimeVal");
     let ampmSel = document.getElementById("modalScheduleTimeAmpm");
 
-    let radios = document.getElementsByName("modalScheduleDirectionRadio");
-    let dir = "UP";
-    for (let r of radios) {
-      if (r.checked) { dir = r.value; break; }
-    }
+    let selectedTripOpt = tSel ? tSel.selectedOptions[0] : null;
+    let dir = selectedTripOpt ? (selectedTripOpt.getAttribute("data-dir") || "UP") : "UP";
 
     let success = await saveBusStopTimeInternal(bSel, tSel, sInput, tInput, ampmSel, dir, true);
     if (success) {
