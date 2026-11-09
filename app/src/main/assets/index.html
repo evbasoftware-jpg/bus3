@@ -1329,6 +1329,23 @@
 </div>
 
 <div class="container">
+  <!-- স্মার্ট অ্যাডভার্টাইজমেন্ট ব্যানার ও স্লাইডশো (Smart Geo-targeted & Slideshow Ads) -->
+  <div id="smartAdBannerContainer" class="smart-ad-container" style="display:none; width: 100%; margin: 4px 0 12px 0;">
+    <div class="smart-ad-card" style="position: relative; overflow: hidden; border-radius: 12px; background: #ffffff; box-shadow: 0 2px 8px rgba(0,0,0,0.08); border: 1px solid #e2e8f0; text-align: center;">
+      <div style="position: absolute; top: 6px; right: 8px; z-index: 10; background: rgba(15, 23, 42, 0.72); backdrop-filter: blur(4px); color: #ffffff; font-size: 10px; font-weight: bold; padding: 2px 8px; border-radius: 6px; letter-spacing: 0.3px;">
+        📢 <span id="smartAdBadgeText">বিজ্ঞাপন</span>
+      </div>
+      <div id="smartAdLocationBadge" style="display:none; position: absolute; top: 6px; left: 8px; z-index: 10; background: rgba(2, 136, 209, 0.9); backdrop-filter: blur(4px); color: #ffffff; font-size: 10.5px; font-weight: bold; padding: 3px 8px; border-radius: 6px;">
+        📍 <span id="smartAdLocationText">নিকটস্থ অফার</span>
+      </div>
+      <a id="smartAdLink" href="javascript:void(0)" onclick="onSmartAdClick()" style="display: block; width: 100%; text-decoration: none; cursor: pointer;">
+        <img id="smartAdImage" src="" alt="Advertisement" onerror="handleSmartAdImgError(this)" onload="handleSmartAdImgSuccess(this)" style="width: 100%; max-height: 165px; object-fit: contain; display: block; margin: 0 auto; transition: opacity 0.35s ease;">
+      </a>
+      <div id="smartAdDots" style="display: none; justify-content: center; gap: 6px; padding: 6px 0; background: #f8fafc; border-top: 1px solid #f1f5f9;">
+      </div>
+    </div>
+  </div>
+
   <!-- ১ নং ছবি: img1.png (বাস লাইভ লোকেশন এর উপরে থাকবে) -->
   <div id="container_img1" class="dynamic-img-container" style="display: none; width: 100%; text-align: center; margin: 0; padding: 0; border: none; outline: none; background: transparent;">
     <img id="dynamic_img1"
@@ -1570,6 +1587,85 @@
       <span class="feat-label">৭) বাস বন্ধের তথ্য</span>
       <span class="feat-sub">দিন বা সময় বন্ধ আপডেট</span>
       <span class="feat-badge" id="quickBusOffBadge" style="background:#fee2e2;color:#991b1b;">🚫 বন্ধ/চালু আপডেট</span>
+    </button>
+    <button type="button" class="feature-action-btn btn-bus-stop-time" onclick="openBusStopScheduleModal()" title="BusStops শিটে বাসের স্টপেজের নির্দিষ্ট সময় (UP বা DOWN) যুক্ত করুন">
+      <span class="feat-icon">⏱️</span>
+      <span class="feat-label">৮) স্টপেজের সময় যুক্ত</span>
+      <span class="feat-sub">BusStops শিটে UP/DOWN সময়</span>
+      <span class="feat-badge" style="background:#e0f2fe;color:#0369a1;">⏱️ সময় যুক্ত করুন</span>
+    </button>
+    <button type="button" class="feature-action-btn btn-ad-settings" onclick="openAdSettingsModal()" title="বিজ্ঞাপন ছবি ও এলাকা (Lat/Long) সেটিংস">
+      <span class="feat-icon">📢</span>
+      <span class="feat-label">৯) বিজ্ঞাপন এলাকা</span>
+      <span class="feat-sub">ছবির Lat/Long নির্ধারণ</span>
+      <span class="feat-badge" style="background:#fef3c7;color:#92400e;">⚙️ বিজ্ঞাপন কনফিগ</span>
+    </button>
+  </div>
+
+  <!-- বাসের নির্দিষ্ট স্টপের নির্ধারিত সময় (BusStops শিট) অপশন - অ্যাপের সবচেয়ে নিচে -->
+  <div class="box" id="busStopScheduleBox" style="margin: 18px 0 16px 0; border: 1.5px solid #38bdf8; background: #f0f9ff; border-radius: 14px; padding: 14px; box-shadow: 0 2px 8px rgba(2,136,209,0.08);">
+    <div style="display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="toggleBusStopScheduleForm()">
+      <div style="display:flex; align-items:center; gap:10px;">
+        <span style="font-size:24px;">⏱️</span>
+        <div>
+          <h3 style="margin:0; font-size:14.5px; font-weight:800; color:#0369a1;">BusStops শিটে স্টপেজের সময় যুক্ত করুন</h3>
+          <span style="font-size:11.5px; color:#0284c7;">বাসের UP বা DOWN রুটের নির্দিষ্ট স্টপেজে পৌঁছানোর সময় সেভ করুন</span>
+        </div>
+      </div>
+      <span id="busStopScheduleToggleIcon" style="font-size:16px; color:#0288d1; font-weight:bold; background:#e0f2fe; padding:4px 9px; border-radius:8px;">▼</span>
+    </div>
+
+    <div id="busStopScheduleForm" class="hidden" style="margin-top:14px; border-top:1px dashed #93c5fd; padding-top:12px;">
+      <!-- ১. বাস নির্বাচন -->
+      <div style="margin-bottom:12px;">
+        <label style="font-size:12.5px; font-weight:bold; color:#0f172a; display:block; margin-bottom:4px;">১) বাস নির্বাচন করুন:</label>
+        <select id="scheduleBusSelect" onchange="onScheduleBusSelected()" style="width:100%; padding:10px; border-radius:8px; border:1.5px solid #94a3b8; font-size:13.5px; box-sizing:border-box; background:#ffffff;">
+          <option value="">-- তালিকা থেকে বাস বাছুন --</option>
+        </select>
+      </div>
+
+      <!-- ২. অভিমুখ / ট্রিপ (UP নাকি DOWN) -->
+      <div style="margin-bottom:12px;">
+        <label style="font-size:12.5px; font-weight:bold; color:#0f172a; display:block; margin-bottom:4px;">২) অভিমুখ / ট্রিপ (UP নাকি DOWN):</label>
+        <div style="display:flex; gap:10px; margin-bottom:8px;">
+          <label style="flex:1; display:flex; align-items:center; gap:6px; background:#f0fdf4; padding:8px 12px; border-radius:8px; border:1.5px solid #86efac; cursor:pointer;">
+            <input type="radio" name="scheduleDirectionRadio" value="UP" checked onchange="onScheduleDirectionChanged('UP')">
+            <span style="font-weight:bold; color:#166534; font-size:13px;">🟢 UP ট্রিপ</span>
+          </label>
+          <label style="flex:1; display:flex; align-items:center; gap:6px; background:#eff6ff; padding:8px 12px; border-radius:8px; border:1.5px solid #93c5fd; cursor:pointer;">
+            <input type="radio" name="scheduleDirectionRadio" value="DOWN" onchange="onScheduleDirectionChanged('DOWN')">
+            <span style="font-weight:bold; color:#1e40af; font-size:13px;">🔵 DOWN ট্রিপ</span>
+          </label>
+        </div>
+        <select id="scheduleTripSelect" onchange="onScheduleTripSelected()" style="width:100%; padding:9px; border-radius:8px; border:1.5px solid #94a3b8; font-size:13px; box-sizing:border-box; background:#ffffff;">
+          <option value="">-- নির্দিষ্ট ট্রিপ ছাড়ার সময় ও রুট --</option>
+        </select>
+      </div>
+
+      <!-- ৩. স্টপেজের নাম -->
+      <div style="margin-bottom:12px;">
+        <label style="font-size:12.5px; font-weight:bold; color:#0f172a; display:block; margin-bottom:4px;">৩) স্টপেজের নাম:</label>
+        <input type="text" id="scheduleStopName" placeholder="স্টপের নাম লিখুন বা নিচের বোতাম থেকে চাপুন..." list="scheduleStopSuggestions" autocomplete="off" oninput="onScheduleStopInput()" style="width:100%; padding:10px; border-radius:8px; border:1.5px solid #94a3b8; font-size:13.5px; box-sizing:border-box; background:#ffffff;">
+        <datalist id="scheduleStopSuggestions"></datalist>
+        <div id="scheduleQuickStops" style="display:flex; flex-wrap:wrap; gap:5px; margin-top:8px; max-height:90px; overflow-y:auto;"></div>
+      </div>
+
+      <!-- ৪. নির্ধারিত সময় -->
+      <div style="margin-bottom:14px;">
+        <label style="font-size:12.5px; font-weight:bold; color:#0f172a; display:block; margin-bottom:4px;">৪) স্টপেজে বাস পৌঁছানোর নির্ধারিত সময়:</label>
+        <div class="time-picker-row" style="display:flex; gap:8px;">
+          <input type="text" id="scheduleTimeVal" placeholder="যেমন: 08:30 বা 11:15" style="flex:2; padding:10px; border-radius:8px; border:1.5px solid #94a3b8; font-size:14px; box-sizing:border-box; background:#ffffff;">
+          <select id="scheduleTimeAmpm" class="ampm-select" style="flex:1; padding:10px; border-radius:8px; border:1.5px solid #94a3b8; font-size:14px; box-sizing:border-box; background:#ffffff;">
+            <option value="AM">AM</option>
+            <option value="PM">PM</option>
+          </select>
+        </div>
+      </div>
+
+      <button type="button" class="btn" style="width:100%; background: linear-gradient(135deg, #0288d1 0%, #0369a1 100%); color:#fff; font-weight:bold; padding:12px; font-size:14.5px; border-radius:8px; box-shadow:0 3px 10px rgba(2,136,209,0.3);" onclick="submitBusStopTime()">
+        💾 BusStops শিটে সময় সেভ করুন
+      </button>
+    </div>
   </div>
 
   <!-- কাজ শেষ? অ্যাপ সম্পূর্ণ বন্ধ করুন (Exit App) অপশন -->
@@ -2099,6 +2195,90 @@
     <div class="modal-actions">
       <button class="btn" onclick="closeAlertModal()">OK</button>
     </div>
+  </div>
+</div>
+
+<!-- ৮) বাসের স্টপেজের নির্ধারিত সময় (BusStops শিট) মডাল -->
+<div id="busStopScheduleModal" class="app-feature-modal hidden">
+  <div class="feature-modal-content" style="max-height: 85vh; overflow-y: auto;">
+    <div class="feature-modal-header">
+      <div class="feature-modal-title">⏱️ BusStops শিটে স্টপের সময় নির্ধারণ</div>
+      <button type="button" class="modal-close-x" onclick="closeBusStopScheduleModal()">&times;</button>
+    </div>
+    <p style="font-size:13px;color:#334155;margin-top:0;line-height:1.45;">
+      নির্দিষ্ট কোনো বাসের নির্দিষ্ট স্টপেজে (UP বা DOWN ট্রিপ) পৌঁছানোর সময় BusStops শিটে সেভ করুন।
+    </p>
+    <div style="background:#f0f9ff;border:1.5px solid #93c5fd;border-radius:10px;padding:12px;margin-bottom:12px;">
+      <!-- ১. বাস নির্বাচন -->
+      <div style="margin-bottom:10px;">
+        <label style="font-size:12.5px;font-weight:bold;color:#0f172a;display:block;margin-bottom:4px;">১) বাস নির্বাচন করুন:</label>
+        <select id="modalScheduleBusSelect" onchange="onModalScheduleBusSelected()" style="width:100%;padding:9px;border-radius:8px;border:1.5px solid #94a3b8;font-size:13.5px;box-sizing:border-box;background:#fff;">
+          <option value="">-- তালিকা থেকে বাস বাছুন --</option>
+        </select>
+      </div>
+
+      <!-- ২. অভিমুখ / ট্রিপ (UP নাকি DOWN) -->
+      <div style="margin-bottom:10px;">
+        <label style="font-size:12.5px;font-weight:bold;color:#0f172a;display:block;margin-bottom:4px;">২) অভিমুখ / ট্রিপ (UP নাকি DOWN):</label>
+        <div style="display:flex;gap:10px;margin-bottom:6px;">
+          <label style="flex:1;display:flex;align-items:center;gap:6px;background:#f0fdf4;padding:8px 10px;border-radius:8px;border:1.5px solid #86efac;cursor:pointer;">
+            <input type="radio" name="modalScheduleDirectionRadio" value="UP" checked onchange="onModalScheduleDirectionChanged('UP')">
+            <span style="font-weight:bold;color:#166534;font-size:12.5px;">🟢 UP ট্রিপ</span>
+          </label>
+          <label style="flex:1;display:flex;align-items:center;gap:6px;background:#eff6ff;padding:8px 10px;border-radius:8px;border:1.5px solid #93c5fd;cursor:pointer;">
+            <input type="radio" name="modalScheduleDirectionRadio" value="DOWN" onchange="onModalScheduleDirectionChanged('DOWN')">
+            <span style="font-weight:bold;color:#1e40af;font-size:12.5px;">🔵 DOWN ট্রিপ</span>
+          </label>
+        </div>
+        <select id="modalScheduleTripSelect" onchange="onModalScheduleTripSelected()" style="width:100%;padding:9px;border-radius:8px;border:1.5px solid #94a3b8;font-size:12.5px;box-sizing:border-box;background:#fff;">
+          <option value="">-- নির্দিষ্ট ট্রিপ ছাড়ার সময় ও রুট --</option>
+        </select>
+      </div>
+
+      <!-- ৩. স্টপেজের নাম -->
+      <div style="margin-bottom:10px;">
+        <label style="font-size:12.5px;font-weight:bold;color:#0f172a;display:block;margin-bottom:4px;">৩) স্টপেজের নাম:</label>
+        <input type="text" id="modalScheduleStopName" placeholder="স্টপের নাম লিখুন বা নিচের বোতাম থেকে চাপুন..." list="modalScheduleStopSuggestions" autocomplete="off" oninput="onModalScheduleStopInput()" style="width:100%;padding:9px;border-radius:8px;border:1.5px solid #94a3b8;font-size:13.5px;box-sizing:border-box;background:#fff;">
+        <datalist id="modalScheduleStopSuggestions"></datalist>
+        <div id="modalScheduleQuickStops" style="display:flex;flex-wrap:wrap;gap:5px;margin-top:6px;max-height:85px;overflow-y:auto;"></div>
+      </div>
+
+      <!-- ৪. নির্ধারিত সময় -->
+      <div style="margin-bottom:12px;">
+        <label style="font-size:12.5px;font-weight:bold;color:#0f172a;display:block;margin-bottom:4px;">৪) স্টপেজে বাস পৌঁছানোর নির্ধারিত সময়:</label>
+        <div class="time-picker-row" style="display:flex;gap:8px;">
+          <input type="text" id="modalScheduleTimeVal" placeholder="যেমন: 08:30 বা 11:15" style="flex:2;padding:9px;border-radius:8px;border:1.5px solid #94a3b8;font-size:14px;box-sizing:border-box;background:#fff;">
+          <select id="modalScheduleTimeAmpm" class="ampm-select" style="flex:1;padding:9px;border-radius:8px;border:1.5px solid #94a3b8;font-size:14px;box-sizing:border-box;background:#fff;">
+            <option value="AM">AM</option>
+            <option value="PM">PM</option>
+          </select>
+        </div>
+      </div>
+
+      <button type="button" class="btn" style="width:100%;background:linear-gradient(135deg,#0288d1 0%,#0369a1 100%);color:#fff;font-weight:bold;padding:11px;font-size:14px;border-radius:8px;" onclick="submitModalBusStopTime()">
+        💾 BusStops শিটে সময় সেভ করুন
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ৯) বিজ্ঞাপন ছবি ও এলাকা (Lat/Long) সেটিংস মডাল -->
+<div id="adSettingsModal" class="app-feature-modal hidden">
+  <div class="feature-modal-content" style="max-height: 85vh; overflow-y: auto;">
+    <div class="feature-modal-header">
+      <div class="feature-modal-title">📢 বিজ্ঞাপন ছবি ও এলাকা সেটিংস</div>
+      <button type="button" class="modal-close-x" onclick="closeAdSettingsModal()">&times;</button>
+    </div>
+    <p style="font-size:13px;color:#334155;margin-top:0;line-height:1.45;">
+      img1.png, img2.png, img3.png, img4.png ছবিগুলোর জন্য নির্দিষ্ট এলাকা (Lat/Long) ও লিংক নির্ধারণ করুন। নির্দিষ্ট এলাকায় পৌঁছালে সংশ্লিষ্ট ছবিটি অগ্রাধিকার পাবে।
+    </p>
+
+    <div id="adConfigListContainer" style="display:flex;flex-direction:column;gap:12px;margin-bottom:14px;">
+    </div>
+
+    <button type="button" class="btn" style="width:100%;background:#15803d;color:#fff;font-weight:bold;padding:11px;font-size:14px;border-radius:8px;" onclick="saveAdSettingsFromModal()">
+      💾 বিজ্ঞাপন সেটিংস সেভ করুন
+    </button>
   </div>
 </div>
 
@@ -3231,6 +3411,9 @@
 
     checkPassengerRideAndSync();
     updateDistanceAndTracking();
+    if (typeof checkGeoTargetedAds === "function") {
+      checkGeoTargetedAds(userPos.lat, userPos.lon);
+    }
   };
 
   // ব্রাউজার জিপিএস হ্যান্ডলিং
@@ -3817,6 +4000,13 @@
     loadDatalistSuggestions();
     syncRemoteDynamicImages();
     try {
+      if (typeof initSmartAdSystem === "function") {
+        initSmartAdSystem();
+      }
+    } catch (e) {
+      console.warn("initSmartAdSystem error:", e);
+    }
+    try {
       let saved = localStorage.getItem("active_tracking_bus");
       if (saved && window.AndroidBridge && typeof window.AndroidBridge.isTrackingRunning === "function" && window.AndroidBridge.isTrackingRunning()) {
         let b = JSON.parse(saved);
@@ -3992,11 +4182,20 @@
             return r.c[colIdx].f !== undefined ? r.c[colIdx].f : (r.c[colIdx].v !== undefined ? r.c[colIdx].v : "");
           };
           let busNum = String(getCol(0)).trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+          let busNameOrDir = String(getCol(1)).trim().toUpperCase();
           let stopName = cleanStopName(getCol(2));
           let timeVal = formatCleanTime(getCol(3));
+          let colG = String(getCol(6)).trim().toUpperCase();
+
+          let dir = "";
+          if (busNameOrDir.includes("UP") || colG.includes("UP")) dir = "UP";
+          else if (busNameOrDir.includes("DOWN") || colG.includes("DOWN")) dir = "DOWN";
+
           if (busNum && stopName && timeVal && timeVal !== "--") {
-            let key = `${busNum}_${stopName}`;
-            map[key] = timeVal;
+            if (dir) {
+              map[`${busNum}_${dir}_${stopName}`] = timeVal;
+            }
+            map[`${busNum}_${stopName}`] = timeVal;
           }
         });
         busStopsScheduleMap = map;
@@ -4741,10 +4940,16 @@
 
     // ১. যদি BusStops শিটে এই বাসের জন্য নির্দিষ্ট স্টপের নির্ধারিত সময় থাকে:
     let cleanBusNum = String(bus.number || "").trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
-    let scheduleKeyFrom = `${cleanBusNum}_${cleanStopName(fromDisplayName)}`;
-    let scheduleKeyTo = `${cleanBusNum}_${cleanStopName(toDisplayName)}`;
-    let exactFromTime = (typeof busStopsScheduleMap !== "undefined" && busStopsScheduleMap[scheduleKeyFrom]) ? busStopsScheduleMap[scheduleKeyFrom] : null;
-    let exactToTime = (typeof busStopsScheduleMap !== "undefined" && busStopsScheduleMap[scheduleKeyTo]) ? busStopsScheduleMap[scheduleKeyTo] : null;
+    let cFrom = cleanStopName(fromDisplayName);
+    let cTo = cleanStopName(toDisplayName);
+    let busDir = (bus.direction || (bus.isDown ? "DOWN" : "UP")).toUpperCase();
+
+    let exactFromTime = (typeof busStopsScheduleMap !== "undefined" && busStopsScheduleMap[`${cleanBusNum}_${busDir}_${cFrom}`])
+      ? busStopsScheduleMap[`${cleanBusNum}_${busDir}_${cFrom}`]
+      : ((typeof busStopsScheduleMap !== "undefined" && busStopsScheduleMap[`${cleanBusNum}_${cFrom}`]) ? busStopsScheduleMap[`${cleanBusNum}_${cFrom}`] : null);
+    let exactToTime = (typeof busStopsScheduleMap !== "undefined" && busStopsScheduleMap[`${cleanBusNum}_${busDir}_${cTo}`])
+      ? busStopsScheduleMap[`${cleanBusNum}_${busDir}_${cTo}`]
+      : ((typeof busStopsScheduleMap !== "undefined" && busStopsScheduleMap[`${cleanBusNum}_${cTo}`]) ? busStopsScheduleMap[`${cleanBusNum}_${cTo}`] : null);
 
     let fMins = null;
     let tMins = null;
@@ -7116,8 +7321,10 @@
       let cleanName = cleanStopName(sName);
 
       // ১) BusStops শিটের সুনির্দিষ্ট নির্ধারিত সময় থাকলে তা নেওয়া হবে
-      let schedKey = `${cleanBusNum}_${cleanName}`;
-      let exactTime = (typeof busStopsScheduleMap !== "undefined" && busStopsScheduleMap[schedKey]) ? busStopsScheduleMap[schedKey] : null;
+      let curDir = (trackingBus && (trackingBus.direction || (trackingBus.isDown ? "DOWN" : "UP"))) ? (trackingBus.direction || (trackingBus.isDown ? "DOWN" : "UP")).toUpperCase() : "";
+      let exactTime = (typeof busStopsScheduleMap !== "undefined" && curDir && busStopsScheduleMap[`${cleanBusNum}_${curDir}_${cleanName}`]) 
+        ? busStopsScheduleMap[`${cleanBusNum}_${curDir}_${cleanName}`] 
+        : ((typeof busStopsScheduleMap !== "undefined" && busStopsScheduleMap[`${cleanBusNum}_${cleanName}`]) ? busStopsScheduleMap[`${cleanBusNum}_${cleanName}`] : null);
 
       let estMin = null;
       if (exactTime) {
@@ -7753,6 +7960,647 @@ https://aionline.in.net`;
         handleDynamicImgError(imgElem);
       }
     }
+  }
+
+  // ==========================================
+  // স্মার্ট অ্যাডভার্টাইজমেন্ট ব্যানার, স্লাইডশো ও নির্দিষ্ট এলাকা (Lat/Long) ভিত্তিক বিজ্ঞাপন ইঞ্জিন
+  // ==========================================
+  let activeAdList = []; // [ { id, title, imgName, src, lat, lon, radiusKm, link, isGeo } ]
+  let currentAdIndex = 0;
+  let adSlideshowTimer = null;
+  let currentGeoLockedAdId = null;
+
+  const AD_GEO_CONFIGS_KEY = "app_ad_geo_configs_v1";
+
+  function getStoredAdGeoConfigs() {
+    try {
+      let raw = localStorage.getItem(AD_GEO_CONFIGS_KEY);
+      if (raw) {
+        let parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (_) {}
+    return [
+      { id: "img1", imgName: "img1.png", title: "বিজ্ঞাপন ১", locationName: "সাধারণ / সকল এলাকা", lat: 0, lon: 0, radiusKm: 0, link: "" },
+      { id: "img2", imgName: "img2.png", title: "বিজ্ঞাপন ২", locationName: "সাধারণ / সকল এলাকা", lat: 0, lon: 0, radiusKm: 0, link: "" },
+      { id: "img3", imgName: "img3.png", title: "বিজ্ঞাপন ৩", locationName: "সাধারণ / সকল এলাকা", lat: 0, lon: 0, radiusKm: 0, link: "" },
+      { id: "img4", imgName: "img4.png", title: "বিজ্ঞাপন ৪", locationName: "সাধারণ / সকল এলাকা", lat: 0, lon: 0, radiusKm: 0, link: "" }
+    ];
+  }
+
+  function saveStoredAdGeoConfigs(list) {
+    try {
+      localStorage.setItem(AD_GEO_CONFIGS_KEY, JSON.stringify(list));
+    } catch (_) {}
+  }
+
+  async function resolveAdImageSource(imgRef) {
+    if (!imgRef) return null;
+    if (imgRef.startsWith("http://") || imgRef.startsWith("https://") || imgRef.startsWith("data:")) {
+      let blobUrl = await checkRemoteImageExists(imgRef);
+      return blobUrl || imgRef;
+    }
+    let baseName = imgRef.replace(/\.png$/i, '');
+    let ts = Date.now();
+
+    // ১. evbasoft GitHub
+    let url1 = `https://raw.githubusercontent.com/evbasoft/bus3/main/app/src/main/assets/${baseName}.png?t=${ts}`;
+    let blob = await checkRemoteImageExists(url1);
+    if (blob) return blob;
+
+    // ২. evbasoftware-jpg GitHub
+    let url2 = `https://raw.githubusercontent.com/evbasoftware-jpg/bus3/main/app/src/main/assets/${baseName}.png?t=${ts}`;
+    blob = await checkRemoteImageExists(url2);
+    if (blob) return blob;
+
+    // ৩. লোকাল Android Assets
+    let localExists = false;
+    try {
+      if (window.AndroidBridge && typeof window.AndroidBridge.assetExists === "function") {
+        localExists = window.AndroidBridge.assetExists(baseName + ".png");
+      }
+    } catch (_) {}
+
+    if (localExists) {
+      return "file:///android_asset/" + baseName + ".png?t=" + ts;
+    }
+    return null;
+  }
+
+  async function initSmartAdSystem() {
+    let adConfigs = getStoredAdGeoConfigs();
+    let validAds = [];
+
+    // প্রতিটি কনফিগার করা ছবির সোর্স যাচাই
+    for (let cfg of adConfigs) {
+      let resolvedSrc = await resolveAdImageSource(cfg.imgName || (cfg.id + ".png"));
+      if (resolvedSrc) {
+        validAds.push({
+          id: cfg.id,
+          imgName: cfg.imgName || (cfg.id + ".png"),
+          title: cfg.title || cfg.id,
+          locationName: cfg.locationName || "",
+          lat: Number(cfg.lat || 0),
+          lon: Number(cfg.lon || 0),
+          radiusKm: Number(cfg.radiusKm || 0),
+          link: cfg.link || "",
+          src: resolvedSrc
+        });
+      }
+    }
+
+    // গুগল শীটে Ads শীট থাকলে সেখান থেকে রিমোট বিজ্ঞাপন আনা (ঐচ্ছিক)
+    try {
+      let sheetAds = await fetchSpreadsheetAds();
+      if (sheetAds && sheetAds.length > 0) {
+        for (let sAd of sheetAds) {
+          let sSrc = await resolveAdImageSource(sAd.imgName);
+          if (sSrc) {
+            sAd.src = sSrc;
+            validAds.push(sAd);
+          }
+        }
+      }
+    } catch (_) {}
+
+    activeAdList = validAds;
+
+    let banner = document.getElementById("smartAdBannerContainer");
+    if (validAds.length > 0) {
+      if (banner) banner.style.display = "block";
+      currentAdIndex = 0;
+      displayAd(validAds[0], false);
+      renderSmartAdDots();
+      startAdSlideshow();
+    } else {
+      if (banner) banner.style.display = "none";
+    }
+  }
+
+  async function fetchSpreadsheetAds() {
+    try {
+      let url = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:json&sheet=Ads`;
+      let res = await fetch(url);
+      if (!res.ok) return null;
+      let text = await res.text();
+      let start = text.indexOf("{");
+      let end = text.lastIndexOf("}");
+      if (start !== -1 && end !== -1) {
+        let json = JSON.parse(text.substring(start, end + 1));
+        let rows = (json.table && json.table.rows) ? json.table.rows : [];
+        let list = [];
+        rows.forEach((r, idx) => {
+          if (!r.c) return;
+          let getCol = (c) => (r.c[c] ? (r.c[c].f !== undefined ? r.c[c].f : (r.c[c].v !== undefined ? r.c[c].v : "")) : "");
+          let img = String(getCol(0)).trim();
+          let title = String(getCol(1)).trim();
+          let locName = String(getCol(2)).trim();
+          let lat = Number(getCol(3)) || 0;
+          let lon = Number(getCol(4)) || 0;
+          let radius = Number(getCol(5)) || 5;
+          let link = String(getCol(6)).trim();
+          let status = String(getCol(7) || "active").trim().toLowerCase();
+          if (img && (status === "active" || status === "")) {
+            list.push({
+              id: "sheet_ad_" + idx,
+              imgName: img,
+              title: title || ("বিজ্ঞাপন " + (idx + 1)),
+              locationName: locName,
+              lat: lat,
+              lon: lon,
+              radiusKm: radius,
+              link: link
+            });
+          }
+        });
+        if (list.length > 0) return list;
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  function displayAd(ad, isGeoLocked) {
+    if (!ad) return;
+    let img = document.getElementById("smartAdImage");
+    let locBadge = document.getElementById("smartAdLocationBadge");
+    let locText = document.getElementById("smartAdLocationText");
+    let badgeText = document.getElementById("smartAdBadgeText");
+
+    if (img) {
+      img.style.opacity = "0.2";
+      setTimeout(() => {
+        img.src = ad.src;
+        img.style.opacity = "1";
+      }, 150);
+    }
+
+    if (locBadge && locText) {
+      if (isGeoLocked && ad.locationName) {
+        locBadge.style.display = "block";
+        locText.innerText = `নিকটস্থ অফার: ${ad.locationName}`;
+      } else if (isGeoLocked) {
+        locBadge.style.display = "block";
+        locText.innerText = `নিকটস্থ এলাকার বিজ্ঞাপন`;
+      } else {
+        locBadge.style.display = "none";
+      }
+    }
+
+    if (badgeText) {
+      badgeText.innerText = ad.title ? `${ad.title}` : "বিজ্ঞাপন";
+    }
+
+    currentGeoLockedAdId = isGeoLocked ? ad.id : null;
+    updateSmartAdDots();
+  }
+
+  function startAdSlideshow() {
+    if (adSlideshowTimer) clearInterval(adSlideshowTimer);
+    if (activeAdList.length <= 1) return;
+    adSlideshowTimer = setInterval(() => {
+      if (!currentGeoLockedAdId) {
+        currentAdIndex = (currentAdIndex + 1) % activeAdList.length;
+        displayAd(activeAdList[currentAdIndex], false);
+      }
+    }, 6000);
+  }
+
+  function renderSmartAdDots() {
+    let dots = document.getElementById("smartAdDots");
+    if (!dots) return;
+    if (activeAdList.length <= 1) {
+      dots.style.display = "none";
+      return;
+    }
+    dots.style.display = "flex";
+    dots.innerHTML = activeAdList.map((_, i) => `
+      <span class="ad-dot" 
+            onclick="selectAdSlide(${i})" 
+            style="width: 8px; height: 8px; border-radius: 50%; background: ${i === currentAdIndex ? '#0288d1' : '#cbd5e1'}; cursor: pointer; transition: all 0.25s ease;">
+      </span>
+    `).join("");
+  }
+
+  function updateSmartAdDots() {
+    let dots = document.getElementById("smartAdDots");
+    if (!dots || activeAdList.length <= 1) return;
+    let dotSpans = dots.querySelectorAll(".ad-dot");
+    dotSpans.forEach((d, i) => {
+      d.style.background = (i === currentAdIndex ? '#0288d1' : '#cbd5e1');
+      d.style.transform = (i === currentAdIndex ? 'scale(1.3)' : 'scale(1)');
+    });
+  }
+
+  function selectAdSlide(idx) {
+    if (idx >= 0 && idx < activeAdList.length) {
+      currentAdIndex = idx;
+      currentGeoLockedAdId = null;
+      displayAd(activeAdList[idx], false);
+      startAdSlideshow();
+    }
+  }
+
+  function handleSmartAdImgError(img) {
+    if (!img) return;
+    img.style.display = "none";
+    let p = img.closest(".smart-ad-container");
+    if (p) p.style.display = "none";
+  }
+
+  function handleSmartAdImgSuccess(img) {
+    if (!img) return;
+    img.style.display = "block";
+    let p = img.closest(".smart-ad-container");
+    if (p) p.style.display = "block";
+  }
+
+  function checkGeoTargetedAds(lat, lon) {
+    if (!lat || !lon || activeAdList.length === 0) return;
+    let matchedAd = null;
+    let minD = 999999;
+
+    for (let ad of activeAdList) {
+      if (ad.lat && ad.lon && ad.radiusKm > 0) {
+        let d = getDistanceFromLatLonInKm(lat, lon, ad.lat, ad.lon);
+        if (d <= ad.radiusKm && d < minD) {
+          minD = d;
+          matchedAd = ad;
+        }
+      }
+    }
+
+    if (matchedAd) {
+      if (currentGeoLockedAdId !== matchedAd.id) {
+        displayAd(matchedAd, true);
+      }
+    } else {
+      if (currentGeoLockedAdId) {
+        currentGeoLockedAdId = null;
+        startAdSlideshow();
+      }
+    }
+  }
+
+  function onSmartAdClick() {
+    let curAd = activeAdList[currentAdIndex];
+    if (!curAd) return;
+    if (curAd.link) {
+      if (curAd.link.startsWith("tel:") || curAd.link.startsWith("http://") || curAd.link.startsWith("https://")) {
+        window.open(curAd.link, "_blank");
+        return;
+      }
+    }
+    showAppAlert(`📢 ${curAd.title || 'বিজ্ঞাপন'}\n${curAd.locationName ? 'এলাকা: ' + curAd.locationName : ''}\n\nআপনার ব্যবসার বিজ্ঞাপনের জন্য আমাদের সাথে যোগাযোগ করুন।`, "বিজ্ঞাপন বিবরণ");
+  }
+
+  // বিজ্ঞাপন কনফিগারেশন মডাল
+  function openAdSettingsModal() {
+    let modal = document.getElementById("adSettingsModal");
+    let container = document.getElementById("adConfigListContainer");
+    if (!modal || !container) return;
+
+    let configs = getStoredAdGeoConfigs();
+    container.innerHTML = configs.map(c => `
+      <div style="background:#ffffff; border:1.5px solid #cbd5e1; border-radius:10px; padding:12px; box-shadow:0 1px 4px rgba(0,0,0,0.05);">
+        <div style="font-weight:bold; color:#0f172a; font-size:13.5px; margin-bottom:8px;">🖼️ ছবি: <span style="color:#0288d1;">${c.imgName}</span></div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px;">
+          <div>
+            <label style="font-size:11px; font-weight:bold; color:#475569;">বিজ্ঞাপন শিরোনাম:</label>
+            <input type="text" id="ad_title_${c.id}" value="${c.title || ''}" placeholder="যেমন: বোলপুর স্পেশাল সেল" style="width:100%; padding:6px; font-size:12.5px; border:1px solid #cbd5e1; border-radius:6px; box-sizing:border-box;">
+          </div>
+          <div>
+            <label style="font-size:11px; font-weight:bold; color:#475569;">এলাকার নাম:</label>
+            <input type="text" id="ad_loc_${c.id}" value="${c.locationName || ''}" placeholder="যেমন: বোলপুর / সাঁইথিয়া" style="width:100%; padding:6px; font-size:12.5px; border:1px solid #cbd5e1; border-radius:6px; box-sizing:border-box;">
+          </div>
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px; margin-bottom:8px;">
+          <div>
+            <label style="font-size:11px; font-weight:bold; color:#475569;">Latitude:</label>
+            <input type="number" step="0.0001" id="ad_lat_${c.id}" value="${c.lat || ''}" placeholder="23.669" style="width:100%; padding:6px; font-size:12px; border:1px solid #cbd5e1; border-radius:6px; box-sizing:border-box;">
+          </div>
+          <div>
+            <label style="font-size:11px; font-weight:bold; color:#475569;">Longitude:</label>
+            <input type="number" step="0.0001" id="ad_lon_${c.id}" value="${c.lon || ''}" placeholder="87.684" style="width:100%; padding:6px; font-size:12px; border:1px solid #cbd5e1; border-radius:6px; box-sizing:border-box;">
+          </div>
+          <div>
+            <label style="font-size:11px; font-weight:bold; color:#475569;">ব্যাসার্ধ (কিমি):</label>
+            <input type="number" id="ad_rad_${c.id}" value="${c.radiusKm || 5}" placeholder="5" style="width:100%; padding:6px; font-size:12px; border:1px solid #cbd5e1; border-radius:6px; box-sizing:border-box;">
+          </div>
+        </div>
+        <div>
+          <label style="font-size:11px; font-weight:bold; color:#475569;">লিংক / ফোন নম্বর (ঐচ্ছিক):</label>
+          <input type="text" id="ad_link_${c.id}" value="${c.link || ''}" placeholder="tel:9876543210 বা https://..." style="width:100%; padding:6px; font-size:12.5px; border:1px solid #cbd5e1; border-radius:6px; box-sizing:border-box;">
+        </div>
+      </div>
+    `).join("");
+
+    modal.classList.remove("hidden");
+  }
+
+  function closeAdSettingsModal() {
+    let modal = document.getElementById("adSettingsModal");
+    if (modal) modal.classList.add("hidden");
+  }
+
+  function saveAdSettingsFromModal() {
+    let configs = getStoredAdGeoConfigs();
+    for (let c of configs) {
+      let tInput = document.getElementById(`ad_title_${c.id}`);
+      let locInput = document.getElementById(`ad_loc_${c.id}`);
+      let latInput = document.getElementById(`ad_lat_${c.id}`);
+      let lonInput = document.getElementById(`ad_lon_${c.id}`);
+      let radInput = document.getElementById(`ad_rad_${c.id}`);
+      let linkInput = document.getElementById(`ad_link_${c.id}`);
+
+      if (tInput) c.title = tInput.value.trim();
+      if (locInput) c.locationName = locInput.value.trim();
+      if (latInput) c.lat = Number(latInput.value) || 0;
+      if (lonInput) c.lon = Number(lonInput.value) || 0;
+      if (radInput) c.radiusKm = Number(radInput.value) || 0;
+      if (linkInput) c.link = linkInput.value.trim();
+    }
+
+    saveStoredAdGeoConfigs(configs);
+    closeAdSettingsModal();
+    initSmartAdSystem();
+    showAppAlert("✅ বিজ্ঞাপন এলাকা ও সেটিংস সফলভাবে সংরক্ষিত হয়েছে!", "বিজ্ঞাপন কনফিগ সম্পন্ন");
+  }
+
+  // ==========================================
+  // বাসের নির্দিষ্ট স্টপের নির্ধারিত সময় (BusStops শিট) ইঞ্জিন
+  // ==========================================
+  function toggleBusStopScheduleForm(forceState) {
+    let form = document.getElementById("busStopScheduleForm");
+    let icon = document.getElementById("busStopScheduleToggleIcon");
+    if (!form) return;
+    let shouldOpen = (forceState !== undefined) ? forceState : form.classList.contains("hidden");
+    if (shouldOpen) {
+      form.classList.remove("hidden");
+      if (icon) icon.innerText = "▲";
+      populateScheduleBusDropdown("scheduleBusSelect");
+    } else {
+      form.classList.add("hidden");
+      if (icon) icon.innerText = "▼";
+    }
+  }
+
+  function openBusStopScheduleModal() {
+    let modal = document.getElementById("busStopScheduleModal");
+    if (modal) {
+      modal.classList.remove("hidden");
+      populateScheduleBusDropdown("modalScheduleBusSelect");
+    }
+  }
+
+  function closeBusStopScheduleModal() {
+    let modal = document.getElementById("busStopScheduleModal");
+    if (modal) modal.classList.add("hidden");
+  }
+
+  async function populateScheduleBusDropdown(selectId) {
+    let sel = document.getElementById(selectId);
+    if (!sel) return;
+
+    let buses = await ensureBusesCatalogLoaded();
+    if (!buses || buses.length === 0) {
+      sel.innerHTML = `<option value="">বাসের তথ্য লোড হচ্ছে...</option>`;
+      return;
+    }
+
+    let uniqueMap = new Map();
+    buses.forEach(b => {
+      let key = b.number || b.name;
+      if (key && !uniqueMap.has(key)) {
+        uniqueMap.set(key, b);
+      }
+    });
+
+    sel.innerHTML = `<option value="">-- তালিকা থেকে বাস বাছুন --</option>` +
+      Array.from(uniqueMap.values()).map(b => {
+        let bNum = b.number ? ` (${b.number})` : "";
+        let isSel = (trackingBus && trackingBus.number === b.number);
+        return `<option value="${b.number}" ${isSel ? 'selected' : ''}>🚌 ${b.name}${bNum}</option>`;
+      }).join("");
+
+    if (trackingBus && trackingBus.number) {
+      sel.value = trackingBus.number;
+      if (selectId === "scheduleBusSelect") onScheduleBusSelected();
+      else onModalScheduleBusSelected();
+    }
+  }
+
+  function onScheduleBusSelected() {
+    handleScheduleBusSelection("scheduleBusSelect", "scheduleTripSelect", "scheduleStopSuggestions", "scheduleQuickStops", false);
+  }
+
+  function onModalScheduleBusSelected() {
+    handleScheduleBusSelection("modalScheduleBusSelect", "modalScheduleTripSelect", "modalScheduleStopSuggestions", "modalScheduleQuickStops", true);
+  }
+
+  function handleScheduleBusSelection(busSelectId, tripSelectId, stopSuggestionsId, quickStopsId, isModal) {
+    let bSel = document.getElementById(busSelectId);
+    let tSel = document.getElementById(tripSelectId);
+    let sDatalist = document.getElementById(stopSuggestionsId);
+    let qDiv = document.getElementById(quickStopsId);
+    if (!bSel || !tSel) return;
+
+    let busNo = bSel.value;
+    if (!busNo) {
+      tSel.innerHTML = `<option value="">-- প্রথমে বাস বাছুন --</option>`;
+      if (qDiv) qDiv.innerHTML = "";
+      return;
+    }
+
+    let matchingBuses = (globalBusesCatalog || []).filter(b => b.number === busNo);
+    if (matchingBuses.length === 0) {
+      tSel.innerHTML = `<option value="">-- ট্রিপ তথ্য পাওয়া যায়নি --</option>`;
+      return;
+    }
+
+    tSel.innerHTML = matchingBuses.map((b, idx) => {
+      let isUp = (idx === 0 || b.direction === "UP" || (b.source && !b.isDown));
+      let dirLabel = isUp ? "UP" : "DOWN";
+      return `<option value="${b.id !== undefined ? b.id : idx}" data-dir="${dirLabel}" data-src="${b.source}" data-dst="${b.dest}" data-dep="${b.depTime || ''}">
+        ${dirLabel}: ${b.source} ➔ ${b.dest} (ছাড়ার সময়: ${b.depTime || '--'})
+      </option>`;
+    }).join("");
+
+    let allStopsSet = new Set();
+    matchingBuses.forEach(b => {
+      if (Array.isArray(b.selectedStops)) {
+        b.selectedStops.forEach(s => allStopsSet.add(s));
+      }
+    });
+
+    if (sDatalist) {
+      sDatalist.innerHTML = Array.from(allStopsSet).map(s => `<option value="${s}"></option>`).join("");
+    }
+
+    if (qDiv) {
+      qDiv.innerHTML = Array.from(allStopsSet).map(s => `
+        <button type="button" onclick="selectQuickScheduleStop('${s}', ${isModal})" style="background:#e0f2fe; border:1px solid #7dd3fc; color:#0369a1; padding:4px 8px; border-radius:6px; font-size:11.5px; font-weight:600; cursor:pointer;">
+          + ${s}
+        </button>
+      `).join("");
+    }
+  }
+
+  function onScheduleDirectionChanged(dir) {
+    syncDirectionTrips("scheduleTripSelect", dir);
+  }
+
+  function onModalScheduleDirectionChanged(dir) {
+    syncDirectionTrips("modalScheduleTripSelect", dir);
+  }
+
+  function syncDirectionTrips(tripSelectId, dir) {
+    let tSel = document.getElementById(tripSelectId);
+    if (!tSel) return;
+    for (let opt of tSel.options) {
+      let optDir = opt.getAttribute("data-dir");
+      if (optDir && optDir.toUpperCase() === dir.toUpperCase()) {
+        opt.selected = true;
+        break;
+      }
+    }
+  }
+
+  function onScheduleTripSelected() {}
+  function onModalScheduleTripSelected() {}
+  function onScheduleStopInput() {}
+  function onModalScheduleStopInput() {}
+
+  function selectQuickScheduleStop(stopName, isModal) {
+    let input = document.getElementById(isModal ? "modalScheduleStopName" : "scheduleStopName");
+    if (input) input.value = stopName;
+
+    let bSel = document.getElementById(isModal ? "modalScheduleBusSelect" : "scheduleBusSelect");
+    let tSel = document.getElementById(isModal ? "modalScheduleTripSelect" : "scheduleTripSelect");
+    let timeInput = document.getElementById(isModal ? "modalScheduleTimeVal" : "scheduleTimeVal");
+    let ampmSelect = document.getElementById(isModal ? "modalScheduleTimeAmpm" : "scheduleTimeAmpm");
+
+    if (bSel && bSel.value && timeInput) {
+      let cleanBusNum = bSel.value.replace(/[^A-Z0-9]/g, '');
+      let cStop = cleanStopName(stopName);
+      let opt = tSel ? tSel.selectedOptions[0] : null;
+      let dir = opt ? (opt.getAttribute("data-dir") || "UP") : "UP";
+
+      let existingTime = busStopsScheduleMap[`${cleanBusNum}_${dir}_${cStop}`] || busStopsScheduleMap[`${cleanBusNum}_${cStop}`];
+      if (existingTime) {
+        let parts = existingTime.split(/\s+/);
+        timeInput.value = parts[0] || "";
+        if (ampmSelect && parts[1]) ampmSelect.value = parts[1].toUpperCase();
+      }
+    }
+  }
+
+  async function submitBusStopTime() {
+    let bSel = document.getElementById("scheduleBusSelect");
+    let tSel = document.getElementById("scheduleTripSelect");
+    let sInput = document.getElementById("scheduleStopName");
+    let tInput = document.getElementById("scheduleTimeVal");
+    let ampmSel = document.getElementById("scheduleTimeAmpm");
+
+    let radios = document.getElementsByName("scheduleDirectionRadio");
+    let dir = "UP";
+    for (let r of radios) {
+      if (r.checked) { dir = r.value; break; }
+    }
+
+    await saveBusStopTimeInternal(bSel, tSel, sInput, tInput, ampmSel, dir, false);
+  }
+
+  async function submitModalBusStopTime() {
+    let bSel = document.getElementById("modalScheduleBusSelect");
+    let tSel = document.getElementById("modalScheduleTripSelect");
+    let sInput = document.getElementById("modalScheduleStopName");
+    let tInput = document.getElementById("modalScheduleTimeVal");
+    let ampmSel = document.getElementById("modalScheduleTimeAmpm");
+
+    let radios = document.getElementsByName("modalScheduleDirectionRadio");
+    let dir = "UP";
+    for (let r of radios) {
+      if (r.checked) { dir = r.value; break; }
+    }
+
+    let success = await saveBusStopTimeInternal(bSel, tSel, sInput, tInput, ampmSel, dir, true);
+    if (success) {
+      closeBusStopScheduleModal();
+    }
+  }
+
+  async function saveBusStopTimeInternal(bSel, tSel, sInput, tInput, ampmSel, direction, isModal) {
+    let busNo = bSel ? bSel.value.trim() : "";
+    let stopName = sInput ? sInput.value.trim() : "";
+    let timeVal = tInput ? tInput.value.trim() : "";
+    let ampm = ampmSel ? ampmSel.value.trim().toUpperCase() : "AM";
+
+    if (!busNo) {
+      showAppAlert("দয়া করে একটি বাস নির্বাচন করুন।", "তথ্য অসম্পূর্ণ");
+      return false;
+    }
+    if (!stopName) {
+      showAppAlert("দয়া করে স্টপেজের নাম লিখুন।", "তথ্য অসম্পূর্ণ");
+      return false;
+    }
+    if (!timeVal) {
+      showAppAlert("দয়া করে সময় লিখুন (যেমন: 08:30 বা 11:15)।", "তথ্য অসম্পূর্ণ");
+      return false;
+    }
+
+    let formattedTime = `${timeVal} ${ampm}`;
+    let busObj = (globalBusesCatalog || []).find(b => b.number === busNo);
+    let busName = busObj ? busObj.name : busNo;
+
+    let selectedTripOpt = tSel ? tSel.selectedOptions[0] : null;
+    let tripSource = selectedTripOpt ? (selectedTripOpt.getAttribute("data-src") || "") : "";
+    let tripDest = selectedTripOpt ? (selectedTripOpt.getAttribute("data-dst") || "") : "";
+    let depTime = selectedTripOpt ? (selectedTripOpt.getAttribute("data-dep") || "") : "";
+
+    let allAvailable = [...(masterStopsList || []), ...(currentBusStopsList || [])];
+    let coords = resolvePlaceCoords(stopName, allAvailable);
+    let lat = coords ? coords.lat : 0;
+    let lon = coords ? coords.lon : 0;
+
+    let payload = {
+      action: "addBusStopTime",
+      busNumber: busNo,
+      busName: busName,
+      direction: direction,
+      source: tripSource,
+      dest: tripDest,
+      depTime: depTime,
+      stopName: stopName,
+      time: formattedTime,
+      lat: lat,
+      lon: lon
+    };
+
+    try {
+      await fetch(API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify(payload)
+      }).catch(() => null);
+
+      let getUrl = `${API_URL}?action=addBusStopTime&busNumber=${encodeURIComponent(busNo)}&busName=${encodeURIComponent(busName)}&direction=${encodeURIComponent(direction)}&stopName=${encodeURIComponent(stopName)}&time=${encodeURIComponent(formattedTime)}&lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lon)}`;
+      fetch(getUrl).catch(() => null);
+    } catch (err) {
+      console.warn("addBusStopTime sync error:", err);
+    }
+
+    let cleanBusNum = busNo.replace(/[^A-Z0-9]/g, '');
+    let cStop = cleanStopName(stopName);
+    busStopsScheduleMap[`${cleanBusNum}_${direction}_${cStop}`] = formattedTime;
+    busStopsScheduleMap[`${cleanBusNum}_${cStop}`] = formattedTime;
+
+    showAppAlert(`✅ BusStops শিটে "${busName}" (${direction}) বাসের "${stopName}" স্টপেজের নির্ধারিত সময় (${formattedTime}) সফলভাবে সংরক্ষণ হয়েছে!`, "BusStops শিট আপডেট সম্পন্ন");
+
+    if (trackingBus && trackingBus.number === busNo) {
+      renderBusTimeTable();
+      updateDistanceAndTracking();
+    }
+    return true;
   }
 
   // ==========================================

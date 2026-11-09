@@ -35,6 +35,8 @@ function doGet(e) {
     return handleAddMasterStop(e.parameter);
   } else if (action === "addStop") {
     return handleAddStop(e.parameter);
+  } else if (action === "addBusStopTime") {
+    return handleAddBusStopTime(e.parameter);
   }
 
   return createJsonResponse({ ok: false, error: "Invalid GET action" });
@@ -61,6 +63,8 @@ function doPost(e) {
     return handleAddStop(data);
   } else if (action === "addMasterStop") {
     return handleAddMasterStop(data);
+  } else if (action === "addBusStopTime") {
+    return handleAddBusStopTime(data);
   } else if (action === "updateGPS") {
     return handleUpdateGPS(data);
   } else if (action === "updateBusClosedStatus") {
@@ -583,6 +587,88 @@ function handleUpdateBusClosedStatus(data) {
   ]);
 
   return createJsonResponse({ ok: true, message: "Bus closure status recorded" });
+}
+
+// -------------------------------------------------------------
+// ৯. বাসের নির্দিষ্ট স্টপের সময়সূচি সংরক্ষণ (BusStops শিট)
+// -------------------------------------------------------------
+function handleAddBusStopTime(data) {
+  var busNo = String(data.busNumber || data.busNo || "").trim().toUpperCase();
+  var busName = String(data.busName || "").trim();
+  var stopName = String(data.stopName || data.name || "").replace(/[\u200B-\u200D\uFEFF]/g, "").trim().toUpperCase();
+  var time = String(data.time || data.stopTime || "").trim();
+  var direction = String(data.direction || "").trim().toUpperCase(); // "UP" or "DOWN"
+  var lat = Number(data.lat || data.latitude || 0);
+  var lon = Number(data.lon || data.longitude || 0);
+
+  if (!busNo || !stopName || !time) {
+    return createJsonResponse({ ok: false, error: "busNumber, stopName, and time are required" });
+  }
+
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName("BusStops");
+  if (!sheet) {
+    sheet = ss.insertSheet("BusStops");
+    sheet.appendRow(["Bus_Number", "Bus_Name", "Stop_Name", "Time", "Latitude", "Longitude", "Accuracy"]);
+  }
+
+  var rows = sheet.getDataRange().getValues();
+  var cleanBusNo = busNo.replace(/[^A-Z0-9]/g, '');
+  var existingRowIndex = -1;
+
+  for (var i = 1; i < rows.length; i++) {
+    var rBus = String(rows[i][0] || "").trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+    var rStop = String(rows[i][2] || "").replace(/[\u200B-\u200D\uFEFF]/g, "").trim().toUpperCase();
+    var rNameOrDir = String(rows[i][1] || "").trim().toUpperCase();
+    var rColG = String(rows[i][6] || "").trim().toUpperCase();
+
+    if (rBus === cleanBusNo && rStop === stopName) {
+      if (direction) {
+        var dirMatches = (rNameOrDir.indexOf(direction) !== -1 || rColG.indexOf(direction) !== -1);
+        if (dirMatches) {
+          existingRowIndex = i + 1;
+          break;
+        }
+      } else {
+        existingRowIndex = i + 1;
+        break;
+      }
+    }
+  }
+
+  var displayName = busName;
+  if (direction) {
+    displayName = busName ? (busName + " (" + direction + ")") : direction;
+  }
+
+  if (existingRowIndex !== -1) {
+    sheet.getRange(existingRowIndex, 4).setValue(time);
+    if (lat && lon) {
+      sheet.getRange(existingRowIndex, 5, 1, 2).setValues([[lat, lon]]);
+    }
+    if (direction) {
+      sheet.getRange(existingRowIndex, 7).setValue(direction);
+    }
+    return createJsonResponse({
+      ok: true,
+      updated: true,
+      row: existingRowIndex,
+      busNumber: busNo,
+      stopName: stopName,
+      time: time,
+      message: "Time updated in BusStops sheet successfully"
+    });
+  } else {
+    sheet.appendRow([busNo, displayName, stopName, time, (lat || ""), (lon || ""), (direction || "")]);
+    return createJsonResponse({
+      ok: true,
+      added: true,
+      busNumber: busNo,
+      stopName: stopName,
+      time: time,
+      message: "New stop schedule added to BusStops sheet successfully"
+    });
+  }
 }
 
 // -------------------------------------------------------------
