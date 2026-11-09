@@ -7998,9 +7998,26 @@ https://aionline.in.net`;
       try {
         let ts = Date.now();
         let url = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:json&sheet=${sName}&_t=${ts}`;
-        let res = await fetch(url, { cache: "no-store" });
-        if (!res.ok) continue;
-        let text = await res.text();
+        let text = "";
+
+        // ১. অ্যান্ড্রয়েড অ্যাপের ভেতর AndroidBridge.fetchUrl ব্যবহার (CORS মুক্ত সরাসরি ফেচ)
+        if (window.AndroidBridge && typeof window.AndroidBridge.fetchUrl === "function") {
+          try {
+            text = window.AndroidBridge.fetchUrl(url);
+          } catch (_) {}
+        }
+
+        // ২. ওয়েব ব্রাউজারের ক্ষেত্রে সাধারণ fetch()
+        if (!text) {
+          try {
+            let res = await fetch(url, { cache: "no-store" });
+            if (res.ok) {
+              text = await res.text();
+            }
+          } catch (_) {}
+        }
+
+        if (!text) continue;
         let start = text.indexOf("{");
         let end = text.lastIndexOf("}");
         if (start !== -1 && end !== -1) {
@@ -8177,28 +8194,8 @@ https://aionline.in.net`;
   async function refreshAdsFromSheet(forceEval = true) {
     try {
       let adsFromSheet = await fetchSpreadsheetAds();
-      if (!adsFromSheet || adsFromSheet.length === 0) {
-        let defaultSrc = await resolveAdImageSource("img1.png");
-        if (defaultSrc) {
-          adsFromSheet = [
-            {
-              id: "fallback_img1",
-              imageName: "img1.png",
-              area: "ads1",
-              rawArea: "ads1",
-              latitude: 0,
-              longitude: 0,
-              radiusKm: 0,
-              contactNumber: "",
-              startTime: "",
-              stopTime: ""
-            }
-          ];
-        }
-      }
-
+      let prepared = [];
       if (adsFromSheet && adsFromSheet.length > 0) {
-        let prepared = [];
         for (let ad of adsFromSheet) {
           let src = await resolveAdImageSource(ad.imageName);
           if (src) {
@@ -8206,8 +8203,8 @@ https://aionline.in.net`;
             prepared.push(ad);
           }
         }
-        allSheetAdsList = prepared;
       }
+      allSheetAdsList = prepared;
 
       if (forceEval) {
         evaluateAllAdSlots();
@@ -8436,9 +8433,9 @@ https://aionline.in.net`;
     window.location.href = `tel:${phone}`;
   }
 
-  // ৯. সাধারণ বিজ্ঞাপন যোগাযোগ বোতাম (হোয়াটসঅ্যাপে 9800044626)
+  // ৯. সাধারণ বিজ্ঞাপন যোগাযোগ বোতাম (হোয়াটসঅ্যাপে 9800074626)
   function openGeneralAdContactWhatsApp() {
-    let phone = "919800044626";
+    let phone = "919800074626";
     let msg = encodeURIComponent("নমস্কার, বাস ট্র্যাকিং অ্যাপে বিজ্ঞাপন দেওয়ার জন্য যোগাযোগ করছি।");
     let url = `https://api.whatsapp.com/send?phone=${phone}&text=${msg}`;
     window.location.href = url;

@@ -283,6 +283,8 @@ class MainActivity : ComponentActivity() {
       setGeolocationEnabled(true)
       allowFileAccess = true
       allowContentAccess = true
+      allowFileAccessFromFileURLs = true
+      allowUniversalAccessFromFileURLs = true
       mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
       cacheMode = WebSettings.LOAD_DEFAULT
       useWideViewPort = true
@@ -733,6 +735,25 @@ class WebAppInterface(private val activity: MainActivity) {
       try {
         activity.webView?.clearCache(true)
       } catch (_: Exception) {}
+    }
+  }
+
+  @JavascriptInterface
+  fun fetchUrl(urlString: String): String {
+    return try {
+      val url = java.net.URL(urlString)
+      val conn = url.openConnection() as java.net.HttpURLConnection
+      conn.connectTimeout = 8000
+      conn.readTimeout = 8000
+      conn.requestMethod = "GET"
+      conn.setRequestProperty("User-Agent", "Mozilla/5.0")
+      if (conn.responseCode == 200) {
+        conn.inputStream.bufferedReader().use { it.readText() }
+      } else {
+        ""
+      }
+    } catch (_: Exception) {
+      ""
     }
   }
 }
