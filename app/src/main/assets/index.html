@@ -4159,12 +4159,56 @@
             status: "active"
           });
         });
-        return list;
+        return assignBusDirections(list);
       }
     } catch (e) {
       console.warn("fetchBusesDirect fallback failed:", e);
     }
     return [];
+  }
+
+  function assignBusDirections(list) {
+    if (!list || list.length === 0) return list;
+    let busGroups = {};
+    list.forEach(b => {
+      let numKey = String(b.number || "").trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+      if (!busGroups[numKey]) busGroups[numKey] = [];
+      busGroups[numKey].push(b);
+    });
+
+    Object.values(busGroups).forEach(group => {
+      if (group.length === 0) return;
+      let baseSrc = cleanStopName(group[0].source);
+      let baseDst = cleanStopName(group[0].dest);
+
+      group.forEach((b, idx) => {
+        if (b.direction) {
+          b.isDown = (String(b.direction).toUpperCase() === "DOWN");
+          return;
+        }
+        let s = cleanStopName(b.source);
+        let d = cleanStopName(b.dest);
+        if (s && d && baseSrc && baseDst) {
+          if (s === baseSrc && d === baseDst) {
+            b.direction = "UP";
+            b.isDown = false;
+          } else if (s === baseDst && d === baseSrc) {
+            b.direction = "DOWN";
+            b.isDown = true;
+          } else if (idx % 2 === 1) {
+            b.direction = "DOWN";
+            b.isDown = true;
+          } else {
+            b.direction = "UP";
+            b.isDown = false;
+          }
+        } else {
+          b.direction = (idx % 2 === 1) ? "DOWN" : "UP";
+          b.isDown = (b.direction === "DOWN");
+        }
+      });
+    });
+    return list;
   }
 
   let busStopsScheduleMap = {};
@@ -4193,14 +4237,15 @@
           let colG = String(getCol(6)).trim().toUpperCase();
 
           let dir = "";
-          if (busNameOrDir.includes("UP") || colG.includes("UP")) dir = "UP";
-          else if (busNameOrDir.includes("DOWN") || colG.includes("DOWN")) dir = "DOWN";
+          if (busNameOrDir.includes("DOWN") || colG.includes("DOWN")) dir = "DOWN";
+          else if (busNameOrDir.includes("UP") || colG.includes("UP")) dir = "UP";
 
           if (busNum && stopName && timeVal && timeVal !== "--") {
             if (dir) {
               map[`${busNum}_${dir}_${stopName}`] = timeVal;
+            } else {
+              map[`${busNum}_${stopName}`] = timeVal;
             }
-            map[`${busNum}_${stopName}`] = timeVal;
           }
         });
         busStopsScheduleMap = map;
@@ -4234,7 +4279,7 @@
         let bRes = await fetch(`${API_URL}?action=getBuses`);
         let bData = await bRes.json();
         if (bData && bData.buses && bData.buses.length > 0) {
-          globalBusesCatalog = bData.buses.filter(b => {
+          let mappedBuses = bData.buses.filter(b => {
             let st = b.status !== undefined ? b.status : b.Status;
             if (st !== undefined && st !== null) {
               return String(st).trim().toLowerCase() === "active";
@@ -4247,6 +4292,7 @@
               arrTime: b.arrTime ? formatCleanTime(b.arrTime) : ""
             };
           });
+          globalBusesCatalog = assignBusDirections(mappedBuses);
         }
       } catch (_) {}
     }
@@ -4949,12 +4995,37 @@
     let cTo = cleanStopName(toDisplayName);
     let busDir = (bus.direction || (bus.isDown ? "DOWN" : "UP")).toUpperCase();
 
-    let exactFromTime = (typeof busStopsScheduleMap !== "undefined" && busStopsScheduleMap[`${cleanBusNum}_${busDir}_${cFrom}`])
-      ? busStopsScheduleMap[`${cleanBusNum}_${busDir}_${cFrom}`]
-      : ((typeof busStopsScheduleMap !== "undefined" && busStopsScheduleMap[`${cleanBusNum}_${cFrom}`]) ? busStopsScheduleMap[`${cleanBusNum}_${cFrom}`] : null);
-    let exactToTime = (typeof busStopsScheduleMap !== "undefined" && busStopsScheduleMap[`${cleanBusNum}_${busDir}_${cTo}`])
-      ? busStopsScheduleMap[`${cleanBusNum}_${busDir}_${cTo}`]
-      : ((typeof busStopsScheduleMap !== "undefined" && busStopsScheduleMap[`${cleanBusNum}_${cTo}`]) ? busStopsScheduleMap[`${cleanBusNum}_${cTo}`] : null);
+    // সময়ের plausibility যাচাই: এই ট্রিপের ছাড়ার সময় ও সম্ভাব্য সমাপ্তি সময়ের সাথে স্টপের সময় সামঞ্জস্যপূর্ণ কিনা
+    function isStopSchedulePlausible(timeStr) {
+      if (!timeStr) return false;
+      let sMins = timeToMinutes(timeStr);
+      if (sMins === null || depMins === null) return true;
+      let duration = (arrMins !== null && arrMins >= depMins) ? (arrMins - depMins) : Math.max(totalStopsCount * 4, 90);
+      if (duration > 360) duration = 360;
+      let diff = (sMins - depMins + 1440) % 1440;
+      return (diff >= 0 && diff <= duration + 35) || diff >= 1425;
+    }
+
+    let exactFromTime = null;
+    let exactToTime = null;
+
+    if (typeof busStopsScheduleMap !== "undefined") {
+      let candFromDir = busStopsScheduleMap[`${cleanBusNum}_${busDir}_${cFrom}`];
+      let candFromGen = busStopsScheduleMap[`${cleanBusNum}_${cFrom}`];
+      if (candFromDir && isStopSchedulePlausible(candFromDir)) {
+        exactFromTime = candFromDir;
+      } else if (candFromGen && isStopSchedulePlausible(candFromGen)) {
+        exactFromTime = candFromGen;
+      }
+
+      let candToDir = busStopsScheduleMap[`${cleanBusNum}_${busDir}_${cTo}`];
+      let candToGen = busStopsScheduleMap[`${cleanBusNum}_${cTo}`];
+      if (candToDir && isStopSchedulePlausible(candToDir)) {
+        exactToTime = candToDir;
+      } else if (candToGen && isStopSchedulePlausible(candToGen)) {
+        exactToTime = candToGen;
+      }
+    }
 
     let fMins = null;
     let tMins = null;
@@ -5090,6 +5161,8 @@
     trackingBus.originalDest = bestBusRow.dest;
     trackingBus.originalDepTime = bestBusRow.depTime;
     trackingBus.originalArrTime = bestBusRow.arrTime;
+    trackingBus.direction = bestBusRow.direction;
+    trackingBus.isDown = bestBusRow.isDown;
 
     if (searchResultItem) {
       trackingBus.searchFrom = searchResultItem.fromDisplayName || bestBusRow.source;
@@ -7327,9 +7400,20 @@
 
       // ১) BusStops শিটের সুনির্দিষ্ট নির্ধারিত সময় থাকলে তা নেওয়া হবে
       let curDir = (trackingBus && (trackingBus.direction || (trackingBus.isDown ? "DOWN" : "UP"))) ? (trackingBus.direction || (trackingBus.isDown ? "DOWN" : "UP")).toUpperCase() : "";
-      let exactTime = (typeof busStopsScheduleMap !== "undefined" && curDir && busStopsScheduleMap[`${cleanBusNum}_${curDir}_${cleanName}`]) 
-        ? busStopsScheduleMap[`${cleanBusNum}_${curDir}_${cleanName}`] 
-        : ((typeof busStopsScheduleMap !== "undefined" && busStopsScheduleMap[`${cleanBusNum}_${cleanName}`]) ? busStopsScheduleMap[`${cleanBusNum}_${cleanName}`] : null);
+      let exactTime = null;
+      if (typeof busStopsScheduleMap !== "undefined") {
+        let tDir = curDir ? busStopsScheduleMap[`${cleanBusNum}_${curDir}_${cleanName}`] : null;
+        let tGen = busStopsScheduleMap[`${cleanBusNum}_${cleanName}`];
+        let plausible = (t) => {
+          if (!t) return false;
+          let sm = timeToMinutes(t);
+          if (sm === null || depMins === null) return true;
+          let diff = (sm - depMins + 1440) % 1440;
+          return (diff >= 0 && diff <= totalDurationMins + 35) || diff >= 1425;
+        };
+        if (tDir && plausible(tDir)) exactTime = tDir;
+        else if (tGen && plausible(tGen)) exactTime = tGen;
+      }
 
       let estMin = null;
       if (exactTime) {
@@ -8609,7 +8693,7 @@ https://aionline.in.net`;
     }
 
     tSel.innerHTML = matchingBuses.map((b, idx) => {
-      let isUp = (idx === 0 || b.direction === "UP" || (b.source && !b.isDown));
+      let isUp = (b.direction === "UP" || (!b.isDown && idx === 0));
       let dirLabel = isUp ? "UP" : "DOWN";
       return `<option value="${b.id !== undefined ? b.id : idx}" data-dir="${dirLabel}" data-src="${b.source}" data-dst="${b.dest}" data-dep="${b.depTime || ''}">
         ${dirLabel}: ${b.source} ➔ ${b.dest} (ছাড়ার সময়: ${b.depTime || '--'})
@@ -8732,11 +8816,8 @@ https://aionline.in.net`;
     let tInput = document.getElementById("scheduleTimeVal");
     let ampmSel = document.getElementById("scheduleTimeAmpm");
 
-    let radios = document.getElementsByName("scheduleDirectionRadio");
-    let dir = "UP";
-    for (let r of radios) {
-      if (r.checked) { dir = r.value; break; }
-    }
+    let selectedTripOpt = tSel ? tSel.selectedOptions[0] : null;
+    let dir = selectedTripOpt ? (selectedTripOpt.getAttribute("data-dir") || "UP") : "UP";
 
     await saveBusStopTimeInternal(bSel, tSel, sInput, tInput, ampmSel, dir, false);
   }
@@ -8821,6 +8902,11 @@ https://aionline.in.net`;
     let cStop = cleanStopName(stopName);
     busStopsScheduleMap[`${cleanBusNum}_${direction}_${cStop}`] = formattedTime;
     busStopsScheduleMap[`${cleanBusNum}_${cStop}`] = formattedTime;
+    if (direction === "DOWN" && busStopsScheduleMap[`${cleanBusNum}_UP_${cStop}`] === formattedTime) {
+      delete busStopsScheduleMap[`${cleanBusNum}_UP_${cStop}`];
+    } else if (direction === "UP" && busStopsScheduleMap[`${cleanBusNum}_DOWN_${cStop}`] === formattedTime) {
+      delete busStopsScheduleMap[`${cleanBusNum}_DOWN_${cStop}`];
+    }
 
     showAppAlert(`✅ BusStops শিটে "${busName}" (${direction}) বাসের "${stopName}" স্টপেজের নির্ধারিত সময় (${formattedTime}) সফলভাবে সংরক্ষণ হয়েছে!`, "BusStops শিট আপডেট সম্পন্ন");
 
