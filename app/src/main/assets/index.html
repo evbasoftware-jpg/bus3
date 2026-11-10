@@ -8504,7 +8504,7 @@ https://aionline.in.net`;
     if (!currentAdContactPhone) return;
     let phone = currentAdContactPhone;
     if (phone.length === 10) phone = "91" + phone;
-    let msg = encodeURIComponent("নমস্কার, আমি আপনার বাসের বিজ্ঞাপনটি দেখে যোগাযোগ করছি।");
+    let msg = encodeURIComponent("নমস্কার, আমি বাস লাইভ লোকেশন অ্যাপে আপনার বিজ্ঞাপনটি দেখে যোগাযোগ করছি।");
     let url = `https://api.whatsapp.com/send?phone=${phone}&text=${msg}`;
     closeAdContactModal();
     window.location.href = url;
