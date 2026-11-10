@@ -2251,11 +2251,7 @@
 <div id="adContactModal" class="app-feature-modal hidden" onclick="if(event.target===this)closeAdContactModal()">
   <div class="feature-modal-content" style="max-width: 360px; text-align: center; padding: 22px 18px; border-radius: 16px;">
     <div style="font-size: 38px; margin-bottom: 6px;">📢</div>
-    <div style="font-size: 17px; font-weight: 800; color: #0f172a; margin-bottom: 4px;">বিজ্ঞাপন যোগাযোগ</div>
-    <div id="adContactPhoneDisplay" style="font-size: 15px; font-weight: 700; color: #0284c7; margin-bottom: 14px;"></div>
-    <p style="font-size: 13px; color: #475569; margin-bottom: 18px; line-height: 1.45;">
-      বিজ্ঞাপনদাতার সাথে কীভাবে যোগাযোগ করতে চান তা নির্বাচন করুন:
-    </p>
+    <div style="font-size: 17px; font-weight: 800; color: #0f172a; margin-bottom: 4px;">বিজ্ঞাপনদাতার সঙ্গে যোগাযোগ করুন</div>  
 
     <div style="display: flex; flex-direction: column; gap: 10px;">
       <!-- WhatsApp বাটন -->
@@ -8520,7 +8516,7 @@ https://aionline.in.net`;
   // ৯. সাধারণ বিজ্ঞাপন যোগাযোগ বোতাম (হোয়াটসঅ্যাপে 9800074626)
   function openGeneralAdContactWhatsApp() {
     let phone = "919800074626";
-    let msg = encodeURIComponent("নমস্কার, বাস ট্র্যাকিং অ্যাপে বিজ্ঞাপন দেওয়ার জন্য যোগাযোগ করছি।");
+    let msg = encodeURIComponent("নমস্কার, বাস লাইভ লোকেশন অ্যাপে বিজ্ঞাপন দেওয়ার জন্য যোগাযোগ করছি।");
     let url = `https://api.whatsapp.com/send?phone=${phone}&text=${msg}`;
     window.location.href = url;
   }
