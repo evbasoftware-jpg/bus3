@@ -401,7 +401,10 @@ class MainActivity : ComponentActivity() {
       }
 
       private fun handleCustomUri(url: String): Boolean {
-        if (url.startsWith("whatsapp:") || url.startsWith("intent:") || url.startsWith("tel:") || url.startsWith("mailto:") || url.startsWith("https://api.whatsapp.com/") || url.startsWith("https://wa.me/")) {
+        if (url.startsWith("file:///android_asset/")) {
+          return false
+        }
+        if (url.startsWith("whatsapp:") || url.startsWith("intent:") || url.startsWith("tel:") || url.startsWith("mailto:") || url.startsWith("https://api.whatsapp.com/") || url.startsWith("https://wa.me/") || url.startsWith("http://") || url.startsWith("https://")) {
           try {
             val intent = if (url.startsWith("tel:")) {
               Intent(Intent.ACTION_DIAL, Uri.parse(url))
@@ -786,6 +789,21 @@ class WebAppInterface(private val activity: MainActivity) {
       }
     } catch (_: Exception) {
       ""
+    }
+  }
+
+  @JavascriptInterface
+  fun openExternalUrl(urlString: String) {
+    activity.runOnUiThread {
+      try {
+        var cleanUrl = urlString.trim()
+        if (!cleanUrl.startsWith("http://") && !cleanUrl.startsWith("https://")) {
+          cleanUrl = "https://$cleanUrl"
+        }
+        val uri = Uri.parse(cleanUrl)
+        val intent = Intent(Intent.ACTION_VIEW, uri)
+        activity.startActivity(intent)
+      } catch (_: Exception) {}
     }
   }
 }

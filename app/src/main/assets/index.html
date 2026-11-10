@@ -2271,7 +2271,7 @@
 
     <div style="display: flex; flex-direction: column; gap: 10px;">
       <!-- WhatsApp বাটন -->
-      <button type="button" onclick="doAdWhatsAppChat()" style="background: linear-gradient(135deg, #25D366 0%, #128C7E 100%); color: #ffffff; border: none; font-size: 14.5px; font-weight: 800; padding: 12px 16px; border-radius: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 3px 10px rgba(37,211,102,0.35);">
+      <button type="button" id="adWhatsAppBtn" onclick="doAdWhatsAppChat()" style="background: linear-gradient(135deg, #25D366 0%, #128C7E 100%); color: #ffffff; border: none; font-size: 14.5px; font-weight: 800; padding: 12px 16px; border-radius: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 3px 10px rgba(37,211,102,0.35);">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="#ffffff" style="flex-shrink:0;">
           <path d="M12.031 2C6.51 2 2.029 6.48 2.029 12C2.029 13.79 2.509 15.47 3.339 16.92L2.019 21.8L7.029 20.49C8.429 21.26 10.159 21.71 12.029 21.71C17.55 21.71 22.03 17.23 22.03 11.71C22.03 6.19 17.55 2 12.031 2ZM17.159 16.48C16.949 17.07 15.919 17.62 15.359 17.69C14.869 17.75 14.239 17.78 12.059 16.88C9.279 15.73 7.489 12.91 7.349 12.72C7.219 12.53 6.229 11.22 6.229 9.86C6.229 8.5 6.939 7.84 7.219 7.55C7.449 7.31 7.789 7.22 8.129 7.22C8.239 7.22 8.339 7.22 8.429 7.23C8.689 7.24 8.819 7.26 8.989 7.68C9.209 8.21 9.749 9.53 9.819 9.68C9.889 9.83 9.949 10.02 9.849 10.21C9.759 10.4 9.689 10.49 9.549 10.65C9.409 10.81 9.279 10.94 9.139 11.11C8.989 11.27 8.839 11.45 9.009 11.75C9.179 12.04 9.779 13.02 10.649 13.79C11.779 14.8 12.709 15.12 13.019 15.26C13.319 15.39 13.499 15.36 13.679 15.15C13.859 14.94 14.449 14.25 14.659 13.95C14.869 13.65 15.089 13.7 15.379 13.81C15.679 13.92 17.259 14.7 17.589 14.86C17.919 15.02 18.139 15.1 18.219 15.24C18.299 15.38 18.299 16.03 17.159 16.48Z"/>
         </svg>
@@ -2279,9 +2279,15 @@
       </button>
 
       <!-- সরাসরি কল বাটন -->
-      <button type="button" onclick="doAdDirectCall()" style="background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); color: #ffffff; border: none; font-size: 14.5px; font-weight: 800; padding: 12px 16px; border-radius: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 3px 10px rgba(2,132,199,0.3);">
+      <button type="button" id="adCallBtn" onclick="doAdDirectCall()" style="background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); color: #ffffff; border: none; font-size: 14.5px; font-weight: 800; padding: 12px 16px; border-radius: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 3px 10px rgba(2,132,199,0.3);">
         <span style="font-size: 18px;">📞</span>
         <span>সরাসরি ফোন কল করুন</span>
+      </button>
+
+      <!-- ওয়েবসাইট / চ্যানেল লিংক বাটন (লিংক দেওয়া থাকলে দেখাবে) -->
+      <button type="button" id="adWebLinkBtn" onclick="doAdOpenWebLink()" style="display: none; background: linear-gradient(135deg, #4f46e5 0%, #3730a3 100%); color: #ffffff; border: none; font-size: 14.5px; font-weight: 800; padding: 12px 16px; border-radius: 10px; cursor: pointer; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 3px 10px rgba(79,70,229,0.35);">
+        <span style="font-size: 18px;">🌐</span>
+        <span id="adWebLinkBtnText">ওয়েব লিংকে যান</span>
       </button>
 
       <!-- বন্ধ করুন বাটন -->
@@ -8261,8 +8267,9 @@ https://aionline.in.net`;
             let cLon = findCol(["lon", "lng"], 3);
             let cRad = findCol(["radius", "rad", "km"], 4);
             let cPhone = findCol(["contact", "phone", "number", "mobile"], 5);
-            let cStart = findCol(["start"], 6);
-            let cStop = findCol(["stop", "end"], 7);
+            let cLink = findCol(["link", "url", "site", "web"], 6);
+            let cStart = findCol(["start"], 7);
+            let cStop = findCol(["stop", "end"], 8);
 
             rows.forEach((r, idx) => {
               if (!r.c) return;
@@ -8302,6 +8309,8 @@ https://aionline.in.net`;
               if (isNaN(rad)) rad = 0;
 
               let contact = String(getCellVal(cPhone)).trim();
+              let linkVal = String(getCellVal(cLink)).trim();
+              if (linkVal === "undefined" || linkVal === "null") linkVal = "";
               let startTime = String(getCellVal(cStart)).trim();
               let stopTime = String(getCellVal(cStop)).trim();
 
@@ -8314,6 +8323,7 @@ https://aionline.in.net`;
                 longitude: lon,
                 radiusKm: rad,
                 contactNumber: contact,
+                link: linkVal,
                 startTime: startTime,
                 stopTime: stopTime
               });
@@ -8600,34 +8610,68 @@ https://aionline.in.net`;
     if (container) container.style.display = "block";
   }
 
-  // ৮. বিজ্ঞাপনে ক্লিক অ্যাকশন (WhatsApp ও Direct Call হ্যান্ডলিং)
+  // ৮. বিজ্ঞাপনে ক্লিক অ্যাকশন (WhatsApp, Direct Call ও ওয়েব লিংক হ্যান্ডলিং)
   let currentAdContactPhone = "";
+  let currentAdWebLink = "";
 
   function onAppAdClicked(slot) {
     let state = appSlotState[slot];
     if (!state || !state.currentAd) return;
     let ad = state.currentAd;
     let contact = (ad.contactNumber || "").trim();
+    let link = (ad.link || "").trim();
 
-    if (!contact) {
+    // যদি কনট্যাক্ট নম্বরে লিংক লেখা থাকে এবং লিংক খালি থাকে
+    if (!link && (contact.startsWith("http://") || contact.startsWith("https://") || contact.includes("whatsapp.com/channel") || contact.includes("chat.whatsapp.com") || contact.includes("wa.me/"))) {
+      link = contact;
+      contact = "";
+    }
+
+    if (!contact && !link) {
       showAppAlert("বিজ্ঞাপনের বিস্তারিত তথ্যের জন্য আমাদের সাথে যোগাযোগ করুন।", "বিজ্ঞাপন");
       return;
     }
 
-    if (contact.startsWith("http://") || contact.startsWith("https://") || contact.includes("wa.me") || contact.includes("whatsapp.com")) {
-      window.location.href = contact;
-      return;
-    }
-
     let cleanPhone = contact.replace(/[^0-9]/g, '');
-    if (!cleanPhone) {
-      showAppAlert(`বিজ্ঞাপন যোগাযোগ: ${contact}`, "বিজ্ঞাপন");
-      return;
+    currentAdContactPhone = cleanPhone;
+    currentAdWebLink = link;
+
+    let waBtn = document.getElementById("adWhatsAppBtn");
+    let callBtn = document.getElementById("adCallBtn");
+    let linkBtn = document.getElementById("adWebLinkBtn");
+    let linkText = document.getElementById("adWebLinkBtnText");
+
+    // WhatsApp এবং Call বাটন দৃশ্যমানতা
+    if (waBtn) waBtn.style.display = cleanPhone ? "flex" : "none";
+    if (callBtn) callBtn.style.display = cleanPhone ? "flex" : "none";
+
+    // ওয়েব লিংক বাটন দৃশ্যমানতা (Ads শিটে লিংক দেওয়া থাকলে "বাতিল (বন্ধ করুন)" এর ঠিক উপরে দেখাবে)
+    if (linkBtn) {
+      if (link) {
+        linkBtn.style.display = "flex";
+        if (linkText) {
+          if (link.includes("whatsapp.com/channel") || link.includes("chat.whatsapp.com")) {
+            linkText.innerText = "হোয়াটসঅ্যাপ চ্যানেলে যুক্ত হন";
+          } else {
+            linkText.innerText = "ওয়েব লিংকে যান";
+          }
+        }
+      } else {
+        linkBtn.style.display = "none";
+      }
     }
 
-    currentAdContactPhone = cleanPhone;
     let disp = document.getElementById("adContactPhoneDisplay");
-    if (disp) disp.innerText = `যোগাযোগ নম্বর: ${contact}`;
+    if (disp) {
+      if (contact) {
+        disp.innerText = `যোগাযোগ নম্বর: ${contact}`;
+        disp.style.display = "block";
+      } else {
+        disp.innerText = "";
+        disp.style.display = "none";
+      }
+    }
+
     let modal = document.getElementById("adContactModal");
     if (modal) modal.classList.remove("hidden");
   }
@@ -8637,6 +8681,26 @@ https://aionline.in.net`;
     if (modal) modal.classList.add("hidden");
   }
 
+  function doAdOpenWebLink() {
+    if (!currentAdWebLink) return;
+    let url = currentAdWebLink.trim();
+    if (!url.startsWith("http://") && !url.startsWith("https://")) {
+      url = "https://" + url;
+    }
+    closeAdContactModal();
+    if (window.AndroidBridge && typeof window.AndroidBridge.openExternalUrl === "function") {
+      try {
+        window.AndroidBridge.openExternalUrl(url);
+        return;
+      } catch (_) {}
+    }
+    try {
+      window.open(url, "_blank");
+    } catch (_) {
+      window.location.href = url;
+    }
+  }
+
   function doAdWhatsAppChat() {
     if (!currentAdContactPhone) return;
     let phone = currentAdContactPhone;
@@ -8644,6 +8708,12 @@ https://aionline.in.net`;
     let msg = encodeURIComponent("নমস্কার, আমি বাস লাইভ লোকেশন অ্যাপে আপনার বিজ্ঞাপনটি দেখে যোগাযোগ করছি।");
     let url = `https://api.whatsapp.com/send?phone=${phone}&text=${msg}`;
     closeAdContactModal();
+    if (window.AndroidBridge && typeof window.AndroidBridge.openExternalUrl === "function") {
+      try {
+        window.AndroidBridge.openExternalUrl(url);
+        return;
+      } catch (_) {}
+    }
     window.location.href = url;
   }
 
