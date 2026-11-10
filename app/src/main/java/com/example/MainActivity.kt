@@ -20,6 +20,7 @@ import android.os.Bundle
 import android.speech.tts.TextToSpeech
 import android.speech.tts.Voice
 import android.view.ViewGroup
+import android.webkit.CookieManager
 import android.webkit.GeolocationPermissions
 import android.webkit.JavascriptInterface
 import android.webkit.JsPromptResult
@@ -419,7 +420,23 @@ class MainActivity : ComponentActivity() {
         if (hasLocationPermission()) {
           view?.evaluateJavascript("if (typeof onLocationPermissionGranted === 'function') { onLocationPermissionGranted(); }", null)
         }
+        val savedLang = getSharedPreferences("app_prefs", Context.MODE_PRIVATE).getString("saved_lang", "") ?: ""
+        if (savedLang.isNotEmpty() && savedLang != "bn") {
+          view?.evaluateJavascript("if (typeof applySavedLanguageOnStartup === 'function') { applySavedLanguageOnStartup('$savedLang'); }", null)
+        }
       }
+    }
+
+    val prefs = getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
+    val savedLang = prefs.getString("saved_lang", "") ?: ""
+    if (savedLang.isNotEmpty() && savedLang != "bn") {
+      try {
+        val cookieManager = CookieManager.getInstance()
+        cookieManager.setAcceptCookie(true)
+        cookieManager.setAcceptThirdPartyCookies(wv, true)
+        cookieManager.setCookie("file:///android_asset/index.html", "googtrans=/bn/$savedLang; path=/;")
+        cookieManager.flush()
+      } catch (_: Exception) {}
     }
 
     wv.loadUrl("file:///android_asset/index.html")
@@ -605,7 +622,22 @@ class WebAppInterface(private val activity: MainActivity) {
 
   @JavascriptInterface
   fun setNotificationLanguage(lang: String) {
-    // সংগৃহীত ভাষা অ্যাপ সেটিংসে আপডেট
+    try {
+      activity.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
+        .edit()
+        .putString("saved_lang", lang)
+        .apply()
+    } catch (_: Exception) {}
+  }
+
+  @JavascriptInterface
+  fun getStoredLanguage(): String {
+    return try {
+      activity.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
+        .getString("saved_lang", "") ?: ""
+    } catch (_: Exception) {
+      ""
+    }
   }
 
   @JavascriptInterface
