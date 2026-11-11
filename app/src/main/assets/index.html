@@ -2290,6 +2290,15 @@
         <span id="adWebLinkBtnText">ওয়েব লিংকে যান</span>
       </button>
 
+      <!-- বিজ্ঞাপনদাতার ঠিকানা (Ads শিটের Address কলমে ঠিকানা থাকলে বাতিল বোতামের উপরে দেখাবে) -->
+      <div id="adAddressBox" style="display: none; background: #f8fafc; border: 1.5px dashed #cbd5e1; border-radius: 10px; padding: 11px 13px; text-align: left; margin: 2px 0;">
+        <div style="font-size: 12px; font-weight: 800; color: #475569; margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">
+          <span style="font-size: 16px;">📍</span>
+          <span>বিজ্ঞাপনদাতার ঠিকানা:</span>
+        </div>
+        <div id="adAddressText" style="font-size: 13.5px; font-weight: 600; color: #0f172a; line-height: 1.45; word-break: break-word;"></div>
+      </div>
+
       <!-- বন্ধ করুন বাটন -->
       <button type="button" onclick="closeAdContactModal()" style="background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; font-size: 13.5px; font-weight: 700; padding: 10px; border-radius: 10px; cursor: pointer; margin-top: 4px;">
         বাতিল (বন্ধ করুন)
@@ -8268,8 +8277,9 @@ https://aionline.in.net`;
             let cRad = findCol(["radius", "rad", "km"], 4);
             let cPhone = findCol(["contact", "phone", "number", "mobile"], 5);
             let cLink = findCol(["link", "url", "site", "web"], 6);
-            let cStart = findCol(["start"], 7);
-            let cStop = findCol(["stop", "end"], 8);
+            let cAddress = findCol(["address", "addr", "place", "location_name"], 7);
+            let cStart = findCol(["start"], 8);
+            let cStop = findCol(["stop", "end"], 9);
 
             rows.forEach((r, idx) => {
               if (!r.c) return;
@@ -8311,6 +8321,8 @@ https://aionline.in.net`;
               let contact = String(getCellVal(cPhone)).trim();
               let linkVal = String(getCellVal(cLink)).trim();
               if (linkVal === "undefined" || linkVal === "null") linkVal = "";
+              let addressVal = String(getCellVal(cAddress)).trim();
+              if (addressVal === "undefined" || addressVal === "null") addressVal = "";
               let startTime = String(getCellVal(cStart)).trim();
               let stopTime = String(getCellVal(cStop)).trim();
 
@@ -8324,6 +8336,7 @@ https://aionline.in.net`;
                 radiusKm: rad,
                 contactNumber: contact,
                 link: linkVal,
+                address: addressVal,
                 startTime: startTime,
                 stopTime: stopTime
               });
@@ -8610,9 +8623,10 @@ https://aionline.in.net`;
     if (container) container.style.display = "block";
   }
 
-  // ৮. বিজ্ঞাপনে ক্লিক অ্যাকশন (WhatsApp, Direct Call ও ওয়েব লিংক হ্যান্ডলিং)
+  // ৮. বিজ্ঞাপনে ক্লিক অ্যাকশন (WhatsApp, Direct Call, ওয়েব লিংক ও ঠিকানা হ্যান্ডলিং)
   let currentAdContactPhone = "";
   let currentAdWebLink = "";
+  let currentAdAddress = "";
 
   function onAppAdClicked(slot) {
     let state = appSlotState[slot];
@@ -8620,6 +8634,7 @@ https://aionline.in.net`;
     let ad = state.currentAd;
     let contact = (ad.contactNumber || "").trim();
     let link = (ad.link || "").trim();
+    let address = (ad.address || "").trim();
 
     // যদি কনট্যাক্ট নম্বরে লিংক লেখা থাকে এবং লিংক খালি থাকে
     if (!link && (contact.startsWith("http://") || contact.startsWith("https://") || contact.includes("whatsapp.com/channel") || contact.includes("chat.whatsapp.com") || contact.includes("wa.me/"))) {
@@ -8627,7 +8642,7 @@ https://aionline.in.net`;
       contact = "";
     }
 
-    if (!contact && !link) {
+    if (!contact && !link && !address) {
       showAppAlert("বিজ্ঞাপনের বিস্তারিত তথ্যের জন্য আমাদের সাথে যোগাযোগ করুন।", "বিজ্ঞাপন");
       return;
     }
@@ -8635,17 +8650,20 @@ https://aionline.in.net`;
     let cleanPhone = contact.replace(/[^0-9]/g, '');
     currentAdContactPhone = cleanPhone;
     currentAdWebLink = link;
+    currentAdAddress = address;
 
     let waBtn = document.getElementById("adWhatsAppBtn");
     let callBtn = document.getElementById("adCallBtn");
     let linkBtn = document.getElementById("adWebLinkBtn");
     let linkText = document.getElementById("adWebLinkBtnText");
+    let addressBox = document.getElementById("adAddressBox");
+    let addressText = document.getElementById("adAddressText");
 
     // WhatsApp এবং Call বাটন দৃশ্যমানতা
     if (waBtn) waBtn.style.display = cleanPhone ? "flex" : "none";
     if (callBtn) callBtn.style.display = cleanPhone ? "flex" : "none";
 
-    // ওয়েব লিংক বাটন দৃশ্যমানতা (Ads শিটে লিংক দেওয়া থাকলে "বাতিল (বন্ধ করুন)" এর ঠিক উপরে দেখাবে)
+    // ওয়েব লিংক বাটন দৃশ্যমানতা
     if (linkBtn) {
       if (link) {
         linkBtn.style.display = "flex";
@@ -8658,6 +8676,16 @@ https://aionline.in.net`;
         }
       } else {
         linkBtn.style.display = "none";
+      }
+    }
+
+    // বিজ্ঞাপনদাতার ঠিকানা দৃশ্যমানতা (Ads শিটে Address দেওয়া থাকলে "বাতিল (বন্ধ করুন)" এর ঠিক উপরে দেখাবে)
+    if (addressBox) {
+      if (address) {
+        if (addressText) addressText.innerText = address;
+        addressBox.style.display = "block";
+      } else {
+        addressBox.style.display = "none";
       }
     }
 

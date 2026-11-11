@@ -710,8 +710,9 @@ function handleGetAds() {
   var colRadius = findCol(["radius", "rad", "km"], 4);
   var colContact = findCol(["contact", "phone", "number", "mobile"], 5);
   var colLink = findCol(["link", "url", "site", "web"], 6);
-  var colStart = findCol(["start"], 7);
-  var colStop = findCol(["stop", "end"], 8);
+  var colAddress = findCol(["address", "addr", "place", "location_name"], 7);
+  var colStart = findCol(["start"], 8);
+  var colStop = findCol(["stop", "end"], 9);
 
   var adList = [];
   for (var r = 1; r < rows.length; r++) {
@@ -729,6 +730,8 @@ function handleGetAds() {
     var contact = String(row[colContact] || "").trim();
     var linkVal = String(row[colLink] || "").trim();
     if (linkVal === "undefined" || linkVal === "null") linkVal = "";
+    var addressVal = String(row[colAddress] || "").trim();
+    if (addressVal === "undefined" || addressVal === "null") addressVal = "";
     var startTime = String(row[colStart] || "").trim();
     var stopTime = String(row[colStop] || "").trim();
 
@@ -741,6 +744,7 @@ function handleGetAds() {
       radiusKm: radiusKm,
       contactNumber: contact,
       link: linkVal,
+      address: addressVal,
       startTime: startTime,
       stopTime: stopTime
     });

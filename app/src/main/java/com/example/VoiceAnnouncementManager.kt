@@ -69,26 +69,230 @@ object VoiceAnnouncementManager {
     }, googleEngine)
   }
 
+  val BENGALI_STOP_DICTIONARY = mapOf(
+    "LABPUR" to "লাভপুর",
+    "SURI" to "সিউড়ি",
+    "BOLPUR" to "বোলপুর",
+    "KIRNAHAR" to "কীর্ণাহার",
+    "KIRNAHAR BUS STAND" to "কীর্ণাহার বাস স্ট্যান্ড",
+    "BOLPUR BUS STAND" to "বোলপুর বাস স্ট্যান্ড",
+    "SURI BUS STAND" to "সিউড়ি বাস স্ট্যান্ড",
+    "LABPUR BUS STAND" to "লাভপুর বাস স্ট্যান্ড",
+    "SAINTHIA" to "সাঁইথিয়া",
+    "AHMEDPUR" to "আহমদপুর",
+    "AHMADPUR" to "আহমদপুর",
+    "AHMADPUR STATION" to "আহমদপুর স্টেশন",
+    "AHMEDPUR STATION" to "আহমদপুর স্টেশন",
+    "DUBRAJPUR" to "দুবরাজপুর",
+    "ILLAMBAZAR" to "ইলামবাজার",
+    "ILAMBAZAR" to "ইলামবাজার",
+    "RAMPURHAT" to "রামপুরহাট",
+    "NALHATI" to "নলহাটি",
+    "MURARAI" to "মুরারই",
+    "MALLARPUR" to "মল্লারপুর",
+    "MAYURESWAR" to "ময়ূরেশ্বর",
+    "PRANTIK" to "প্রান্তিক",
+    "KANKALITALA" to "কঙ্কালীতলা",
+    "NANOOR" to "নানুর",
+    "GUSHKARA" to "গুসকরা",
+    "BHEDIA" to "ভেড়িয়া",
+    "BARDHAMAN" to "বর্ধমান",
+    "BURDWAN" to "বর্ধমান",
+    "DURGAPUR" to "দুর্গাপুর",
+    "ASANSOL" to "আসানসোল",
+    "KOLKATA" to "কলকাতা",
+    "PURANDARPUR" to "পুরন্দরপুর",
+    "KOTASUR" to "কোটাসুর",
+    "TARAPITH" to "তারাপীঠ",
+    "SUNDIPUR" to "সুন্দিপুর",
+    "CHOWHATTA" to "চৌহাট্টা",
+    "HIRAPUR" to "হীরাপুর",
+    "KUSUMGORIA" to "কুসুমগড়িয়া",
+    "GORURHAT SASTHINAGAR" to "গরুরহাট ষষ্ঠীনগর",
+    "GORURHAT" to "গরুরহাট",
+    "SASTHINAGAR" to "ষষ্ঠীনগর",
+    "BAMNIGRAM" to "বামনিগ্রাম",
+    "UJJWALPUR" to "উজ্জ্বলপুর",
+    "KADWA" to "কাদোয়া",
+    "BORO PUKUR" to "বড়পুকুর",
+    "BOROPUKUR" to "বড়পুকুর",
+    "INDUS" to "ইন্দাস",
+    "GHOSHPARA" to "ঘোষপাড়া",
+    "BIPRATIKURI" to "বিপ্রতিকুড়ি",
+    "CHOWRASTA" to "চৌরাস্তা",
+    "JAMBU" to "জাম্বু",
+    "JAMBUNI" to "জামবুনী",
+    "BAHIRI" to "বাহিরী",
+    "PICHHULDANGA" to "পিছুলডাঙ্গা",
+    "DWARKA" to "দ্বারকা",
+    "SINGHEE" to "সিংঘী",
+    "PUNJABI MORE" to "পাঞ্জাবি মোড়",
+    "TIN MATHA MORE" to "তিন মাথা মোড়",
+    "STATION MORE" to "স্টেশন মোড়",
+    "HOSPITAL MORE" to "হাসপাতাল মোড়",
+    "COLLEGE MORE" to "কলেজ মোড়",
+    "COURT MORE" to "কোর্ট মোড়",
+    "BUS STAND" to "বাস স্ট্যান্ড",
+    "BDO" to "বিডিও",
+    "B.D.O." to "বিডিও",
+    "B.D.O" to "বিডিও",
+    "OFFICE" to "অফিস",
+    "BDO OFFICE" to "বিডিও অফিস",
+    "BDO OFFICE AHMADPUR" to "বিডিও অফিস আহমদপুর",
+    "BDO OFFICE AHMEDPUR" to "বিডিও অফিস আহমদপুর",
+    "SDO" to "এসডিও",
+    "SDO OFFICE" to "এসডিও অফিস",
+    "PS" to "থানা",
+    "POLICE STATION" to "পুলিশ স্টেশন",
+    "KEUDA" to "কেউদা",
+    "KUCHUIGHATA" to "কুচুইঘাটা",
+    "REGISTRY PARA" to "রেজিস্ট্রি পাড়া",
+    "REGISTRY PARA LABPUR" to "রেজিস্ট্রি পাড়া লাভপুর",
+    "TETULTALA" to "তেঁতুলতলা",
+    "KADAMTALA" to "কদমতলা",
+    "BLOCK" to "ব্লক",
+    "PANCHAYAT" to "পঞ্চায়েত",
+    "STATION" to "স্টেশন",
+    "RLY STATION" to "রেলওয়ে স্টেশন",
+    "RAILWAY STATION" to "রেলওয়ে স্টেশন"
+  )
+
+  fun toBengaliSpokenStopName(raw: String): String {
+    val clean = raw.replace(Regex("\\(.*?\\)"), "").replace(Regex("[🚏🚌📍🏁]"), "").trim()
+    if (clean.isBlank() || clean == "--") return ""
+    if (clean.any { it in '\u0980'..'\u09FF' }) return clean
+    val upper = clean.uppercase()
+    BENGALI_STOP_DICTIONARY[upper]?.let { return it }
+
+    val parts = upper.split(Regex("\\s+"))
+    if (parts.size > 1) {
+      return parts.joinToString(" ") { p ->
+        BENGALI_STOP_DICTIONARY[p] ?: transliterateWord(p)
+      }
+    }
+    return transliterateWord(upper)
+  }
+
+  private fun transliterateWord(w: String): String {
+    var word = w.trim().uppercase()
+    if (word.isBlank()) return ""
+    if (word.any { it in '\u0980'..'\u09FF' }) return word
+    BENGALI_STOP_DICTIONARY[word]?.let { return it }
+
+    val suffixes = listOf(
+      Regex("PURAM$") to "পুরম", Regex("PUR$") to "পুর", Regex("NAGAR$") to "নগর",
+      Regex("PARA$") to "পাড়া", Regex("HAT$") to "হাট", Regex("GRAM$") to "গ্রাম",
+      Regex("DANGA$") to "ডাঙ্গা", Regex("DIHI$") to "ডিহি", Regex("PUKUR$") to "পুকুর",
+      Regex("GHAT$") to "ঘাট", Regex("MORE$") to "মোড়", Regex("KURI$") to "কুড়ি",
+      Regex("BARI$") to "বাড়ি", Regex("TALA$") to "তলা", Regex("BAZAR$") to "বাজার",
+      Regex("GANJ$") to "গঞ্জ", Regex("BAD$") to "বাদ", Regex("KALI$") to "কালী",
+      Regex("GORIA$") to "গড়িয়া", Regex("BANDH$") to "বাঁধ", Regex("STAND$") to "স্ট্যান্ড"
+    )
+
+    var foundSuffix = ""
+    for ((pat, repl) in suffixes) {
+      if (pat.containsMatchIn(word)) {
+        word = word.replace(pat, "")
+        foundSuffix = repl
+        break
+      }
+    }
+
+    val clusters = listOf(
+      "SHH" to "ষ", "CHH" to "ছ", "KH" to "খ", "GH" to "ঘ", "CH" to "চ", "JH" to "ঝ",
+      "TH" to "থ", "DH" to "ধ", "PH" to "ফ", "BH" to "ভ", "SH" to "শ", "NG" to "ঙ",
+      "NJ" to "ঞ্জ", "ND" to "ন্দ", "NT" to "ন্ত", "MB" to "ম্ব", "MP" to "ম্প",
+      "ST" to "স্ট", "STR" to "স্ট্র", "TR" to "ত্র", "PR" to "প্র", "KR" to "ক্র",
+      "BR" to "ব্র", "DR" to "দ্র", "GR" to "গ্র", "TT" to "ট্ট", "DD" to "ড্ড"
+    )
+
+    val singleConsonants = mapOf(
+      'K' to "ক", 'G' to "গ", 'C' to "ক", 'J' to "জ", 'Z' to "জ",
+      'T' to "ট", 'D' to "ড", 'N' to "ন", 'P' to "প", 'F' to "ফ",
+      'B' to "ব", 'V' to "ভ", 'M' to "ম", 'Y' to "য", 'R' to "র",
+      'L' to "ল", 'W' to "ওয়", 'S' to "স", 'H' to "হ"
+    )
+
+    val vowelIndep = mapOf(
+      "AA" to "আ", "A" to "অ", "I" to "ই", "EE" to "ঈ", "U" to "উ",
+      "OO" to "ঊ", "E" to "এ", "AI" to "ঐ", "O" to "ও", "AU" to "ঔ", "OU" to "ঔ", "OW" to "ঔ"
+    )
+
+    val vowelDep = mapOf(
+      "AA" to "া", "A" to "া", "I" to "ি", "EE" to "ী", "U" to "ু",
+      "OO" to "ূ", "E" to "ে", "AI" to "ৈ", "O" to "ো", "AU" to "ৌ", "OU" to "ৌ", "OW" to "ৌ"
+    )
+
+    var res = ""
+    var idx = 0
+    var lastWasConsonant = false
+
+    while (idx < word.length) {
+      var vMatch: String? = null
+      for (vk in listOf("AA", "EE", "OO", "AI", "AU", "OU", "OW")) {
+        if (word.startsWith(vk, idx)) {
+          vMatch = vk
+          break
+        }
+      }
+      if (vMatch == null && listOf('A', 'I', 'U', 'E', 'O').contains(word[idx])) {
+        vMatch = word[idx].toString()
+      }
+
+      if (vMatch != null) {
+        res += if (lastWasConsonant) (vowelDep[vMatch] ?: "া") else (vowelIndep[vMatch] ?: "অ")
+        idx += vMatch.length
+        lastWasConsonant = false
+        continue
+      }
+
+      var cMatch: Pair<String, String>? = null
+      for (c in clusters) {
+        if (word.startsWith(c.first, idx)) {
+          cMatch = c
+          break
+        }
+      }
+
+      if (cMatch != null) {
+        res += cMatch.second
+        idx += cMatch.first.length
+        lastWasConsonant = true
+        continue
+      }
+
+      val ch = word[idx]
+      val mapped = singleConsonants[ch]
+      if (mapped != null) {
+        res += mapped
+        lastWasConsonant = true
+      } else {
+        res += ch
+        lastWasConsonant = false
+      }
+      idx++
+    }
+
+    return (res + foundSuffix).trim()
+  }
+
   fun setupTtsVoice(langCode: String) {
     val tts = textToSpeech ?: return
     val targetLocale = getLocaleForLanguage(langCode)
     try {
-      val langResult = tts.setLanguage(targetLocale)
-      if (langResult == TextToSpeech.LANG_MISSING_DATA || langResult == TextToSpeech.LANG_NOT_SUPPORTED) {
-        if (tts.setLanguage(Locale("bn", "IN")) < TextToSpeech.LANG_AVAILABLE) {
-          tts.setLanguage(Locale.ENGLISH)
-        }
-      }
+      tts.language = targetLocale
 
       var isFemaleSelected = false
       if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
         val availableVoices = tts.voices
         if (!availableVoices.isNullOrEmpty()) {
+          // ভারতীয় স্ট্যান্ডার্ড ভয়েস (country = IN বা নাম bn-in) অগ্রাধিকার দিন
           val matchingLocaleVoices = availableVoices.filter {
-            it.locale.language.equals(targetLocale.language, ignoreCase = true)
+            it.locale.language.equals(targetLocale.language, ignoreCase = true) &&
+            (it.locale.country.equals("IN", ignoreCase = true) || it.name.lowercase().contains("-in") || it.name.lowercase().contains("_in"))
           }.ifEmpty {
             availableVoices.filter {
-              it.locale.language.equals("bn", ignoreCase = true)
+              it.locale.language.equals(targetLocale.language, ignoreCase = true)
             }
           }.ifEmpty {
             availableVoices.toList()
@@ -102,7 +306,7 @@ object VoiceAnnouncementManager {
               n.contains("-fem") || n.contains("_fem") || n.contains("fem_") ||
               n.contains("swara") || n.contains("aditi") || n.contains("kavya") ||
               n.contains("lekha") || n.contains("sangeeta") || n.contains("priya") ||
-              n.contains("zira")
+              n.contains("zira") || n.contains("ananya")
             ) return true
             return v.features.any {
               val fl = it.lowercase()
@@ -134,7 +338,7 @@ object VoiceAnnouncementManager {
           } else {
             matchingLocaleVoices.filter { !isExplicitlyMale(it) }
               .sortedByDescending { it.quality }
-              .firstOrNull()
+              .firstOrNull() ?: matchingLocaleVoices.firstOrNull()
           }
 
           if (selectedVoice != null) {
@@ -144,18 +348,18 @@ object VoiceAnnouncementManager {
         }
       }
 
-      if (isFemaleSelected) {
-        tts.setPitch(1.22f)
-        tts.setSpeechRate(0.92f)
-      } else {
-        tts.setPitch(1.25f)
-        tts.setSpeechRate(0.92f)
-      }
+      // ভারতীয় মিষ্টি, মার্জিত ও স্পষ্ট সুরেলা কণ্ঠের জন্য আদর্শ পিচ ও গতি
+      tts.setPitch(1.08f)
+      tts.setSpeechRate(0.92f)
     } catch (_: Exception) {}
   }
 
   fun formatTextForTts(text: String): String {
     var out = text
+    // কোলন (:) বাদ দেওয়া যাতে টিটিএস অপ্রয়োজনীয় বিরতি বা অদ্ভুত উচ্চারণ না করে
+    out = out.replace(":", " ")
+
+    // সাধারণ পরিচিত শব্দ রূপান্তর
     out = out.replace(Regex("(?i)\\bBDO\\s+OFFICE\\b"), "বিডিও অফিস")
     out = out.replace(Regex("(?i)\\bBDO\\b"), "বিডিও")
     out = out.replace(Regex("(?i)\\bOFFICE\\b"), "অফিস")
@@ -163,12 +367,23 @@ object VoiceAnnouncementManager {
     out = out.replace(Regex("(?i)\\bSDO\\b"), "এসডিও")
     out = out.replace(Regex("(?i)\\bAHMADPUR\\b"), "আহমদপুর")
     out = out.replace(Regex("(?i)\\bAHMEDPUR\\b"), "আহমদপুর")
+    out = out.replace(Regex("(?i)\\bSTATION\\b"), "স্টেশন")
+    out = out.replace(Regex("(?i)\\bTETULTALA\\b"), "তেঁতুলতলা")
+    out = out.replace(Regex("(?i)\\bKADAMTALA\\b"), "কদমতলা")
+    out = out.replace(Regex("(?i)\\bLABPUR\\b"), "লাভপুর")
+    out = out.replace(Regex("(?i)\\bCHOWHATTA\\b"), "চৌহাট্টা")
+    out = out.replace(Regex("(?i)\\bSAINTHIA\\b"), "সাঁইথিয়া")
+    out = out.replace(Regex("(?i)\\bBOLPUR\\b"), "বোলপুর")
+    out = out.replace(Regex("(?i)\\bSURI\\b"), "সিউড়ি")
 
-    val regex = Regex("\\b[A-Z]{2,}\\b")
-    return regex.replace(out) { matchResult ->
+    // টেক্সটে যদি এখনো কোনো ইংরেজি ক্যাপিটাল শব্দ বা নাম থাকে, তা স্বয়ংক্রিয়ভাবে বাংলায় রূপান্তর করা
+    val engRegex = Regex("\\b[A-Za-z]{2,}\\b")
+    out = engRegex.replace(out) { matchResult ->
       val word = matchResult.value
-      word.lowercase().replaceFirstChar { if (it.isLowerCase()) it.titlecase() else it.toString() }
+      toBengaliSpokenStopName(word)
     }
+
+    return out.replace(Regex("\\s+"), " ").trim()
   }
 
   private var lastSpokenText: String = ""
@@ -180,7 +395,7 @@ object VoiceAnnouncementManager {
     val curLang = if (langCode.isBlank()) "bn" else langCode
 
     val now = System.currentTimeMillis()
-    // একই টেক্সট ১০ সেকেন্ডের মধ্যে পুনরাবৃত্তি করবেন না (নন-স্টপ লুপ প্রতিরোধ)
+    // একই টেক্সট ১০ সেকেন্ডের মধ্যে পুনরাবৃত্তি করবেন না
     if (preparedText == lastSpokenText && (now - lastSpokenTimestamp < 10000L)) {
       return
     }
@@ -188,13 +403,11 @@ object VoiceAnnouncementManager {
     lastSpokenText = preparedText
     lastSpokenTimestamp = now
 
-    // কিউতে আগের জমে থাকা ঘোষণা পরিষ্কার করুন যাতে ব্যাকলগ নন-স্টপ না বাজে
     speechQueue.clear()
     speechQueue.add(Pair(preparedText, curLang))
 
-    // Acquire WakeLock so CPU does not sleep during announcement
     try {
-      wakeLock?.acquire(10000L) // 10 seconds max safety
+      wakeLock?.acquire(10000L)
     } catch (_: Exception) {}
 
     mainHandler.post {
@@ -218,7 +431,13 @@ object VoiceAnnouncementManager {
       }
     }
 
-    // দ্রুত ও মিষ্টি সুরেলা অনলাইন নারী কণ্ঠ অগ্রাধিকার দিন (অ্যাপ মিনিমাইজ বা স্ক্রিন অফ থাকলেও কাজ করবে)
+    // ডিভাইসের নিজস্ব গুগল টেক্সট-টু-স্পিচ (com.google.android.tts) সর্বদা খাঁটি ভারতীয় কণ্ঠ প্রদান করে
+    if (isTtsInitialized && textToSpeech != null) {
+      speakViaNativeTts(preparedText, curLang, onDoneCallback)
+      return
+    }
+
+    // ফলব্যাক: যদি ডিভাইসে নেটিভ টিটিএস ইনিশিয়ালাইজ না হয়ে থাকে
     if (isNetworkAvailable() && preparedText.length < 250) {
       playGoogleOnlineFemaleVoice(preparedText, curLang) { success ->
         if (!success) {

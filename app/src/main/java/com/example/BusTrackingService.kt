@@ -484,14 +484,23 @@ class BusTrackingService : Service() {
 
     val cleanCur = getCleanStopBaseName(currentStopText)
     val cleanNext = getCleanStopBaseName(nextName.ifBlank { nextStopText })
+    val cleanDest = getCleanStopBaseName(destName)
+
+    val spokenCur = VoiceAnnouncementManager.toBengaliSpokenStopName(cleanCur)
+    val spokenNext = VoiceAnnouncementManager.toBengaliSpokenStopName(cleanNext)
+    val spokenDest = VoiceAnnouncementManager.toBengaliSpokenStopName(cleanDest)
 
     if (cleanCur.isNotBlank() && cleanCur != "--" && cleanCur != lastAnnouncedServiceCurrent) {
       lastAnnouncedServiceCurrent = cleanCur
       lastAnnouncementTime = now
       val annText = when (currentLangCode.lowercase()) {
-        "en" -> "Current stop: $cleanCur"
-        "hi" -> "वर्तमान स्टॉप: $cleanCur"
-        else -> "বর্তমান স্টপেজ: $cleanCur"
+        "en" -> "Current stop $cleanCur."
+        "hi" -> "वर्तमान स्टॉप $spokenCur।"
+        else -> if (spokenNext.isNotBlank() && !spokenNext.equals(spokenCur, ignoreCase = true)) {
+          "বর্তমান স্টপেজ $spokenCur। পরবর্তী স্টপেজ $spokenNext।"
+        } else {
+          "বর্তমান স্টপেজ $spokenCur।"
+        }
       }
       VoiceAnnouncementManager.speak(annText, currentLangCode)
       return
@@ -501,9 +510,9 @@ class BusTrackingService : Service() {
       lastAnnouncedServiceNext = cleanNext
       lastAnnouncementTime = now
       val annText = when (currentLangCode.lowercase()) {
-        "en" -> "Next stop: $cleanNext"
-        "hi" -> "अगला स्टॉप: $cleanNext"
-        else -> "পরবর্তী স্টপেজ: $cleanNext"
+        "en" -> "Next stop is $cleanNext."
+        "hi" -> "अगला स्टॉप $spokenNext है।"
+        else -> "পরবর্তী স্টপেজ $spokenNext।"
       }
       VoiceAnnouncementManager.speak(annText, currentLangCode)
       return
@@ -513,9 +522,9 @@ class BusTrackingService : Service() {
       lastAnnouncedServiceDest = destName
       lastAnnouncementTime = now
       val annText = when (currentLangCode.lowercase()) {
-        "en" -> "Destination $destName arrived"
-        "hi" -> "गंतव्य $destName आ गया है"
-        else -> "গন্তব্য $destName পৌঁছানো হয়েছে"
+        "en" -> "We have arrived at destination $cleanDest. Thank you for traveling with us!"
+        "hi" -> "हम गंतव्य $spokenDest पहुँच चुके हैं। यात्रा के लिए धन्यवाद!"
+        else -> "আমরা গন্তব্য $spokenDest-এ পৌঁছে গেছি। আমাদের সাথে ভ্রমণের জন্য ধন্যবাদ!"
       }
       VoiceAnnouncementManager.speak(annText, currentLangCode)
     }
