@@ -5269,15 +5269,17 @@
       }
       if (arrMins < depMins) arrMins += 1440;
 
-      // বাসটির যাত্রার সময়কাল ও বর্তমান অবস্থান নির্ধারণ
-      let totalTripSpan = Math.max(arrMins - depMins, 20);
-      let diffDepNow = nowMins - depMins;
-      if (diffDepNow < -720) diffDepNow += 1440;
-      else if (diffDepNow > 720) diffDepNow -= 1440;
+      let depTimeMins = depMins;
+      let arrTimeMins = arrMins;
+      let curNow = nowMins;
+      // যদি মধ্যরাতের ট্রিপ হয় (রাত ১২টার পর ভোর পর্যন্ত চলা)
+      if (arrTimeMins > 1440 && curNow < depTimeMins && curNow < 720) {
+        curNow += 1440;
+      }
 
-      let diffArrNow = nowMins - arrMins;
-      if (diffArrNow < -720) diffArrNow += 1440;
-      else if (diffArrNow > 720) diffArrNow -= 1440;
+      let diffDepNow = curNow - depTimeMins;
+      let diffArrNow = curNow - arrTimeMins;
+      let totalTripSpan = Math.max(arrTimeMins - depTimeMins, 20);
 
       // এই বাসটি কি এই সময়ে চলন্ত / সক্রিয় ট্রিপ?
       // ট্রিপ শুরু হওয়ার ১৫ মিনিট আগে থেকে শেষ হওয়ার ৩০ মিনিট পর পর্যন্ত চলন্ত হিসেবে গ্রাহ্য
@@ -5292,7 +5294,21 @@
       if (trackingBus && trackingBus.number === b.number && busPos && busPos.lat && busPos.lon) {
         busLat = busPos.lat;
         busLon = busPos.lon;
-        curStopName = "লাইভ জিপিএস অবস্থান";
+        // রুট স্টপ তালিকা থেকে নিকটতম স্টপ ইনডেক্স নির্ধারণ
+        let minD = Infinity;
+        let bestIdx = 0;
+        orderedStops.forEach((st, idx) => {
+          let sc = resolvePlaceCoords(st, masterStopsList);
+          if (sc) {
+            let d = getDistanceMeters(busLat, busLon, sc.lat, sc.lon);
+            if (d < minD) {
+              minD = d;
+              bestIdx = idx;
+            }
+          }
+        });
+        curIdx = bestIdx;
+        curStopName = orderedStops[curIdx] ? `${orderedStops[curIdx]} (লাইভ GPS)` : "লাইভ জিপিএস অবস্থান";
       }
 
       // ২. অন্যথায় সময় অনুযায়ী বাসের রুট প্রগ্রেস ও বর্তমান স্টপেজ
@@ -5328,39 +5344,61 @@
       }
 
       // From এবং To স্টপের সাপেক্ষে বাসের অবস্থান বিশ্লেষণ
-      // ব্যবহারকারী যাতে পরিষ্কারভাবে বুঝতে পারেন বাসটি From এর আগে, মাঝে, নাকি To পেরিয়ে গেছে
+      // UP বা DOWN উভয় রুটের ক্ষেত্রেই orderedStops ভ্রমণ অভিমুখে ক্রমানুসারে সাজানো
       let relStatus = "before_from";
       let relBadgeText = "🟢 From স্টপেজের দিকে আসছে";
       let relColor = "#16a34a";
       let fromNote = "(পৌঁছাবে)";
       let toNote = "(পৌঁছাবে)";
 
-      let diffFromNow = (fMins !== null) ? (fMins - nowMins) : 0;
-      if (diffFromNow < -720) diffFromNow += 1440;
-      else if (diffFromNow > 720) diffFromNow -= 1440;
+      let isBusDeparted = (diffDepNow >= 0);
+      let isBusFinished = (diffArrNow > 0);
 
-      let diffToNow = (tMins !== null) ? (tMins - nowMins) : 0;
-      if (diffToNow < -720) diffToNow += 1440;
-      else if (diffToNow > 720) diffToNow -= 1440;
-
-      if (curIdx > toIdx || diffToNow < -3) {
+      if (!isBusDeparted || curStopName.includes("যাত্রার অপেক্ষায়")) {
+        relStatus = "before_from";
+        relBadgeText = (fromIdx === 0) ? "🟢 বোর্ডিং স্টপেজে যাত্রার অপেক্ষায়" : "🟢 এখনও ছাড়েনি (উৎস টার্মিনালে অপেক্ষারত)";
+        relColor = "#16a34a";
+        fromNote = "(পৌঁছাবে)";
+        toNote = "(পৌঁছাবে)";
+      } else if (isBusFinished || curStopName.includes("গন্তব্যে পৌঁছেছে")) {
         relStatus = "passed_to";
-        relBadgeText = "⚪ From ও To উভয় স্টপই অতিক্রম করেছে";
+        relBadgeText = "⚪ যাত্রাপথ সম্পন্ন করে ফেলেছে";
         relColor = "#64748b";
         fromNote = "(পেরিয়ে গেছে ⏩)";
         toNote = "(পেরিয়ে গেছে ⏩)";
-      } else if (curIdx >= fromIdx || diffFromNow < -3) {
-        relStatus = "between_from_to";
-        relBadgeText = "🟡 From পেরিয়েছে • To স্টপের দিকে চলছে";
-        relColor = "#d97706";
-        fromNote = "(পেরিয়ে গেছে ⏩)";
-        toNote = "(পৌঁছাবে)";
       } else {
-        relStatus = "before_from";
-        relBadgeText = "🟢 From স্টপেজের দিকে আসছে";
-        relColor = "#15803d";
-        fromNote = "(পৌঁছাবে)";
-        toNote = "(পৌঁছাবে)";
+        // বাসটি বর্তমানে রুটের ওপর চলন্ত
+        if (curIdx < fromIdx) {
+          relStatus = "before_from";
+          relBadgeText = "🟢 From স্টপেজের দিকে আসছে";
+          relColor = "#16a34a";
+          fromNote = "(পৌঁছাবে)";
+          toNote = "(পৌঁছাবে)";
+        } else if (curIdx === fromIdx) {
+          relStatus = "between_from_to";
+          relBadgeText = "🟡 From স্টপেজে উপস্থিত / To এর দিকে রওনা";
+          relColor = "#d97706";
+          fromNote = "(এখন এই স্টপে 🚏)";
+          toNote = "(পৌঁছাবে)";
+        } else if (curIdx > fromIdx && curIdx < toIdx) {
+          relStatus = "between_from_to";
+          relBadgeText = "🟡 From পেরিয়েছে • To স্টপের দিকে চলছে";
+          relColor = "#d97706";
+          fromNote = "(পেরিয়ে গেছে ⏩)";
+          toNote = "(পৌঁছাবে)";
+        } else if (curIdx === toIdx) {
+          relStatus = "passed_to";
+          relBadgeText = "🎯 গন্তব্য স্টপেজে পৌঁছে গেছে";
+          relColor = "#059669";
+          fromNote = "(পেরিয়ে গেছে ⏩)";
+          toNote = "(পৌঁছে গেছে ✅)";
+        } else { // curIdx > toIdx
+          relStatus = "passed_to";
+          relBadgeText = "⚪ From ও To উভয় স্টপই অতিক্রম করেছে";
+          relColor = "#64748b";
+          fromNote = "(পেরিয়ে গেছে ⏩)";
+          toNote = "(পেরিয়ে গেছে ⏩)";
+        }
       }
 
       if (busLat && busLon) {
@@ -5453,65 +5491,50 @@
 
     let boundsCoords = [];
 
-    // ১. ম্যাপে From স্টপেজের নাম ও সুস্পষ্ট সবুজ পিন প্রদর্শন
+    // ১. ম্যাপে From স্টপেজের নাম ও সাধারণ মার্কার প্রদর্শন (অতিরিক্ত বড় ব্যাজ ছাড়া সাধারণ স্টাইল)
     let fromDisplayName = (runningList[0] && runningList[0].fromDisplayName) || fromInput;
     let fromCoord = resolvePlaceCoords(fromDisplayName, masterStopsList) || resolvePlaceCoords(fromInput, masterStopsList);
     if (fromCoord) {
       boundsCoords.push([fromCoord.lat, fromCoord.lon]);
-      let fromHtml = `
-        <div style="display:flex; flex-direction:column; align-items:center; text-align:center; pointer-events:none;">
-          <div style="width:34px; height:34px; border-radius:50%; background:linear-gradient(135deg, #16a34a 0%, #15803d 100%); border:2.5px solid #ffffff; box-shadow:0 3px 10px rgba(0,0,0,0.35); display:flex; align-items:center; justify-content:center; font-size:18px; color:#fff;">
-            🟢
-          </div>
-          <div class="from-to-map-badge from-badge" style="margin-top:2px;">
-            বোর্ডিং (From): ${escapeHtml(fromDisplayName)}
-          </div>
-        </div>
-      `;
-      let fromIcon = L.divIcon({
-        className: 'custom-from-pin-icon',
-        html: fromHtml,
-        iconSize: [140, 58],
-        iconAnchor: [70, 36]
+      let fromMarker = L.circleMarker([fromCoord.lat, fromCoord.lon], {
+        radius: 7.5,
+        fillColor: "#16a34a",
+        color: "#ffffff",
+        weight: 2.5,
+        opacity: 1,
+        fillOpacity: 1,
+        zIndexOffset: 800
       });
-      let fromMarker = L.marker([fromCoord.lat, fromCoord.lon], { icon: fromIcon, zIndexOffset: 800 });
+      fromMarker.bindTooltip(`<b>📍 ${escapeHtml(fromDisplayName)} (From)</b>`, {
+        permanent: true,
+        direction: 'top',
+        className: 'stop-marker-label',
+        offset: [0, -7]
+      });
       routeRunningBusesLayer.addLayer(fromMarker);
     }
 
-    // ২. ম্যাপে To স্টপেজের নাম ও সুস্পষ্ট লাল পিন প্রদর্শন
+    // ২. ম্যাপে To স্টপেজের নাম ও সাধারণ মার্কার প্রদর্শন (অতিরিক্ত বড় ব্যাজ ছাড়া সাধারণ স্টাইল)
     let toDisplayName = (runningList[0] && runningList[0].toDisplayName) || toInput;
     let toCoord = resolvePlaceCoords(toDisplayName, masterStopsList) || resolvePlaceCoords(toInput, masterStopsList);
     if (toCoord) {
       boundsCoords.push([toCoord.lat, toCoord.lon]);
-      let toHtml = `
-        <div style="display:flex; flex-direction:column; align-items:center; text-align:center; pointer-events:none;">
-          <div style="width:34px; height:34px; border-radius:50%; background:linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); border:2.5px solid #ffffff; box-shadow:0 3px 10px rgba(0,0,0,0.35); display:flex; align-items:center; justify-content:center; font-size:18px; color:#fff;">
-            🎯
-          </div>
-          <div class="from-to-map-badge to-badge" style="margin-top:2px;">
-            গন্তব্য (To): ${escapeHtml(toDisplayName)}
-          </div>
-        </div>
-      `;
-      let toIcon = L.divIcon({
-        className: 'custom-to-pin-icon',
-        html: toHtml,
-        iconSize: [140, 58],
-        iconAnchor: [70, 36]
+      let toMarker = L.circleMarker([toCoord.lat, toCoord.lon], {
+        radius: 7.5,
+        fillColor: "#dc2626",
+        color: "#ffffff",
+        weight: 2.5,
+        opacity: 1,
+        fillOpacity: 1,
+        zIndexOffset: 800
       });
-      let toMarker = L.marker([toCoord.lat, toCoord.lon], { icon: toIcon, zIndexOffset: 800 });
+      toMarker.bindTooltip(`<b>🎯 ${escapeHtml(toDisplayName)} (To)</b>`, {
+        permanent: true,
+        direction: 'top',
+        className: 'stop-marker-label',
+        offset: [0, -7]
+      });
       routeRunningBusesLayer.addLayer(toMarker);
-    }
-
-    // ৩. From এবং To এর মাঝে সংযোগকারী হালকা গাইড রুট লাইন
-    if (fromCoord && toCoord) {
-      let corridorLine = L.polyline([[fromCoord.lat, fromCoord.lon], [toCoord.lat, toCoord.lon]], {
-        color: '#0284c7',
-        weight: 3.5,
-        opacity: 0.65,
-        dashArray: '5, 8'
-      });
-      routeRunningBusesLayer.addLayer(corridorLine);
     }
 
     // ৪. এই রুটের সকল চলন্ত বাসের ছবি/আইকন ম্যাপে প্রদর্শন
