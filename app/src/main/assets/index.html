@@ -930,6 +930,27 @@
       overflow: hidden;
       text-overflow: ellipsis;
     }
+    .from-to-map-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3.5px 9px;
+      border-radius: 14px;
+      font-size: 11px;
+      font-weight: 800;
+      white-space: nowrap;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.28);
+      border: 1.5px solid #ffffff;
+      pointer-events: auto;
+    }
+    .from-to-map-badge.from-badge {
+      background: linear-gradient(135deg, #15803d 0%, #166534 100%);
+      color: #ffffff;
+    }
+    .from-to-map-badge.to-badge {
+      background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+      color: #ffffff;
+    }
     .logo-box{position: static; margin-bottom: 6px; display: flex; justify-content: center;}
     .logo{max-height:85px; width:auto; max-width: 95%; filter: drop-shadow(0 2px 6px rgba(0,0,0,0.3)); object-fit: contain; border-radius: 8px;}
 
@@ -5225,82 +5246,151 @@
     let now = new Date();
     let nowMins = now.getHours() * 60 + now.getMinutes();
 
-    let runningList = [];
+    let allRouteBuses = [];
 
     finalBuses.forEach(item => {
       let b = item.bus;
       let fMins = item.fMins !== undefined && item.fMins !== null ? item.fMins : (item.sortMinutes !== 9999 ? item.sortMinutes : timeToMinutes(item.fromTimeStr));
       let tMins = item.tMins !== undefined && item.tMins !== null ? item.tMins : timeToMinutes(item.toTimeStr);
       let depMins = item.depMins !== undefined && item.depMins !== null ? item.depMins : timeToMinutes(b.depTime);
-      if (fMins === null) return;
-      if (depMins === null) depMins = fMins - 30;
+      let arrMins = timeToMinutes(b.arrTime);
 
-      // ৩(c) শর্ত: যে বাস গুলো from স্টপেজ পেরিয়ে গেছে সেগুলো দেখাবে না!
-      let diffFromNow = fMins - nowMins;
-      if (diffFromNow < -720) diffFromNow += 1440;
-      else if (diffFromNow > 720) diffFromNow -= 1440;
-
-      // যদি From স্টপেজে পৌঁছানোর সময়ের পর ৫ মিনিটের বেশি পার হয়ে যায়, তবে বাসটি From স্টপেজ পেরিয়ে গেছে
-      if (diffFromNow < -5) {
-        return; // ৩(c) অনুযায়ী বাতিল
-      }
-
-      // বাসের সম্পূর্ণ স্টপ তালিকা
       let orderedStops = item.orderedStops || getFullStopsListForBus(b);
       let fromIdx = item.fromIdx !== undefined ? item.fromIdx : findStopIndexInList(cleanStopName(fromName), orderedStops);
       if (fromIdx === -1) fromIdx = 0;
+      let toIdx = item.toIdx !== undefined ? item.toIdx : findStopIndexInList(cleanStopName(toName), orderedStops);
+      if (toIdx === -1) toIdx = Math.max(orderedStops.length - 1, 1);
 
-      // বাসের বর্তমান অবস্থান ও স্টপেজ নির্ধারণ:
+      if (depMins === null) {
+        depMins = (fMins !== null) ? Math.max(0, fMins - (fromIdx * 4)) : Math.max(0, nowMins - 20);
+      }
+      if (arrMins === null) {
+        arrMins = (tMins !== null) ? tMins + Math.max(0, (orderedStops.length - 1 - toIdx) * 4) : depMins + Math.max(orderedStops.length * 4, 60);
+      }
+      if (arrMins < depMins) arrMins += 1440;
+
+      // বাসটির যাত্রার সময়কাল ও বর্তমান অবস্থান নির্ধারণ
+      let totalTripSpan = Math.max(arrMins - depMins, 20);
+      let diffDepNow = nowMins - depMins;
+      if (diffDepNow < -720) diffDepNow += 1440;
+      else if (diffDepNow > 720) diffDepNow -= 1440;
+
+      let diffArrNow = nowMins - arrMins;
+      if (diffArrNow < -720) diffArrNow += 1440;
+      else if (diffArrNow > 720) diffArrNow -= 1440;
+
+      // এই বাসটি কি এই সময়ে চলন্ত / সক্রিয় ট্রিপ?
+      // ট্রিপ শুরু হওয়ার ১৫ মিনিট আগে থেকে শেষ হওয়ার ৩০ মিনিট পর পর্যন্ত চলন্ত হিসেবে গ্রাহ্য
+      let isRunningNow = (diffDepNow >= -15 && diffArrNow <= 30);
+
+      // বাসের বর্তমান স্টপেজ ইনডেক্স ও নাম নির্ধারণ
+      let curIdx = 0;
       let curStopName = "";
       let busLat = null, busLon = null;
 
-      // ১. যদি এই বাসটির লাইভ জিপিএস সক্রিয় থাকে
+      // ১. যদি লাইভ GPS সক্রিয় থাকে
       if (trackingBus && trackingBus.number === b.number && busPos && busPos.lat && busPos.lon) {
         busLat = busPos.lat;
         busLon = busPos.lon;
         curStopName = "লাইভ জিপিএস অবস্থান";
       }
 
-      // ২. অন্যথায় সময় অনুযায়ী বাসের চলমান অবস্থান ও স্টপেজ নির্ধারণ
+      // ২. অন্যথায় সময় অনুযায়ী বাসের রুট প্রগ্রেস ও বর্তমান স্টপেজ
       if (!busLat || !busLon) {
-        let diffDepNow = nowMins - depMins;
-        if (diffDepNow < -720) diffDepNow += 1440;
-        else if (diffDepNow > 720) diffDepNow -= 1440;
-
         if (diffDepNow < 0) {
-          // বাস এখনও শুরুর স্থান ছাড়েনি
-          curStopName = `${orderedStops[0] || b.source || 'উৎস টার্মিনাল'} (প্রস্তুত)`;
-          let sc = resolvePlaceCoords(orderedStops[0] || b.source, masterStopsList);
-          if (sc) { busLat = sc.lat; busLon = sc.lon; }
+          curIdx = 0;
+          curStopName = `${orderedStops[0] || b.source || 'উৎস টার্মিনাল'} (যাত্রার অপেক্ষায়)`;
+        } else if (diffArrNow > 0) {
+          curIdx = orderedStops.length - 1;
+          curStopName = `${orderedStops[curIdx] || b.dest || 'শেষ স্টপেজ'} (গন্তব্যে পৌঁছেছে)`;
         } else {
-          // বাস চলছে: শুরু থেকে From স্টপের মাঝে কোন স্টপেজে আছে
-          let span = Math.max(fMins - depMins, 10);
-          let elapsed = Math.max(0, Math.min(span, nowMins - depMins));
-          let p = elapsed / span;
-          let curIdx = Math.min(fromIdx, Math.max(0, Math.round(p * fromIdx)));
+          let elapsed = Math.max(0, Math.min(totalTripSpan, diffDepNow));
+          let progress = elapsed / totalTripSpan;
+          curIdx = Math.min(orderedStops.length - 1, Math.max(0, Math.round(progress * (orderedStops.length - 1))));
           curStopName = orderedStops[curIdx] || orderedStops[0] || b.source;
-          let sc = resolvePlaceCoords(curStopName, masterStopsList);
-          if (sc) { busLat = sc.lat; busLon = sc.lon; }
+        }
+
+        let sc = resolvePlaceCoords(curStopName, masterStopsList);
+        if (!sc && orderedStops.length > 0) {
+          // কাছাকাছি কোনো স্টপের স্থানাঙ্ক খোঁজা
+          for (let step = 0; step < orderedStops.length; step++) {
+            let tryIdx = curIdx + step < orderedStops.length ? curIdx + step : curIdx - step;
+            if (tryIdx >= 0 && tryIdx < orderedStops.length) {
+              sc = resolvePlaceCoords(orderedStops[tryIdx], masterStopsList);
+              if (sc) break;
+            }
+          }
+        }
+        if (sc) {
+          busLat = sc.lat;
+          busLon = sc.lon;
         }
       }
 
+      // From এবং To স্টপের সাপেক্ষে বাসের অবস্থান বিশ্লেষণ
+      // ব্যবহারকারী যাতে পরিষ্কারভাবে বুঝতে পারেন বাসটি From এর আগে, মাঝে, নাকি To পেরিয়ে গেছে
+      let relStatus = "before_from";
+      let relBadgeText = "🟢 From স্টপেজের দিকে আসছে";
+      let relColor = "#16a34a";
+      let fromNote = "(পৌঁছাবে)";
+      let toNote = "(পৌঁছাবে)";
+
+      let diffFromNow = (fMins !== null) ? (fMins - nowMins) : 0;
+      if (diffFromNow < -720) diffFromNow += 1440;
+      else if (diffFromNow > 720) diffFromNow -= 1440;
+
+      let diffToNow = (tMins !== null) ? (tMins - nowMins) : 0;
+      if (diffToNow < -720) diffToNow += 1440;
+      else if (diffToNow > 720) diffToNow -= 1440;
+
+      if (curIdx > toIdx || diffToNow < -3) {
+        relStatus = "passed_to";
+        relBadgeText = "⚪ From ও To উভয় স্টপই অতিক্রম করেছে";
+        relColor = "#64748b";
+        fromNote = "(পেরিয়ে গেছে ⏩)";
+        toNote = "(পেরিয়ে গেছে ⏩)";
+      } else if (curIdx >= fromIdx || diffFromNow < -3) {
+        relStatus = "between_from_to";
+        relBadgeText = "🟡 From পেরিয়েছে • To স্টপের দিকে চলছে";
+        relColor = "#d97706";
+        fromNote = "(পেরিয়ে গেছে ⏩)";
+        toNote = "(পৌঁছাবে)";
+      } else {
+        relStatus = "before_from";
+        relBadgeText = "🟢 From স্টপেজের দিকে আসছে";
+        relColor = "#15803d";
+        fromNote = "(পৌঁছাবে)";
+        toNote = "(পৌঁছাবে)";
+      }
+
       if (busLat && busLon) {
-        runningList.push({
+        allRouteBuses.push({
           item: item,
           bus: b,
           lat: busLat,
           lon: busLon,
+          curIdx: curIdx,
+          fromIdx: fromIdx,
+          toIdx: toIdx,
           curStopName: curStopName,
           fromDisplayName: item.fromDisplayName,
           toDisplayName: item.toDisplayName,
           fromTimeStr: item.fromTimeStr,
           toTimeStr: item.toTimeStr,
-          crowdStatus: getBusCrowdStatus(b.number)
+          crowdStatus: getBusCrowdStatus(b.number),
+          isRunningNow: isRunningNow,
+          relStatus: relStatus,
+          relBadgeText: relBadgeText,
+          relColor: relColor,
+          fromNote: fromNote,
+          toNote: toNote
         });
       }
     });
 
-    return runningList;
+    // বর্তমান সময়ে চলন্ত বাস থাকলে সেগুলোকে অগ্রাধিকার দিয়ে দেখানো
+    let activeRunning = allRouteBuses.filter(rb => rb.isRunningNow);
+    return activeRunning.length > 0 ? activeRunning : allRouteBuses;
   }
 
   function updateRouteRunningBusesUI(finalBuses, fromName, toName) {
@@ -5309,7 +5399,7 @@
     if (!section || !countBadge) return;
 
     let runningList = getRunningBusesOnRoute(finalBuses, fromName, toName);
-    countBadge.innerText = `${runningList.length}টি বাস`;
+    countBadge.innerText = `${runningList.length}টি বাস চলন্ত`;
     section.style.display = "block";
 
     if (isRouteRunningBusesActive) {
@@ -5357,12 +5447,74 @@
     let runningList = getRunningBusesOnRoute(latestRouteSearchResults, fromInput, toInput);
 
     if (runningList.length === 0) {
-      showAppAlert(`বর্তমান সময়ে "${fromInput.toUpperCase()}" অভিমুখে কোনো চলমান বাস পাওয়া যায়নি (সম্ভবত পূর্বের বাসগুলো চলে গেছে অথবা পরবর্তী বাসের সময় এখনও হয়নি)।`, "চলমান বাস তথ্য");
+      showAppAlert(`বর্তমানে এই রুটে কোনো চলন্ত বাসের তথ্য পাওয়া যায়নি।`, "চলমান বাস তথ্য");
       return;
     }
 
     let boundsCoords = [];
 
+    // ১. ম্যাপে From স্টপেজের নাম ও সুস্পষ্ট সবুজ পিন প্রদর্শন
+    let fromDisplayName = (runningList[0] && runningList[0].fromDisplayName) || fromInput;
+    let fromCoord = resolvePlaceCoords(fromDisplayName, masterStopsList) || resolvePlaceCoords(fromInput, masterStopsList);
+    if (fromCoord) {
+      boundsCoords.push([fromCoord.lat, fromCoord.lon]);
+      let fromHtml = `
+        <div style="display:flex; flex-direction:column; align-items:center; text-align:center; pointer-events:none;">
+          <div style="width:34px; height:34px; border-radius:50%; background:linear-gradient(135deg, #16a34a 0%, #15803d 100%); border:2.5px solid #ffffff; box-shadow:0 3px 10px rgba(0,0,0,0.35); display:flex; align-items:center; justify-content:center; font-size:18px; color:#fff;">
+            🟢
+          </div>
+          <div class="from-to-map-badge from-badge" style="margin-top:2px;">
+            বোর্ডিং (From): ${escapeHtml(fromDisplayName)}
+          </div>
+        </div>
+      `;
+      let fromIcon = L.divIcon({
+        className: 'custom-from-pin-icon',
+        html: fromHtml,
+        iconSize: [140, 58],
+        iconAnchor: [70, 36]
+      });
+      let fromMarker = L.marker([fromCoord.lat, fromCoord.lon], { icon: fromIcon, zIndexOffset: 800 });
+      routeRunningBusesLayer.addLayer(fromMarker);
+    }
+
+    // ২. ম্যাপে To স্টপেজের নাম ও সুস্পষ্ট লাল পিন প্রদর্শন
+    let toDisplayName = (runningList[0] && runningList[0].toDisplayName) || toInput;
+    let toCoord = resolvePlaceCoords(toDisplayName, masterStopsList) || resolvePlaceCoords(toInput, masterStopsList);
+    if (toCoord) {
+      boundsCoords.push([toCoord.lat, toCoord.lon]);
+      let toHtml = `
+        <div style="display:flex; flex-direction:column; align-items:center; text-align:center; pointer-events:none;">
+          <div style="width:34px; height:34px; border-radius:50%; background:linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); border:2.5px solid #ffffff; box-shadow:0 3px 10px rgba(0,0,0,0.35); display:flex; align-items:center; justify-content:center; font-size:18px; color:#fff;">
+            🎯
+          </div>
+          <div class="from-to-map-badge to-badge" style="margin-top:2px;">
+            গন্তব্য (To): ${escapeHtml(toDisplayName)}
+          </div>
+        </div>
+      `;
+      let toIcon = L.divIcon({
+        className: 'custom-to-pin-icon',
+        html: toHtml,
+        iconSize: [140, 58],
+        iconAnchor: [70, 36]
+      });
+      let toMarker = L.marker([toCoord.lat, toCoord.lon], { icon: toIcon, zIndexOffset: 800 });
+      routeRunningBusesLayer.addLayer(toMarker);
+    }
+
+    // ৩. From এবং To এর মাঝে সংযোগকারী হালকা গাইড রুট লাইন
+    if (fromCoord && toCoord) {
+      let corridorLine = L.polyline([[fromCoord.lat, fromCoord.lon], [toCoord.lat, toCoord.lon]], {
+        color: '#0284c7',
+        weight: 3.5,
+        opacity: 0.65,
+        dashArray: '5, 8'
+      });
+      routeRunningBusesLayer.addLayer(corridorLine);
+    }
+
+    // ৪. এই রুটের সকল চলন্ত বাসের ছবি/আইকন ম্যাপে প্রদর্শন
     runningList.forEach((rb) => {
       boundsCoords.push([rb.lat, rb.lon]);
 
@@ -5386,11 +5538,11 @@
         popupAnchor: [0, -38]
       });
 
-      let marker = L.marker([rb.lat, rb.lon], { icon: customBusDivIcon });
+      let marker = L.marker([rb.lat, rb.lon], { icon: customBusDivIcon, zIndexOffset: 1200 });
 
-      // ৩(b) শর্ত: বাসের ছবিতে ক্লিক করলে বাসের নাম, নম্বর, বাসের ভিড়ের মাত্রা, বাসটি from স্টপেজে কখন পৌঁছাবে এবং বাসটি to স্টপেজে কখন পৌঁছাবে সেগুলো দেখাবে
+      // বাসের ছবিতে ক্লিক করলে বিস্তারিত তথ্য (From এবং To পেরিয়েছে কিনা তা সুস্পষ্টভাবে প্রদর্শিত)
       let popupContent = `
-        <div style="font-family: inherit; min-width: 210px; max-width: 250px; padding: 2px;">
+        <div style="font-family: inherit; min-width: 220px; max-width: 260px; padding: 2px;">
           <div style="font-size: 14.5px; font-weight: 800; color: #0d47a1; margin-bottom: 3px; display: flex; align-items: center; gap: 6px;">
             <span>🚌</span>
             <span>${busNameSafe}</span>
@@ -5398,12 +5550,15 @@
           <div style="font-size: 11.5px; color: #475569; margin-bottom: 6px; font-weight: 600;">
             নম্বর: <b>${busNumSafe}</b> (${escapeHtml(rb.bus.category || 'PUBLIC')})
           </div>
+          <div style="background: ${rb.relStatus === 'before_from' ? '#f0fdf4' : (rb.relStatus === 'between_from_to' ? '#fffbeb' : '#f1f5f9')}; border: 1px solid ${rb.relColor}; border-radius: 6px; padding: 4px 8px; margin-bottom: 6px; font-size: 11.5px; font-weight: 700; color: ${rb.relColor};">
+            ${escapeHtml(rb.relBadgeText)}
+          </div>
           <div style="background: #f0fdf4; border: 1px solid #86efac; border-radius: 6px; padding: 4px 8px; margin-bottom: 6px; font-size: 11.5px; font-weight: 700; color: #166534;">
             👥 ভিড়ের মাত্রা: ${escapeHtml(rb.crowdStatus)}
           </div>
-          <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 6px 8px; font-size: 11.5px; margin-bottom: 8px; line-height: 1.45;">
-            <div>📍 <b>${escapeHtml(rb.fromDisplayName)}:</b> <span style="color:#0284c7;font-weight:bold;">${escapeHtml(rb.fromTimeStr)}</span></div>
-            <div>➔ 🎯 <b>${escapeHtml(rb.toDisplayName)}:</b> <span style="color:#059669;font-weight:bold;">${escapeHtml(rb.toTimeStr)}</span></div>
+          <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 6px 8px; font-size: 11.5px; margin-bottom: 8px; line-height: 1.5;">
+            <div>📍 <b>${escapeHtml(rb.fromDisplayName)}:</b> <span style="color:#0284c7;font-weight:bold;">${escapeHtml(rb.fromTimeStr)}</span> <span style="font-size:10.5px;color:#64748b;">${escapeHtml(rb.fromNote)}</span></div>
+            <div>➔ 🎯 <b>${escapeHtml(rb.toDisplayName)}:</b> <span style="color:#059669;font-weight:bold;">${escapeHtml(rb.toTimeStr)}</span> <span style="font-size:10.5px;color:#64748b;">${escapeHtml(rb.toNote)}</span></div>
             <div style="margin-top: 4px; color: #64748b; font-size: 10.5px; border-top: 1px dashed #cbd5e1; padding-top: 3px;">
               🚏 বর্তমান স্টপেজ: <b style="color:#334155;">${escapeHtml(rb.curStopName)}</b>
             </div>
@@ -5417,11 +5572,6 @@
       marker.bindPopup(popupContent);
       routeRunningBusesLayer.addLayer(marker);
     });
-
-    let fromCoord = resolvePlaceCoords(fromInput, masterStopsList);
-    if (fromCoord) boundsCoords.push([fromCoord.lat, fromCoord.lon]);
-    let toCoord = resolvePlaceCoords(toInput, masterStopsList);
-    if (toCoord) boundsCoords.push([toCoord.lat, toCoord.lon]);
 
     if (boundsCoords.length > 0) {
       try {
