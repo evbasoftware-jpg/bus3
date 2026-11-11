@@ -13,6 +13,7 @@ import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
 import android.os.Build
+import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
 import android.os.PowerManager
@@ -129,12 +130,14 @@ class BusTrackingService : Service() {
   private var lastAnnouncedServiceNext: String = ""
   private var lastAnnouncedServiceDest: String = ""
   private var lastAnnouncementTime: Long = 0L
+  private val serviceHandler = Handler(Looper.getMainLooper())
+  private var nextAnnouncementRunnable: Runnable? = null
 
   private fun getCleanStopBaseName(s: String): String {
     if (s.isBlank() || s == "--") return ""
     return s.substringBefore("(")
       .substringBefore("|")
-      .replace(Regex("(?i)মিটার|পেরিয়ে|পেরিয়ে|গেছে|পৌঁছে|গেছেন|আসছে|স্টপ|স্টপেজ|eta|mins|min|km|m|final stop|গন্তব্যের শেষ স্টপেজ"), "")
+      .replace(Regex("[🚏🚌📍🏁]"), "")
       .trim()
   }
 
@@ -476,11 +479,8 @@ class BusTrackingService : Service() {
 
   private fun checkBackgroundScreenOffAnnouncements(destMeters: Float) {
     // স্ক্রিন অন থাকলে অ্যাপের স্ক্রিন (UI) নিজেই স্টপের সঠিক নাম একবার ঘোষণা করবে।
-    // সার্ভিস শুধুমাত্র স্ক্রিন অফ থাকলে (!MainActivity.isActivityResumed) নাম পরিবর্তনের সময় একবার ঘোষণা করবে।
+    // সার্ভিস শুধুমাত্র স্ক্রিন অফ বা অ্যাপ মিনিমাইজ থাকলে (!MainActivity.isActivityResumed) ঘোষণা করবে।
     if (MainActivity.isActivityResumed) return
-
-    val now = System.currentTimeMillis()
-    if (now - lastAnnouncementTime < 6000L) return
 
     val cleanCur = getCleanStopBaseName(currentStopText)
     val cleanNext = getCleanStopBaseName(nextName.ifBlank { nextStopText })
@@ -490,43 +490,64 @@ class BusTrackingService : Service() {
     val spokenNext = VoiceAnnouncementManager.toBengaliSpokenStopName(cleanNext)
     val spokenDest = VoiceAnnouncementManager.toBengaliSpokenStopName(cleanDest)
 
+    val now = System.currentTimeMillis()
+
+    // ১. গন্তব্যে পৌঁছানো ঘোষণা (অ্যাপ ওপেন থাকার সময়ের মতো হুবহু একই বাক্য)
+    val isDestinationReached = (destMeters in 1f..80f) || (cleanDest.isNotBlank() && cleanCur.equals(cleanDest, ignoreCase = true))
+    if (isDestinationReached && cleanDest.isNotBlank() && cleanDest != lastAnnouncedServiceDest) {
+      lastAnnouncedServiceDest = cleanDest
+      lastAnnouncementTime = now
+      val destSpeech = when (currentLangCode.lowercase()) {
+        "hi" -> "हम गंतव्य $spokenDest पहुँच चुके हैं। यात्रा के लिए धन्यवाद!"
+        "en" -> "We have arrived at destination $cleanDest. Thank you for traveling with us!"
+        else -> "আমরা গন্তব্য $spokenDest-এ পৌঁছে গেছি। আমাদের সাথে ভ্রমণের জন্য ধন্যবাদ!"
+      }
+      VoiceAnnouncementManager.speak(destSpeech, currentLangCode)
+      return
+    }
+
+    // ২. বর্তমান স্টপেজ ঘোষণা (অ্যাপ ওপেন থাকার সময়ের মতো হুবহু একই বাক্য)
     if (cleanCur.isNotBlank() && cleanCur != "--" && cleanCur != lastAnnouncedServiceCurrent) {
       lastAnnouncedServiceCurrent = cleanCur
       lastAnnouncementTime = now
-      val annText = when (currentLangCode.lowercase()) {
-        "en" -> "Current stop $cleanCur."
+      val curSpeech = when (currentLangCode.lowercase()) {
         "hi" -> "वर्तमान स्टॉप $spokenCur।"
-        else -> if (spokenNext.isNotBlank() && !spokenNext.equals(spokenCur, ignoreCase = true)) {
-          "বর্তমান স্টপেজ $spokenCur। পরবর্তী স্টপেজ $spokenNext।"
-        } else {
-          "বর্তমান স্টপেজ $spokenCur।"
-        }
+        "en" -> "Current stop $cleanCur."
+        else -> "বর্তমান স্টপেজ $spokenCur।"
       }
-      VoiceAnnouncementManager.speak(annText, currentLangCode)
+      VoiceAnnouncementManager.speak(curSpeech, currentLangCode)
+
+      // পরবর্তী স্টপের ঘোষণা ৩.২ সেকেন্ড পর আলাদাভাবে বাজবে (ঠিক যেমন অ্যাপ ওপেন থাকলে বাজে)
+      if (cleanNext.isNotBlank() && cleanNext != "--" && !cleanNext.equals(cleanCur, ignoreCase = true)) {
+        lastAnnouncedServiceNext = cleanNext
+        nextAnnouncementRunnable?.let { serviceHandler.removeCallbacks(it) }
+        val r = Runnable {
+          if (!MainActivity.isActivityResumed) {
+            val nextSpeech = when (currentLangCode.lowercase()) {
+              "hi" -> "अगला स्टॉप $spokenNext है।"
+              "en" -> "Next stop is $cleanNext."
+              else -> "পরবর্তী স্টপেজ $spokenNext।"
+            }
+            VoiceAnnouncementManager.speak(nextSpeech, currentLangCode)
+          }
+        }
+        nextAnnouncementRunnable = r
+        serviceHandler.postDelayed(r, 3200L)
+      }
       return
     }
 
+    // ৩. শুধুমাত্র পরবর্তী স্টপেজ পরিবর্তিত হলে ঘোষণা (যদি বর্তমান স্টপ অপরিবর্তিত থাকে)
     if (cleanNext.isNotBlank() && cleanNext != "--" && !cleanNext.equals(cleanCur, ignoreCase = true) && cleanNext != lastAnnouncedServiceNext) {
+      if (now - lastAnnouncementTime < 4000L) return
       lastAnnouncedServiceNext = cleanNext
       lastAnnouncementTime = now
-      val annText = when (currentLangCode.lowercase()) {
-        "en" -> "Next stop is $cleanNext."
+      val nextSpeech = when (currentLangCode.lowercase()) {
         "hi" -> "अगला स्टॉप $spokenNext है।"
+        "en" -> "Next stop is $cleanNext."
         else -> "পরবর্তী স্টপেজ $spokenNext।"
       }
-      VoiceAnnouncementManager.speak(annText, currentLangCode)
-      return
-    }
-
-    if (destMeters in 1f..80f && destName.isNotBlank() && destName != lastAnnouncedServiceDest) {
-      lastAnnouncedServiceDest = destName
-      lastAnnouncementTime = now
-      val annText = when (currentLangCode.lowercase()) {
-        "en" -> "We have arrived at destination $cleanDest. Thank you for traveling with us!"
-        "hi" -> "हम गंतव्य $spokenDest पहुँच चुके हैं। यात्रा के लिए धन्यवाद!"
-        else -> "আমরা গন্তব্য $spokenDest-এ পৌঁছে গেছি। আমাদের সাথে ভ্রমণের জন্য ধন্যবাদ!"
-      }
-      VoiceAnnouncementManager.speak(annText, currentLangCode)
+      VoiceAnnouncementManager.speak(nextSpeech, currentLangCode)
     }
   }
 
@@ -929,6 +950,8 @@ class BusTrackingService : Service() {
     lastAnnouncementTime = 0L
     activeRouteStops = emptyList()
     VoiceAnnouncementManager.clearQueue()
+    nextAnnouncementRunnable?.let { serviceHandler.removeCallbacks(it) }
+    nextAnnouncementRunnable = null
 
     try {
       backgroundPollingJob?.cancel()
