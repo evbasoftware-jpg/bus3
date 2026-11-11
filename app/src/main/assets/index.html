@@ -930,26 +930,32 @@
       overflow: hidden;
       text-overflow: ellipsis;
     }
-    .from-to-map-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 5px;
-      padding: 3.5px 9px;
-      border-radius: 14px;
-      font-size: 11px;
-      font-weight: 800;
-      white-space: nowrap;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.28);
-      border: 1.5px solid #ffffff;
-      pointer-events: auto;
+    /* কম্প্যাক্ট চলন্ত বাস পপআপ - যাতে ম্যাপের অন্য তথ্য ঢাকা না পড়ে */
+    .compact-bus-popup .leaflet-popup-content-wrapper {
+      padding: 3px 4px !important;
+      border-radius: 8px !important;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.28) !important;
+      border: 1px solid #cbd5e1 !important;
     }
-    .from-to-map-badge.from-badge {
-      background: linear-gradient(135deg, #15803d 0%, #166534 100%);
-      color: #ffffff;
+    .compact-bus-popup .leaflet-popup-content {
+      margin: 4px 6px !important;
+      line-height: 1.25 !important;
     }
-    .from-to-map-badge.to-badge {
-      background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
-      color: #ffffff;
+    .compact-bus-popup .leaflet-popup-close-button {
+      top: 3px !important;
+      right: 4px !important;
+      width: 16px !important;
+      height: 16px !important;
+      font-size: 14px !important;
+      color: #64748b !important;
+      padding: 0 !important;
+    }
+    .compact-bus-popup .leaflet-popup-tip-container {
+      height: 7px !important;
+    }
+    .compact-bus-popup .leaflet-popup-tip {
+      width: 10px !important;
+      height: 10px !important;
     }
     .logo-box{position: static; margin-bottom: 6px; display: flex; justify-content: center;}
     .logo{max-height:85px; width:auto; max-width: 95%; filter: drop-shadow(0 2px 6px rgba(0,0,0,0.3)); object-fit: contain; border-radius: 8px;}
@@ -5563,36 +5569,36 @@
 
       let marker = L.marker([rb.lat, rb.lon], { icon: customBusDivIcon, zIndexOffset: 1200 });
 
-      // বাসের ছবিতে ক্লিক করলে বিস্তারিত তথ্য (From এবং To পেরিয়েছে কিনা তা সুস্পষ্টভাবে প্রদর্শিত)
+      // বাসের ছবিতে ক্লিক করলে সংক্ষিপ্ত ও কম্প্যাক্ট তথ্য (যাতে ম্যাপের অন্য তথ্য ঢাকা না পড়ে)
       let popupContent = `
-        <div style="font-family: inherit; min-width: 220px; max-width: 260px; padding: 2px;">
-          <div style="font-size: 14.5px; font-weight: 800; color: #0d47a1; margin-bottom: 3px; display: flex; align-items: center; gap: 6px;">
-            <span>🚌</span>
-            <span>${busNameSafe}</span>
+        <div style="font-family: inherit; width: 190px; max-width: 215px; padding: 1px;">
+          <div style="font-size: 12px; font-weight: 800; color: #0d47a1; margin-bottom: 3px; display: flex; align-items: center; justify-content: space-between; gap: 4px; padding-right: 14px;">
+            <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">🚌 <b>${busNameSafe}</b></span>
+            <span style="font-size: 9.5px; color: #64748b; font-weight: 600; white-space: nowrap;">${busNumSafe}</span>
           </div>
-          <div style="font-size: 11.5px; color: #475569; margin-bottom: 6px; font-weight: 600;">
-            নম্বর: <b>${busNumSafe}</b> (${escapeHtml(rb.bus.category || 'PUBLIC')})
+          <div style="background: ${rb.relStatus === 'before_from' ? '#f0fdf4' : (rb.relStatus === 'between_from_to' ? '#fffbeb' : '#f1f5f9')}; border: 1px solid ${rb.relColor}; border-radius: 4px; padding: 2px 5px; margin-bottom: 3px; font-size: 10px; font-weight: 700; color: ${rb.relColor}; display: flex; align-items: center; justify-content: space-between; gap: 4px;">
+            <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(rb.relBadgeText)}</span>
           </div>
-          <div style="background: ${rb.relStatus === 'before_from' ? '#f0fdf4' : (rb.relStatus === 'between_from_to' ? '#fffbeb' : '#f1f5f9')}; border: 1px solid ${rb.relColor}; border-radius: 6px; padding: 4px 8px; margin-bottom: 6px; font-size: 11.5px; font-weight: 700; color: ${rb.relColor};">
-            ${escapeHtml(rb.relBadgeText)}
-          </div>
-          <div style="background: #f0fdf4; border: 1px solid #86efac; border-radius: 6px; padding: 4px 8px; margin-bottom: 6px; font-size: 11.5px; font-weight: 700; color: #166534;">
-            👥 ভিড়ের মাত্রা: ${escapeHtml(rb.crowdStatus)}
-          </div>
-          <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 6px 8px; font-size: 11.5px; margin-bottom: 8px; line-height: 1.5;">
-            <div>📍 <b>${escapeHtml(rb.fromDisplayName)}:</b> <span style="color:#0284c7;font-weight:bold;">${escapeHtml(rb.fromTimeStr)}</span> <span style="font-size:10.5px;color:#64748b;">${escapeHtml(rb.fromNote)}</span></div>
-            <div>➔ 🎯 <b>${escapeHtml(rb.toDisplayName)}:</b> <span style="color:#059669;font-weight:bold;">${escapeHtml(rb.toTimeStr)}</span> <span style="font-size:10.5px;color:#64748b;">${escapeHtml(rb.toNote)}</span></div>
-            <div style="margin-top: 4px; color: #64748b; font-size: 10.5px; border-top: 1px dashed #cbd5e1; padding-top: 3px;">
-              🚏 বর্তমান স্টপেজ: <b style="color:#334155;">${escapeHtml(rb.curStopName)}</b>
+          <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 4px; padding: 3px 5px; font-size: 10px; line-height: 1.35; margin-bottom: 4px;">
+            <div>📍 <b>${escapeHtml(rb.fromDisplayName)}:</b> <span style="color:#0284c7;font-weight:700;">${escapeHtml(rb.fromTimeStr)}</span> <span style="font-size:9px;color:#64748b;">${escapeHtml(rb.fromNote)}</span></div>
+            <div>➔ 🎯 <b>${escapeHtml(rb.toDisplayName)}:</b> <span style="color:#059669;font-weight:700;">${escapeHtml(rb.toTimeStr)}</span> <span style="font-size:9px;color:#64748b;">${escapeHtml(rb.toNote)}</span></div>
+            <div style="margin-top: 2px; color: #64748b; font-size: 9.5px; border-top: 1px dashed #cbd5e1; padding-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+              🚏 অবস্থান: <b style="color:#334155;">${escapeHtml(rb.curStopName)}</b>
             </div>
           </div>
-          <button type="button" style="width: 100%; padding: 7px 10px; background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); color: #ffffff; border: none; border-radius: 6px; font-size: 12px; font-weight: bold; cursor: pointer; box-shadow: 0 2px 6px rgba(2,132,199,0.3);" onclick="selectBusAndTrackFromMap('${busNumSafe}')">
-            🎯 এই বাসটি লাইভ ট্র্যাক করুন
+          <button type="button" style="width: 100%; padding: 4px 6px; background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); color: #ffffff; border: none; border-radius: 4px; font-size: 10.5px; font-weight: bold; cursor: pointer; box-shadow: 0 1px 4px rgba(2,132,199,0.3);" onclick="selectBusAndTrackFromMap('${busNumSafe}')">
+            🎯 লাইভ ট্র্যাক করুন
           </button>
         </div>
       `;
 
-      marker.bindPopup(popupContent);
+      marker.bindPopup(popupContent, {
+        className: 'compact-bus-popup',
+        maxWidth: 220,
+        minWidth: 180,
+        autoPan: true,
+        autoPanPadding: [8, 8]
+      });
       routeRunningBusesLayer.addLayer(marker);
     });
 
