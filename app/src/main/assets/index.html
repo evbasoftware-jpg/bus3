@@ -2764,7 +2764,7 @@
     "SURI BUS STAND": "সিউড়ি বাস স্ট্যান্ড",
     "LABPUR BUS STAND": "লাভপুর বাস স্ট্যান্ড",
     "SAINTHIA": "সাঁইথিয়া",
-    "AHMEDPUR": "আহমদপুর",
+    "AHMEDPUR": "আহমেদপুর",
     "DUBRAJPUR": "দুবরাজপুর",
     "ILLAMBAZAR": "ইলামবাজার",
     "ILAMBAZAR": "ইলামবাজার",
@@ -2817,14 +2817,16 @@
     "COLLEGE MORE": "কলেজ মোড়",
     "COURT MORE": "কোর্ট মোড়",
     "BUS STAND": "বাস স্ট্যান্ড",
-    "AHMADPUR": "আহমদপুর",
+    "AHMADPUR": "আহমেদপুর",
+    "AHMADPUR STATION": "আহমেদপুর স্টেশন",
+    "AHMEDPUR STATION": "আহমেদপুর স্টেশন",
     "BDO": "বিডিও",
     "B.D.O.": "বিডিও",
     "B.D.O": "বিডিও",
     "OFFICE": "অফিস",
     "BDO OFFICE": "বিডিও অফিস",
-    "BDO OFFICE AHMADPUR": "বিডিও অফিস আহমদপুর",
-    "BDO OFFICE AHMEDPUR": "বিডিও অফিস আহমদপুর",
+    "BDO OFFICE AHMADPUR": "বিডিও অফিস আহমেদপুর",
+    "BDO OFFICE AHMEDPUR": "বিডিও অফিস আহমেদপুর",
     "SDO": "এসডিও",
     "SDO OFFICE": "এসডিও অফিস",
     "PS": "থানা",
@@ -2962,6 +2964,19 @@
     return str.replace(/\b[A-Za-z]+\b/g, txt => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase());
   }
 
+  function fixBengaliPronunciation(str) {
+    if (!str) return "";
+    return str
+      .replace(/আহমদপুর/g, "আহমেদপুর")
+      .replace(/আহমাদপুর/g, "আহমেদপুর")
+      .replace(/অহমদপুর/g, "আহমেদপুর")
+      .replace(/আহামদপুর/g, "আহমেদপুর")
+      .replace(/অহারুপুর/g, "আহমেদপুর")
+      .replace(/আহমারপুর/g, "আহমেদপুর")
+      .replace(/\bআহমদ\b/g, "আহমেদ")
+      .replace(/\bআহমাদ\b/g, "আহমেদ");
+  }
+
   // স্টপের নাম কণ্ঠ ঘোষণার জন্য প্রস্তুতকরণ
   function getSpokenStopName(rawName, lang) {
     if (!rawName) return "";
@@ -2972,10 +2987,10 @@
 
     // বাংলা ভাষার জন্য: সম্পূর্ণ নির্ভুল বাংলা লিপিতে রূপান্তর করা
     if (curLang === "bn" || curLang === "hi") {
-      if (/[\u0980-\u09FF]/.test(clean)) return clean;
+      if (/[\u0980-\u09FF]/.test(clean)) return fixBengaliPronunciation(clean);
       let upper = clean.toUpperCase();
-      if (BENGALI_STOP_DICTIONARY[upper]) return BENGALI_STOP_DICTIONARY[upper];
-      return transliterateEnglishToBengali(clean);
+      if (BENGALI_STOP_DICTIONARY[upper]) return fixBengaliPronunciation(BENGALI_STOP_DICTIONARY[upper]);
+      return fixBengaliPronunciation(transliterateEnglishToBengali(clean));
     }
 
     // ইংরেজি ভাষার জন্য: ALL-CAPS থেকে স্বাভাবিক Title Case করা ("Sundipur") যাতে অক্ষর করে না পড়ে
@@ -2992,7 +3007,7 @@
 
   function playVoiceAnnouncement(text, lang) {
     if (!voiceAnnouncementEnabled || !text) return;
-    let cleanText = text.trim();
+    let cleanText = fixBengaliPronunciation(text.trim());
     if (!cleanText) return;
     let curLang = lang || getCurrentAppLanguage() || "bn";
 
@@ -3054,27 +3069,39 @@
           let n = (v.name || "").toLowerCase();
           return (
             n.includes("female") || n.includes("woman") || n.includes("girl") ||
+            n.includes("bnc") || n.includes("bne") || n.includes("bnf") || n.includes("bdf") ||
+            n.includes("bif") || n.includes("baf") || n.includes("hic") || n.includes("hid") || n.includes("hie") ||
             n.includes("zira") || n.includes("kavya") || n.includes("aditi") ||
             n.includes("lekha") || n.includes("sangeeta") || n.includes("swara") ||
             n.includes("kalpana") || n.includes("priya") || n.includes("ananya") ||
-            n.includes("bdf") || n.includes("bnf") || n.includes("bif") || n.includes("baf")
+            n.includes("shruti") || n.includes("maya")
           );
         });
 
         if (!femaleVoice) {
           femaleVoice = matchingVoices.find(v => {
             let n = (v.name || "").toLowerCase();
-            return !n.includes("male") && !n.includes("man") && !n.includes("boy") && !n.includes("david") && !n.includes("ravi") && !n.includes("bin");
+            return !n.includes("male") && !n.includes("man") && !n.includes("boy") && !n.includes("david") && !n.includes("ravi") && !n.includes("bin") && !n.includes("bnd") && !n.includes("ban");
           }) || matchingVoices[0];
         }
+
+        let isRealFemale = femaleVoice && (
+          (femaleVoice.name || "").toLowerCase().includes("female") ||
+          (femaleVoice.name || "").toLowerCase().includes("woman") ||
+          (femaleVoice.name || "").toLowerCase().includes("bnc") ||
+          (femaleVoice.name || "").toLowerCase().includes("bne") ||
+          (femaleVoice.name || "").toLowerCase().includes("bnf") ||
+          (femaleVoice.name || "").toLowerCase().includes("swara") ||
+          (femaleVoice.name || "").toLowerCase().includes("aditi")
+        );
 
         if (femaleVoice) {
           utter.voice = femaleVoice;
         }
 
-        // মিষ্টি, সুরেলা ও নম্র নারী কণ্ঠের জন্য আদর্শ পিচ ও গতি (Female singer voice tone)
-        utter.pitch = 1.18;
-        utter.rate = 0.92;
+        // মিষ্টি, সুরেলা ও নম্র নারী কণ্ঠের জন্য আদর্শ পিচ ও গতি (Female voice tone)
+        utter.pitch = isRealFemale ? 1.25 : 1.48;
+        utter.rate = 0.95;
 
         let hasEnded = false;
         utter.onend = function() {
