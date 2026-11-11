@@ -854,6 +854,82 @@
 
     .swap-btn:hover { background: #e3f2fd; }
     .swap-btn:active { transform: translateY(-50%) scale(0.92); }
+
+    /* ৩ নম্বর নির্দেশনা: ম্যাপে চলমান বাস বাটন ও পিন স্টাইল */
+    .btn-route-live-buses {
+      background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+      color: #ffffff !important;
+      border: 1.5px solid #38bdf8;
+      border-radius: 12px;
+      padding: 10px 14px;
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 4px 12px rgba(2, 132, 199, 0.25);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-family: inherit;
+    }
+    .btn-route-live-buses:active {
+      transform: scale(0.98);
+    }
+    .btn-route-live-buses.active-view {
+      background: linear-gradient(135deg, #059669 0%, #047857 100%);
+      border-color: #34d399;
+      box-shadow: 0 4px 14px rgba(5, 150, 105, 0.35);
+    }
+    .route-buses-badge {
+      background: rgba(255, 255, 255, 0.25);
+      backdrop-filter: blur(4px);
+      color: #ffffff;
+      font-size: 11.5px;
+      font-weight: 800;
+      padding: 3px 10px;
+      border-radius: 20px;
+      border: 1px solid rgba(255, 255, 255, 0.4);
+    }
+    .running-bus-marker-wrapper {
+      position: relative;
+      cursor: pointer;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .running-bus-icon-bubble {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #0284c7 0%, #0d47a1 100%);
+      border: 2.5px solid #ffffff;
+      box-shadow: 0 3px 10px rgba(0, 0, 0, 0.35);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      animation: pulseBusPin 2s infinite;
+    }
+    @keyframes pulseBusPin {
+      0% { box-shadow: 0 0 0 0 rgba(2, 132, 199, 0.7); }
+      70% { box-shadow: 0 0 0 8px rgba(2, 132, 199, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(2, 132, 199, 0); }
+    }
+    .running-bus-name-badge {
+      background: rgba(15, 23, 42, 0.9);
+      color: #ffffff;
+      font-size: 10px;
+      font-weight: 800;
+      padding: 2px 7px;
+      border-radius: 10px;
+      margin-top: 3px;
+      white-space: nowrap;
+      border: 1px solid rgba(255, 255, 255, 0.8);
+      box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+      max-width: 110px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
     .logo-box{position: static; margin-bottom: 6px; display: flex; justify-content: center;}
     .logo{max-height:85px; width:auto; max-width: 95%; filter: drop-shadow(0 2px 6px rgba(0,0,0,0.3)); object-fit: contain; border-radius: 8px;}
 
@@ -1493,6 +1569,17 @@
     </button>
   </div>
 
+  <!-- ৩ নম্বর নির্দেশনা: From এবং To লেখার পর ম্যাপে চলমান বাস দেখার নতুন অপশন -->
+  <div id="routeLiveBusesSection" style="display: none; margin: 8px 0 12px 0;">
+    <button type="button" id="btnToggleRouteLiveBuses" class="btn-route-live-buses" onclick="toggleRouteLiveBusesOnMap()">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span style="font-size: 18px;">🚌</span>
+        <span id="routeLiveBusesBtnTitle" style="font-weight: 800; font-size: 13.5px;">ম্যাপে চলমান বাস দেখুন (Live on Map)</span>
+      </div>
+      <span id="routeLiveBusesCountBadge" class="route-buses-badge">খোঁজা হচ্ছে...</span>
+    </button>
+  </div>
+
   <div id="busList"></div>
   
   <label>বাসের নাম / নম্বর</label>
@@ -1563,8 +1650,6 @@
     <div class="card"><b>⚡ বাসের গতিবেগ:</b> <span id="infoSpeed">--</span></div>
     <div class="card"><b>👥 বাসের ভিড়ের মাত্রা:</b> <span id="infoCrowdLevel">🟢 কম ভিড় (খালি আসন আছে)</span></div>
     <div class="card"><b>⏰ গন্তব্য অ্যালার্ট:</b> <span id="infoAlarmStatus">৫০০মি সক্রিয় 🔔</span></div>
-    <div class="card"><b>📡 ব্যবহারকারীর GPS:</b> <span id="infoUserGPS">--</span></div>
-    <div class="card"><b>📶 GPS সংকেত:</b> <span id="infoConfidence">--</span></div>
   </div>
   
   <!-- ৩ নং বিজ্ঞাপন স্লট: ads3 (ম্যাপের উপরে থাকবে) -->
@@ -1680,6 +1765,12 @@
       <span class="feat-sub">BusStops শিটে UP/DOWN সময়</span>
       <span class="feat-badge" style="background:#e0f2fe;color:#0369a1;">⏱️ সময় যুক্ত করুন</span>
     </button>
+  </div>
+
+  <!-- ১ নম্বর নির্দেশনা অনুযায়ী: ব্যবহারকারীর GPS এবং GPS সংকেত অপশন দুটি ৮) স্টপেজের সময় যুক্ত বোতামের নিচে স্থানান্তরিত -->
+  <div style="margin: 8px 0 12px 0; display: flex; flex-direction: column; gap: 6px;">
+    <div class="card" style="margin: 0; box-shadow: 0 2px 6px rgba(0,0,0,0.06);"><b>📡 ব্যবহারকারীর GPS:</b> <span id="infoUserGPS">--</span></div>
+    <div class="card" style="margin: 0; box-shadow: 0 2px 6px rgba(0,0,0,0.06);"><b>📶 GPS সংকেত:</b> <span id="infoConfidence">--</span></div>
   </div>
 
   <!-- বিজ্ঞাপনের জন্য WhatsApp এ যোগাযোগ করুন -->
@@ -2766,6 +2857,9 @@
   let busMarker = null, userMarker = null, routeLine = null;
   let allMasterStopMarkersLayer = L.layerGroup().addTo(map);
   let stopMarkersLayer = L.layerGroup().addTo(map);
+  let routeRunningBusesLayer = L.layerGroup().addTo(map);
+  let isRouteRunningBusesActive = false;
+  let latestRouteSearchResults = [];
   let stopRoutePolyline = null;
 
   let userPos = null, busPos = null, trackingBus = null, trackingInterval = null;
@@ -4149,7 +4243,7 @@
     if (distKm < 1) {
       return `${meters} M`;
     }
-    return `${distKm.toFixed(1)} KM (${meters} M)`;
+    return `${distKm.toFixed(1)} KM`;
   }     
 
   window.addEventListener("DOMContentLoaded", async () => {
@@ -4952,6 +5046,10 @@
 
     if (from.length < 3 || to.length < 3) {
       document.getElementById("busList").innerHTML = "";
+      latestRouteSearchResults = [];
+      let liveSec = document.getElementById("routeLiveBusesSection");
+      if (liveSec) liveSec.style.display = "none";
+      clearRouteRunningBusesMarkers();
       return;
     }
     debounceTimer = setTimeout(autoSearchBuses, 500);
@@ -4967,6 +5065,10 @@
 
     if (!from || !to) {
       listDiv.innerHTML = (!from && !to) ? "" : `<div style="padding:10px;text-align:center;color:#607d8b;font-size:13px;">উভয় স্টপেজের নাম লিখুন (From এবং To)...</div>`;
+      latestRouteSearchResults = [];
+      let liveSec = document.getElementById("routeLiveBusesSection");
+      if (liveSec) liveSec.style.display = "none";
+      clearRouteRunningBusesMarkers();
       return;
     }
 
@@ -4995,6 +5097,10 @@
 
       if (!activeBuses || activeBuses.length === 0) {
         listDiv.innerHTML = `<div style="padding:12px;color:#c62828;text-align:center;font-weight:bold;">কোনো বাসের তথ্য পাওয়া যায়নি।</div>`;
+        latestRouteSearchResults = [];
+        let liveSec = document.getElementById("routeLiveBusesSection");
+        if (liveSec) liveSec.style.display = "none";
+        clearRouteRunningBusesMarkers();
         return;
       }
 
@@ -5016,6 +5122,10 @@
 
       if (validatedBuses.length === 0) {
         listDiv.innerHTML = `<div style="padding:12px;color:#c62828;text-align:center;font-weight:bold;">"${from.toUpperCase()}" থেকে "${to.toUpperCase()}" অভিমুখে কোনো বাস পাওয়া যায়নি।</div>`;
+        latestRouteSearchResults = [];
+        let liveSec = document.getElementById("routeLiveBusesSection");
+        if (liveSec) liveSec.style.display = "none";
+        clearRouteRunningBusesMarkers();
         return;
       }
 
@@ -5071,10 +5181,265 @@
       hintDiv.innerText = "👆 লাইভ ট্র্যাকিংয়ের জন্য উপরের লিস্ট থেকে যেকোনো বাস বেছে নিন";
       listDiv.appendChild(hintDiv);
 
+      // ৩ নম্বর নির্দেশনা: ম্যাপে চলমান বাসের তালিকা ও বোতাম আপডেট
+      latestRouteSearchResults = finalBuses;
+      updateRouteRunningBusesUI(finalBuses, from, to);
+
     } catch (e) {
       listDiv.innerHTML = `<div style="padding:12px;color:#c62828;text-align:center;font-weight:bold;">বাসের তালিকা লোড করা সম্ভব হয়নি। নেটওয়ার্ক চেক করুন।</div>`;
     }
   }
+
+  // ==========================================
+  // ৩ নম্বর নির্দেশনা: ম্যাপে চলমান বাস লজিক
+  // ==========================================
+  function escapeHtml(str) {
+    if (!str) return "";
+    return String(str)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+
+  function getBusCrowdStatus(busNo) {
+    let saved = null;
+    try {
+      saved = localStorage.getItem("crowd_level_" + busNo) || localStorage.getItem("current_crowd_level");
+    } catch(_) {}
+    if (saved === "high") return "🔴 প্রচণ্ড ভিড় (দাঁড়ানোর জায়গা কম)";
+    if (saved === "medium") return "🟡 মাঝারি ভিড় (বসার জায়গা সীমিত)";
+    if (saved === "low") return "🟢 কম ভিড় (খালি আসন আছে)";
+
+    // সময়ভিত্তিক স্বাভাবিক ভিড়ের পূর্বাভাস
+    let h = new Date().getHours();
+    if ((h >= 9 && h <= 11) || (h >= 17 && h <= 19)) {
+      return "🟡 মাঝারি ভিড় (বসার জায়গা সীমিত)";
+    }
+    return "🟢 কম ভিড় (খালি আসন আছে)";
+  }
+
+  function getRunningBusesOnRoute(finalBuses, fromName, toName) {
+    if (!finalBuses || finalBuses.length === 0) return [];
+    let now = new Date();
+    let nowMins = now.getHours() * 60 + now.getMinutes();
+
+    let runningList = [];
+
+    finalBuses.forEach(item => {
+      let b = item.bus;
+      let fMins = item.fMins !== undefined && item.fMins !== null ? item.fMins : (item.sortMinutes !== 9999 ? item.sortMinutes : timeToMinutes(item.fromTimeStr));
+      let tMins = item.tMins !== undefined && item.tMins !== null ? item.tMins : timeToMinutes(item.toTimeStr);
+      let depMins = item.depMins !== undefined && item.depMins !== null ? item.depMins : timeToMinutes(b.depTime);
+      if (fMins === null) return;
+      if (depMins === null) depMins = fMins - 30;
+
+      // ৩(c) শর্ত: যে বাস গুলো from স্টপেজ পেরিয়ে গেছে সেগুলো দেখাবে না!
+      let diffFromNow = fMins - nowMins;
+      if (diffFromNow < -720) diffFromNow += 1440;
+      else if (diffFromNow > 720) diffFromNow -= 1440;
+
+      // যদি From স্টপেজে পৌঁছানোর সময়ের পর ৫ মিনিটের বেশি পার হয়ে যায়, তবে বাসটি From স্টপেজ পেরিয়ে গেছে
+      if (diffFromNow < -5) {
+        return; // ৩(c) অনুযায়ী বাতিল
+      }
+
+      // বাসের সম্পূর্ণ স্টপ তালিকা
+      let orderedStops = item.orderedStops || getFullStopsListForBus(b);
+      let fromIdx = item.fromIdx !== undefined ? item.fromIdx : findStopIndexInList(cleanStopName(fromName), orderedStops);
+      if (fromIdx === -1) fromIdx = 0;
+
+      // বাসের বর্তমান অবস্থান ও স্টপেজ নির্ধারণ:
+      let curStopName = "";
+      let busLat = null, busLon = null;
+
+      // ১. যদি এই বাসটির লাইভ জিপিএস সক্রিয় থাকে
+      if (trackingBus && trackingBus.number === b.number && busPos && busPos.lat && busPos.lon) {
+        busLat = busPos.lat;
+        busLon = busPos.lon;
+        curStopName = "লাইভ জিপিএস অবস্থান";
+      }
+
+      // ২. অন্যথায় সময় অনুযায়ী বাসের চলমান অবস্থান ও স্টপেজ নির্ধারণ
+      if (!busLat || !busLon) {
+        let diffDepNow = nowMins - depMins;
+        if (diffDepNow < -720) diffDepNow += 1440;
+        else if (diffDepNow > 720) diffDepNow -= 1440;
+
+        if (diffDepNow < 0) {
+          // বাস এখনও শুরুর স্থান ছাড়েনি
+          curStopName = `${orderedStops[0] || b.source || 'উৎস টার্মিনাল'} (প্রস্তুত)`;
+          let sc = resolvePlaceCoords(orderedStops[0] || b.source, masterStopsList);
+          if (sc) { busLat = sc.lat; busLon = sc.lon; }
+        } else {
+          // বাস চলছে: শুরু থেকে From স্টপের মাঝে কোন স্টপেজে আছে
+          let span = Math.max(fMins - depMins, 10);
+          let elapsed = Math.max(0, Math.min(span, nowMins - depMins));
+          let p = elapsed / span;
+          let curIdx = Math.min(fromIdx, Math.max(0, Math.round(p * fromIdx)));
+          curStopName = orderedStops[curIdx] || orderedStops[0] || b.source;
+          let sc = resolvePlaceCoords(curStopName, masterStopsList);
+          if (sc) { busLat = sc.lat; busLon = sc.lon; }
+        }
+      }
+
+      if (busLat && busLon) {
+        runningList.push({
+          item: item,
+          bus: b,
+          lat: busLat,
+          lon: busLon,
+          curStopName: curStopName,
+          fromDisplayName: item.fromDisplayName,
+          toDisplayName: item.toDisplayName,
+          fromTimeStr: item.fromTimeStr,
+          toTimeStr: item.toTimeStr,
+          crowdStatus: getBusCrowdStatus(b.number)
+        });
+      }
+    });
+
+    return runningList;
+  }
+
+  function updateRouteRunningBusesUI(finalBuses, fromName, toName) {
+    let section = document.getElementById("routeLiveBusesSection");
+    let countBadge = document.getElementById("routeLiveBusesCountBadge");
+    if (!section || !countBadge) return;
+
+    let runningList = getRunningBusesOnRoute(finalBuses, fromName, toName);
+    countBadge.innerText = `${runningList.length}টি বাস`;
+    section.style.display = "block";
+
+    if (isRouteRunningBusesActive) {
+      renderRouteRunningBusesOnMap();
+    }
+  }
+
+  function toggleRouteLiveBusesOnMap() {
+    isRouteRunningBusesActive = !isRouteRunningBusesActive;
+    let btn = document.getElementById("btnToggleRouteLiveBuses");
+    let title = document.getElementById("routeLiveBusesBtnTitle");
+
+    if (isRouteRunningBusesActive) {
+      if (btn) btn.classList.add("active-view");
+      if (title) title.innerText = "ম্যাপে চলমান বাস বন্ধ করুন (Hide)";
+      renderRouteRunningBusesOnMap();
+
+      let mapEl = document.getElementById("liveMapWrapper");
+      if (mapEl) {
+        mapEl.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+    } else {
+      if (btn) btn.classList.remove("active-view");
+      if (title) title.innerText = "ম্যাপে চলমান বাস দেখুন (Live on Map)";
+      clearRouteRunningBusesMarkers();
+    }
+  }
+
+  function clearRouteRunningBusesMarkers() {
+    if (routeRunningBusesLayer) {
+      routeRunningBusesLayer.clearLayers();
+    }
+  }
+
+  function renderRouteRunningBusesOnMap() {
+    if (!map) return;
+    if (!routeRunningBusesLayer) {
+      routeRunningBusesLayer = L.layerGroup().addTo(map);
+    }
+    routeRunningBusesLayer.clearLayers();
+
+    let fromInput = document.getElementById("searchFrom") ? document.getElementById("searchFrom").value.trim() : "";
+    let toInput = document.getElementById("searchTo") ? document.getElementById("searchTo").value.trim() : "";
+
+    let runningList = getRunningBusesOnRoute(latestRouteSearchResults, fromInput, toInput);
+
+    if (runningList.length === 0) {
+      showAppAlert(`বর্তমান সময়ে "${fromInput.toUpperCase()}" অভিমুখে কোনো চলমান বাস পাওয়া যায়নি (সম্ভবত পূর্বের বাসগুলো চলে গেছে অথবা পরবর্তী বাসের সময় এখনও হয়নি)।`, "চলমান বাস তথ্য");
+      return;
+    }
+
+    let boundsCoords = [];
+
+    runningList.forEach((rb) => {
+      boundsCoords.push([rb.lat, rb.lon]);
+
+      let busNameSafe = escapeHtml(rb.bus.name || 'বাস');
+      let busNumSafe = escapeHtml(rb.bus.number || '');
+
+      let busIconHtml = `
+        <div class="running-bus-marker-wrapper" title="${busNameSafe} - ${busNumSafe}">
+          <div class="running-bus-icon-bubble">
+            <span style="font-size:20px; line-height:1;">🚌</span>
+          </div>
+          <div class="running-bus-name-badge">${busNameSafe}</div>
+        </div>
+      `;
+
+      let customBusDivIcon = L.divIcon({
+        className: 'custom-running-bus-div-icon',
+        html: busIconHtml,
+        iconSize: [46, 58],
+        iconAnchor: [23, 40],
+        popupAnchor: [0, -38]
+      });
+
+      let marker = L.marker([rb.lat, rb.lon], { icon: customBusDivIcon });
+
+      // ৩(b) শর্ত: বাসের ছবিতে ক্লিক করলে বাসের নাম, নম্বর, বাসের ভিড়ের মাত্রা, বাসটি from স্টপেজে কখন পৌঁছাবে এবং বাসটি to স্টপেজে কখন পৌঁছাবে সেগুলো দেখাবে
+      let popupContent = `
+        <div style="font-family: inherit; min-width: 210px; max-width: 250px; padding: 2px;">
+          <div style="font-size: 14.5px; font-weight: 800; color: #0d47a1; margin-bottom: 3px; display: flex; align-items: center; gap: 6px;">
+            <span>🚌</span>
+            <span>${busNameSafe}</span>
+          </div>
+          <div style="font-size: 11.5px; color: #475569; margin-bottom: 6px; font-weight: 600;">
+            নম্বর: <b>${busNumSafe}</b> (${escapeHtml(rb.bus.category || 'PUBLIC')})
+          </div>
+          <div style="background: #f0fdf4; border: 1px solid #86efac; border-radius: 6px; padding: 4px 8px; margin-bottom: 6px; font-size: 11.5px; font-weight: 700; color: #166534;">
+            👥 ভিড়ের মাত্রা: ${escapeHtml(rb.crowdStatus)}
+          </div>
+          <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 6px 8px; font-size: 11.5px; margin-bottom: 8px; line-height: 1.45;">
+            <div>📍 <b>${escapeHtml(rb.fromDisplayName)}:</b> <span style="color:#0284c7;font-weight:bold;">${escapeHtml(rb.fromTimeStr)}</span></div>
+            <div>➔ 🎯 <b>${escapeHtml(rb.toDisplayName)}:</b> <span style="color:#059669;font-weight:bold;">${escapeHtml(rb.toTimeStr)}</span></div>
+            <div style="margin-top: 4px; color: #64748b; font-size: 10.5px; border-top: 1px dashed #cbd5e1; padding-top: 3px;">
+              🚏 বর্তমান স্টপেজ: <b style="color:#334155;">${escapeHtml(rb.curStopName)}</b>
+            </div>
+          </div>
+          <button type="button" style="width: 100%; padding: 7px 10px; background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); color: #ffffff; border: none; border-radius: 6px; font-size: 12px; font-weight: bold; cursor: pointer; box-shadow: 0 2px 6px rgba(2,132,199,0.3);" onclick="selectBusAndTrackFromMap('${busNumSafe}')">
+            🎯 এই বাসটি লাইভ ট্র্যাক করুন
+          </button>
+        </div>
+      `;
+
+      marker.bindPopup(popupContent);
+      routeRunningBusesLayer.addLayer(marker);
+    });
+
+    let fromCoord = resolvePlaceCoords(fromInput, masterStopsList);
+    if (fromCoord) boundsCoords.push([fromCoord.lat, fromCoord.lon]);
+    let toCoord = resolvePlaceCoords(toInput, masterStopsList);
+    if (toCoord) boundsCoords.push([toCoord.lat, toCoord.lon]);
+
+    if (boundsCoords.length > 0) {
+      try {
+        let bounds = L.latLngBounds(boundsCoords);
+        map.fitBounds(bounds.pad(0.22), { animate: true });
+      } catch(_) {}
+    }
+  }
+
+  window.selectBusAndTrackFromMap = function(busNumber) {
+    if (!latestRouteSearchResults || latestRouteSearchResults.length === 0) return;
+    let match = latestRouteSearchResults.find(item => String(item.bus.number).trim() === String(busNumber).trim());
+    if (match) {
+      selectBus(match.bus, match);
+      let mapEl = document.getElementById("liveMapWrapper");
+      if (mapEl) mapEl.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  };
 
   function estimateStopTime(targetStop, srcCoords, destCoords, depTimeStr, arrTimeStr) {
     let depMins = timeToMinutes(depTimeStr);
@@ -5359,7 +5724,13 @@
       fromTimeStr: formatCleanTime(fromTimeStr),
       toDisplayName: toDisplayName,
       toTimeStr: formatCleanTime(toTimeStr),
-      sortMinutes: fMins !== null ? fMins : (depMins !== null ? depMins : 9999)
+      sortMinutes: fMins !== null ? fMins : (depMins !== null ? depMins : 9999),
+      orderedStops: orderedStops,
+      fromIdx: fromIdx,
+      toIdx: toIdx,
+      fMins: fMins,
+      tMins: tMins,
+      depMins: depMins
     };
   }
 
