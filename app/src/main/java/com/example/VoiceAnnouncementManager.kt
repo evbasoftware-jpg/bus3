@@ -79,10 +79,10 @@ object VoiceAnnouncementManager {
     "SURI BUS STAND" to "সিউড়ি বাস স্ট্যান্ড",
     "LABPUR BUS STAND" to "লাভপুর বাস স্ট্যান্ড",
     "SAINTHIA" to "সাঁইথিয়া",
-    "AHMEDPUR" to "আহমেদপুর",
-    "AHMADPUR" to "আহমেদপুর",
-    "AHMADPUR STATION" to "আহমেদপুর স্টেশন",
-    "AHMEDPUR STATION" to "আহমেদপুর স্টেশন",
+    "AHMEDPUR" to "আমেদপুর",
+    "AHMADPUR" to "আমেদপুর",
+    "AHMADPUR STATION" to "আমেদপুর স্টেশন",
+    "AHMEDPUR STATION" to "আমেদপুর স্টেশন",
     "DUBRAJPUR" to "দুবরাজপুর",
     "ILLAMBAZAR" to "ইলামবাজার",
     "ILAMBAZAR" to "ইলামবাজার",
@@ -138,8 +138,8 @@ object VoiceAnnouncementManager {
     "B.D.O" to "বিডিও",
     "OFFICE" to "অফিস",
     "BDO OFFICE" to "বিডিও অফিস",
-    "BDO OFFICE AHMADPUR" to "বিডিও অফিস আহমেদপুর",
-    "BDO OFFICE AHMEDPUR" to "বিডিও অফিস আহমেদপুর",
+    "BDO OFFICE AHMADPUR" to "বিডিও অফিস আমেদপুর",
+    "BDO OFFICE AHMEDPUR" to "বিডিও অফিস আমেদপুর",
     "SDO" to "এসডিও",
     "SDO OFFICE" to "এসডিও অফিস",
     "PS" to "থানা",
@@ -160,14 +160,20 @@ object VoiceAnnouncementManager {
   fun fixBengaliPronunciation(str: String): String {
     if (str.isBlank()) return ""
     return str
-      .replace("আহমদপুর", "আহমেদপুর")
-      .replace("আহমাদপুর", "আহমেদপুর")
-      .replace("অহমদপুর", "আহমেদপুর")
-      .replace("আহামদপুর", "আহমেদপুর")
-      .replace("অহারুপুর", "আহমেদপুর")
-      .replace("আহমারপুর", "আহমেদপুর")
-      .replace(Regex("\\bআহমদ\\b"), "আহমেদ")
-      .replace(Regex("\\bআহমাদ\\b"), "আহমেদ")
+      .replace("আহমেদপুর", "আমেদপুর")
+      .replace("আহমদপুর", "আমেদপুর")
+      .replace("আহমাদপুর", "আমেদপুর")
+      .replace("অহমদপুর", "আমেদপুর")
+      .replace("আহামদপুর", "আমেদপুর")
+      .replace("অহারুপুর", "আমেদপুর")
+      .replace("অহরোপর", "আমেদপুর")
+      .replace("আহমারপুর", "আমেদপুর")
+      .replace("অহমাডপুর", "আমেদপুর")
+      .replace(Regex("(?i)\\bAHMADPUR\\b"), "আমেদপুর")
+      .replace(Regex("(?i)\\bAHMEDPUR\\b"), "আমেদপুর")
+      .replace(Regex("\\bআহমেদ\\b"), "আমেদ")
+      .replace(Regex("\\bআহমদ\\b"), "আমেদ")
+      .replace(Regex("\\bআহমাদ\\b"), "আমেদ")
   }
 
   fun toBengaliSpokenStopName(raw: String): String {
@@ -211,6 +217,11 @@ object VoiceAnnouncementManager {
         foundSuffix = repl
         break
       }
+    }
+
+    if (word == "AHMAD" || word == "AHMED") return "আমেদ" + foundSuffix
+    if (word.startsWith("AHMAD") || word.startsWith("AHMED")) {
+      return word.replace("AHMAD", "আমেদ").replace("AHMED", "আমেদ") + foundSuffix
     }
 
     val clusters = listOf(
@@ -348,9 +359,9 @@ object VoiceAnnouncementManager {
           val femaleVoices = matchingLocaleVoices.filter { isExplicitlyFemale(it) && !isExplicitlyMale(it) }
           val selectedVoice = if (femaleVoices.isNotEmpty()) {
             femaleVoices.sortedWith(
-              compareByDescending<Voice> { it.isNetworkConnectionRequired || it.name.contains("network") }
+              compareByDescending<Voice> { !it.isNetworkConnectionRequired && !it.name.contains("network") }
                 .thenByDescending { it.quality }
-            ).firstOrNull()
+            ).firstOrNull() ?: femaleVoices.firstOrNull()
           } else {
             matchingLocaleVoices.filter { !isExplicitlyMale(it) }
               .sortedByDescending { it.quality }
@@ -364,15 +375,10 @@ object VoiceAnnouncementManager {
         }
       }
 
-      // মিষ্টি, সফট, সুরেলা ও সুন্দর ভারতীয় মহিলা কণ্ঠের জন্য আদর্শ পিচ ও গতি
-      if (isFemaleSelected) {
-        tts.setPitch(1.24f)
-        tts.setSpeechRate(0.96f)
-      } else {
-        // ডিভাইসে শুধুমাত্র ডিফল্ট পুরুষ ভয়েস থাকলে পিচ বাড়িয়ে (1.52f) সফট মিষ্টি নারী কণ্ঠে রূপান্তর
-        tts.setPitch(1.52f)
-        tts.setSpeechRate(0.95f)
-      }
+      // মিষ্টি, সফট, মার্জিত ও স্পষ্ট স্বাভাবিক ভারতীয় মহিলা কণ্ঠ
+      // অতিরিক্ত পিচ বিকৃতি (ফাটা ফাটা ভাব) রোধ করতে প্রাকৃতিক পিচ ১.০২f এবং শান্ত গতি ০.৯২f
+      tts.setPitch(1.02f)
+      tts.setSpeechRate(0.92f)
     } catch (_: Exception) {}
   }
 
@@ -382,17 +388,17 @@ object VoiceAnnouncementManager {
     out = out.replace(":", " ")
 
     // সাধারণ পরিচিত শব্দ রূপান্তর
-    out = out.replace(Regex("(?i)\\bBDO\\s+OFFICE\\s+AHMADPUR\\b"), "বিডিও অফিস আহমেদপুর")
-    out = out.replace(Regex("(?i)\\bBDO\\s+OFFICE\\s+AHMEDPUR\\b"), "বিডিও অফিস আহমেদপুর")
+    out = out.replace(Regex("(?i)\\bBDO\\s+OFFICE\\s+AHMADPUR\\b"), "বিডিও অফিস আমেদপুর")
+    out = out.replace(Regex("(?i)\\bBDO\\s+OFFICE\\s+AHMEDPUR\\b"), "বিডিও অফিস আমেদপুর")
     out = out.replace(Regex("(?i)\\bBDO\\s+OFFICE\\b"), "বিডিও অফিস")
     out = out.replace(Regex("(?i)\\bBDO\\b"), "বিডিও")
     out = out.replace(Regex("(?i)\\bOFFICE\\b"), "অফিস")
     out = out.replace(Regex("(?i)\\bSDO\\s+OFFICE\\b"), "এসডিও অফিস")
     out = out.replace(Regex("(?i)\\bSDO\\b"), "এসডিও")
-    out = out.replace(Regex("(?i)\\bAHMADPUR\\s+STATION\\b"), "আহমেদপুর স্টেশন")
-    out = out.replace(Regex("(?i)\\bAHMEDPUR\\s+STATION\\b"), "আহমেদপুর স্টেশন")
-    out = out.replace(Regex("(?i)\\bAHMADPUR\\b"), "আহমেদপুর")
-    out = out.replace(Regex("(?i)\\bAHMEDPUR\\b"), "আহমেদপুর")
+    out = out.replace(Regex("(?i)\\bAHMADPUR\\s+STATION\\b"), "আমেদপুর স্টেশন")
+    out = out.replace(Regex("(?i)\\bAHMEDPUR\\s+STATION\\b"), "আমেদপুর স্টেশন")
+    out = out.replace(Regex("(?i)\\bAHMADPUR\\b"), "আমেদপুর")
+    out = out.replace(Regex("(?i)\\bAHMEDPUR\\b"), "আমেদপুর")
     out = out.replace(Regex("(?i)\\bSTATION\\b"), "স্টেশন")
     out = out.replace(Regex("(?i)\\bTETULTALA\\b"), "তেঁতুলতলা")
     out = out.replace(Regex("(?i)\\bKADAMTALA\\b"), "কদমতলা")
@@ -402,7 +408,7 @@ object VoiceAnnouncementManager {
     out = out.replace(Regex("(?i)\\bBOLPUR\\b"), "বোলপুর")
     out = out.replace(Regex("(?i)\\bSURI\\b"), "সিউড়ি")
 
-    // আহমদপুর যাতে আহমারপুর উচ্চারিত না হয়ে নির্ভুল "আহমেদপুর" উচ্চারিত হয়
+    // আহমদপুর যাতে "অহারুপুর" বা "আহমারপুর" উচ্চারিত না হয়ে স্পষ্ট "আমেদপুর" উচ্চারিত হয়
     out = fixBengaliPronunciation(out)
 
     // টেক্সটে যদি এখনো কোনো ইংরেজি ক্যাপিটাল শব্দ বা নাম থাকে, তা স্বয়ংক্রিয়ভাবে বাংলায় রূপান্তর করা

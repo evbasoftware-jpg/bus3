@@ -2764,7 +2764,7 @@
     "SURI BUS STAND": "সিউড়ি বাস স্ট্যান্ড",
     "LABPUR BUS STAND": "লাভপুর বাস স্ট্যান্ড",
     "SAINTHIA": "সাঁইথিয়া",
-    "AHMEDPUR": "আহমেদপুর",
+    "AHMEDPUR": "আমেদপুর",
     "DUBRAJPUR": "দুবরাজপুর",
     "ILLAMBAZAR": "ইলামবাজার",
     "ILAMBAZAR": "ইলামবাজার",
@@ -2817,16 +2817,16 @@
     "COLLEGE MORE": "কলেজ মোড়",
     "COURT MORE": "কোর্ট মোড়",
     "BUS STAND": "বাস স্ট্যান্ড",
-    "AHMADPUR": "আহমেদপুর",
-    "AHMADPUR STATION": "আহমেদপুর স্টেশন",
-    "AHMEDPUR STATION": "আহমেদপুর স্টেশন",
+    "AHMADPUR": "আমেদপুর",
+    "AHMADPUR STATION": "আমেদপুর স্টেশন",
+    "AHMEDPUR STATION": "আমেদপুর স্টেশন",
     "BDO": "বিডিও",
     "B.D.O.": "বিডিও",
     "B.D.O": "বিডিও",
     "OFFICE": "অফিস",
     "BDO OFFICE": "বিডিও অফিস",
-    "BDO OFFICE AHMADPUR": "বিডিও অফিস আহমেদপুর",
-    "BDO OFFICE AHMEDPUR": "বিডিও অফিস আহমেদপুর",
+    "BDO OFFICE AHMADPUR": "বিডিও অফিস আমেদপুর",
+    "BDO OFFICE AHMEDPUR": "বিডিও অফিস আমেদপুর",
     "SDO": "এসডিও",
     "SDO OFFICE": "এসডিও অফিস",
     "PS": "থানা",
@@ -2876,6 +2876,11 @@
         foundSuffix = repl;
         break;
       }
+    }
+
+    if (w === "AHMAD" || w === "AHMED") return "আমেদ" + foundSuffix;
+    if (w.startsWith("AHMAD") || w.startsWith("AHMED")) {
+      return w.replace("AHMAD", "আমেদ").replace("AHMED", "আমেদ") + foundSuffix;
     }
 
     const clusters = [
@@ -2967,14 +2972,20 @@
   function fixBengaliPronunciation(str) {
     if (!str) return "";
     return str
-      .replace(/আহমদপুর/g, "আহমেদপুর")
-      .replace(/আহমাদপুর/g, "আহমেদপুর")
-      .replace(/অহমদপুর/g, "আহমেদপুর")
-      .replace(/আহামদপুর/g, "আহমেদপুর")
-      .replace(/অহারুপুর/g, "আহমেদপুর")
-      .replace(/আহমারপুর/g, "আহমেদপুর")
-      .replace(/\bআহমদ\b/g, "আহমেদ")
-      .replace(/\bআহমাদ\b/g, "আহমেদ");
+      .replace(/আহমেদপুর/g, "আমেদপুর")
+      .replace(/আহমদপুর/g, "আমেদপুর")
+      .replace(/আহমাদপুর/g, "আমেদপুর")
+      .replace(/অহমদপুর/g, "আমেদপুর")
+      .replace(/আহামদপুর/g, "আমেদপুর")
+      .replace(/অহারুপুর/g, "আমেদপুর")
+      .replace(/অহরোপর/g, "আমেদপুর")
+      .replace(/আহমারপুর/g, "আমেদপুর")
+      .replace(/অহমাডপুর/g, "আমেদপুর")
+      .replace(/\bAHMADPUR\b/gi, "আমেদপুর")
+      .replace(/\bAHMEDPUR\b/gi, "আমেদপুর")
+      .replace(/\bআহমেদ\b/g, "আমেদ")
+      .replace(/\bআহমদ\b/g, "আমেদ")
+      .replace(/\bআহমাদ\b/g, "আমেদ");
   }
 
   // স্টপের নাম কণ্ঠ ঘোষণার জন্য প্রস্তুতকরণ
@@ -3099,9 +3110,9 @@
           utter.voice = femaleVoice;
         }
 
-        // মিষ্টি, সুরেলা ও নম্র নারী কণ্ঠের জন্য আদর্শ পিচ ও গতি (Female voice tone)
-        utter.pitch = isRealFemale ? 1.25 : 1.48;
-        utter.rate = 0.95;
+        // মিষ্টি, সুরেলা, নরম ও স্বাভাবিক ভারতীয় নারী কণ্ঠ (কোনো ফাটা ভাব ছাড়া প্রাকৃতিক পিচ ও শান্ত গতি)
+        utter.pitch = 1.02;
+        utter.rate = 0.92;
 
         let hasEnded = false;
         utter.onend = function() {
