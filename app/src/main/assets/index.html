@@ -232,6 +232,91 @@
       color: #ffffff !important;
     }
 
+    /* বিজ্ঞাপন স্লাইডার (আঙুল দিয়ে ডান/বাম সোয়াইপ ও স্মুথ অ্যানিমেশন) */
+    .app-ad-card a {
+      -webkit-user-drag: none;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: pan-y;
+    }
+    .ad-carousel-viewport {
+      position: relative;
+      width: 100%;
+      overflow: hidden;
+      touch-action: pan-y;
+      user-select: none;
+      -webkit-user-select: none;
+      background: #ffffff;
+    }
+    .ad-carousel-track {
+      display: flex;
+      width: 100%;
+      will-change: transform;
+      transition: transform 0.46s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    .ad-carousel-slide {
+      flex: 0 0 100%;
+      width: 100%;
+      min-width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #ffffff;
+    }
+    .ad-carousel-slide img {
+      width: 100%;
+      max-height: 165px;
+      object-fit: contain;
+      display: block;
+      margin: 0 auto;
+      pointer-events: none;
+      -webkit-user-drag: none;
+      user-select: none;
+    }
+    .ad-nav-btn {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      z-index: 12;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      border: none;
+      background: rgba(15, 23, 42, 0.42);
+      backdrop-filter: blur(4px);
+      color: #ffffff;
+      font-size: 16px;
+      font-weight: 800;
+      line-height: 1;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      padding: 0;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.22);
+      transition: background 0.2s ease, transform 0.15s ease;
+      touch-action: manipulation;
+    }
+    .ad-nav-btn:active {
+      background: rgba(2, 136, 209, 0.85);
+      transform: translateY(-50%) scale(0.9);
+    }
+    .ad-nav-prev { left: 6px; }
+    .ad-nav-next { right: 6px; }
+    .ad-dot-item {
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: #cbd5e1;
+      cursor: pointer;
+      transition: width 0.32s cubic-bezier(0.22, 1, 0.36, 1), background-color 0.28s ease;
+      display: inline-block;
+    }
+    .ad-dot-item.active {
+      width: 18px;
+      background: #0288d1;
+    }
+
     .time-picker-row { display: flex; gap: 6px; }
     .time-picker-row input { flex: 2; margin: 5px 0 10px; }
     .ampm-select {
@@ -9948,11 +10033,11 @@ https://aionline.in.net`;
   let allSheetAdsList = []; // [ { id, imageName, area, latitude, longitude, radiusKm, contactNumber, startTime, stopTime, src } ]
   
   let appSlotState = {
-    ads1: { ads: [], index: 0, timer: null, currentAd: null },
-    ads2: { ads: [], index: 0, timer: null, currentAd: null },
-    ads3: { ads: [], index: 0, timer: null, currentAd: null },
-    ads4: { ads: [], index: 0, timer: null, currentAd: null },
-    ads5: { ads: [], index: 0, timer: null, currentAd: null }
+    ads1: { ads: [], index: 0, timer: null, currentAd: null, lastSig: "", trackBuilt: false, isDragging: false, lastSwipeAt: 0, loopSnapTimer: null, gesturesAttached: false },
+    ads2: { ads: [], index: 0, timer: null, currentAd: null, lastSig: "", trackBuilt: false, isDragging: false, lastSwipeAt: 0, loopSnapTimer: null, gesturesAttached: false },
+    ads3: { ads: [], index: 0, timer: null, currentAd: null, lastSig: "", trackBuilt: false, isDragging: false, lastSwipeAt: 0, loopSnapTimer: null, gesturesAttached: false },
+    ads4: { ads: [], index: 0, timer: null, currentAd: null, lastSig: "", trackBuilt: false, isDragging: false, lastSwipeAt: 0, loopSnapTimer: null, gesturesAttached: false },
+    ads5: { ads: [], index: 0, timer: null, currentAd: null, lastSig: "", trackBuilt: false, isDragging: false, lastSwipeAt: 0, loopSnapTimer: null, gesturesAttached: false }
   };
 
   async function syncRemoteDynamicImages() {
@@ -10398,63 +10483,328 @@ https://aionline.in.net`;
         if (slotElem) slotElem.style.display = "none";
         if (state.timer) { clearInterval(state.timer); state.timer = null; }
         state.currentAd = null;
+        state.lastSig = "";
+        state.trackBuilt = false;
       } else {
         if (slotElem) {
-          // গ্রিডের ক্ষেত্রে স্প্যান সঠিক রাখা
           if (slot === 'ads2' || slot === 'ads3') {
             slotElem.style.gridColumn = "1 / -1";
           }
           slotElem.style.display = "block";
         }
-        if (state.index >= eligible.length) state.index = 0;
-        displaySlotAd(slot, state.index);
-        setupSlotSlideshow(slot);
+        let sig = eligible.map(a => `${a.src}|${a.isGeoMatch ? 1 : 0}|${a.contactNumber || ''}|${a.link || ''}`).join("||");
+        if (state.lastSig !== sig || !state.trackBuilt) {
+          state.lastSig = sig;
+          if (state.index >= eligible.length) state.index = 0;
+          buildSlotCarouselTrack(slot);
+          displaySlotAd(slot, state.index, false);
+          setupSlotSlideshow(slot);
+        } else if (!state.timer && eligible.length > 1) {
+          setupSlotSlideshow(slot);
+        }
       }
     });
   }
 
-  // ৬. নির্দিষ্ট স্লটে বিজ্ঞাপন প্রদর্শন
-  function displaySlotAd(slot, index) {
+  function ensureSlotCarouselStructure(slot) {
+    let linkEl = document.getElementById("ad_link_" + slot);
+    if (!linkEl) return null;
+    let card = linkEl.closest(".app-ad-card");
+    let viewport = document.getElementById("ad_viewport_" + slot);
+    if (!viewport) {
+      linkEl.innerHTML = `
+        <div id="ad_viewport_${slot}" class="ad-carousel-viewport">
+          <div id="ad_track_${slot}" class="ad-carousel-track"></div>
+        </div>
+      `;
+      viewport = document.getElementById("ad_viewport_" + slot);
+    }
+    if (card && !document.getElementById("ad_prev_" + slot)) {
+      let prevBtn = document.createElement("button");
+      prevBtn.id = "ad_prev_" + slot;
+      prevBtn.type = "button";
+      prevBtn.className = "ad-nav-btn ad-nav-prev notranslate";
+      prevBtn.setAttribute("aria-label", "Previous Ad");
+      prevBtn.innerText = "‹";
+      prevBtn.onclick = function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        stepSlotSlide(slot, -1);
+      };
+
+      let nextBtn = document.createElement("button");
+      nextBtn.id = "ad_next_" + slot;
+      nextBtn.type = "button";
+      nextBtn.className = "ad-nav-btn ad-nav-next notranslate";
+      nextBtn.setAttribute("aria-label", "Next Ad");
+      nextBtn.innerText = "›";
+      nextBtn.onclick = function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        stepSlotSlide(slot, 1);
+      };
+
+      card.appendChild(prevBtn);
+      card.appendChild(nextBtn);
+    }
+    attachSlotSwipeHandlers(slot, viewport);
+    return {
+      viewport,
+      track: document.getElementById("ad_track_" + slot)
+    };
+  }
+
+  function buildSlotCarouselTrack(slot) {
     let state = appSlotState[slot];
     if (!state || !state.ads || state.ads.length === 0) return;
+    let struct = ensureSlotCarouselStructure(slot);
+    if (!struct || !struct.track) return;
 
-    let ad = state.ads[index % state.ads.length];
-    state.currentAd = ad;
-    state.index = index % state.ads.length;
+    let ads = state.ads;
+    let slideItems = [];
+    if (ads.length === 1) {
+      slideItems = [{ ad: ads[0], realIdx: 0 }];
+    } else {
+      slideItems.push({ ad: ads[ads.length - 1], realIdx: ads.length - 1 });
+      ads.forEach((a, i) => slideItems.push({ ad: a, realIdx: i }));
+      slideItems.push({ ad: ads[0], realIdx: 0 });
+    }
 
-    let img = document.getElementById("ad_img_" + slot);
+    state.failedSlides = new Set();
+    struct.track.innerHTML = slideItems.map((item, sIdx) => `
+      <div class="ad-carousel-slide" data-real-idx="${item.realIdx}">
+        <img src="${item.ad.src}" alt="Advertisement" draggable="false"
+             onload="handleAdSlotImgSuccess('${slot}', ${item.realIdx})"
+             onerror="handleAdSlotImgError('${slot}', ${item.realIdx}, ${sIdx})">
+      </div>
+    `).join("");
+
+    let prevBtn = document.getElementById("ad_prev_" + slot);
+    let nextBtn = document.getElementById("ad_next_" + slot);
+    if (prevBtn) prevBtn.style.display = ads.length > 1 ? "flex" : "none";
+    if (nextBtn) nextBtn.style.display = ads.length > 1 ? "flex" : "none";
+
+    state.trackBuilt = true;
+  }
+
+  function setTrackTransformPercent(track, visualIdx, dragPx, animate) {
+    if (!track) return;
+    if (animate) {
+      track.style.transition = "transform 0.46s cubic-bezier(0.22, 1, 0.36, 1)";
+    } else {
+      track.style.transition = "none";
+    }
+    let offsetPx = dragPx ? ` + ${dragPx}px` : "";
+    track.style.transform = `translate3d(calc(-${visualIdx * 100}%${offsetPx}), 0, 0)`;
+  }
+
+  function updateSlotAdBadges(slot, ad) {
+    if (!ad) return;
     let geoBadge = document.getElementById("ad_geo_badge_" + slot);
     let badgeText = document.getElementById("ad_badge_text_" + slot);
+    if (geoBadge) geoBadge.style.display = ad.isGeoMatch ? "block" : "none";
+    if (badgeText) badgeText.innerText = ad.isGeoMatch ? "নিকটস্থ অফার" : "বিজ্ঞাপন";
+  }
 
-    if (img) {
-      img.style.opacity = "0.3";
-      setTimeout(() => {
-        img.src = ad.src;
-        img.style.opacity = "1";
-        img.style.display = "block";
-      }, 120);
+  // ৬. নির্দিষ্ট স্লটে বিজ্ঞাপন প্রদর্শন (স্মুথ স্লাইড অ্যানিমেশনসহ)
+  function displaySlotAd(slot, index, animate = true) {
+    let state = appSlotState[slot];
+    if (!state || !state.ads || state.ads.length === 0) return;
+    if (!state.trackBuilt) buildSlotCarouselTrack(slot);
+
+    let len = state.ads.length;
+    let normIdx = ((index % len) + len) % len;
+    state.index = normIdx;
+    state.currentAd = state.ads[normIdx];
+
+    let track = document.getElementById("ad_track_" + slot);
+    if (track) {
+      if (state.loopSnapTimer) {
+        clearTimeout(state.loopSnapTimer);
+        state.loopSnapTimer = null;
+      }
+      let visualIdx = (len > 1) ? (normIdx + 1) : 0;
+      if (animate) {
+        void track.offsetWidth;
+      }
+      setTrackTransformPercent(track, visualIdx, 0, animate);
     }
 
-    if (geoBadge) {
-      geoBadge.style.display = ad.isGeoMatch ? "block" : "none";
-    }
-
-    if (badgeText) {
-      badgeText.innerText = ad.isGeoMatch ? "নিকটস্থ অফার" : "বিজ্ঞাপন";
-    }
-
+    updateSlotAdBadges(slot, state.currentAd);
     renderSlotDots(slot);
+  }
+
+  function stepSlotSlide(slot, delta) {
+    let state = appSlotState[slot];
+    if (!state || !state.ads || state.ads.length === 0) return;
+    let len = state.ads.length;
+    if (len === 1) {
+      displaySlotAd(slot, 0, true);
+      return;
+    }
+
+    let track = document.getElementById("ad_track_" + slot);
+    if (!track) {
+      displaySlotAd(slot, state.index + delta, true);
+      setupSlotSlideshow(slot);
+      return;
+    }
+
+    if (state.loopSnapTimer) {
+      clearTimeout(state.loopSnapTimer);
+      state.loopSnapTimer = null;
+    }
+
+    let prevIdx = state.index;
+    let nextIdx = ((prevIdx + delta) % len + len) % len;
+    state.index = nextIdx;
+    state.currentAd = state.ads[nextIdx];
+
+    let targetVisual = prevIdx + delta + 1; // 0 = clone of last, len + 1 = clone of first
+    if (targetVisual < 0) targetVisual = 0;
+    if (targetVisual > len + 1) targetVisual = len + 1;
+
+    setTrackTransformPercent(track, targetVisual, 0, true);
+    updateSlotAdBadges(slot, state.currentAd);
+    renderSlotDots(slot);
+
+    if (targetVisual === 0 || targetVisual === len + 1) {
+      let realVisual = nextIdx + 1;
+      state.loopSnapTimer = setTimeout(() => {
+        state.loopSnapTimer = null;
+        if (!state.isDragging) {
+          setTrackTransformPercent(track, realVisual, 0, false);
+        }
+      }, 470);
+    }
+
+    setupSlotSlideshow(slot);
+  }
+
+  function attachSlotSwipeHandlers(slot, viewport) {
+    let state = appSlotState[slot];
+    if (!state || !viewport || state.gesturesAttached) return;
+    state.gesturesAttached = true;
+
+    let startX = 0;
+    let startY = 0;
+    let startTime = 0;
+    let curDx = 0;
+    let isHorizontal = null;
+    let activePointer = false;
+
+    function getBaseVisualIdx() {
+      return (state.ads && state.ads.length > 1) ? (state.index + 1) : 0;
+    }
+
+    function onStart(clientX, clientY) {
+      if (!state.ads || state.ads.length === 0) return;
+      if (state.loopSnapTimer) {
+        clearTimeout(state.loopSnapTimer);
+        state.loopSnapTimer = null;
+        let track = document.getElementById("ad_track_" + slot);
+        setTrackTransformPercent(track, getBaseVisualIdx(), 0, false);
+      }
+      activePointer = true;
+      state.isDragging = true;
+      startX = clientX;
+      startY = clientY;
+      startTime = Date.now();
+      curDx = 0;
+      isHorizontal = null;
+      if (state.timer) {
+        clearInterval(state.timer);
+        state.timer = null;
+      }
+    }
+
+    function onMove(clientX, clientY, e) {
+      if (!activePointer) return;
+      let dx = clientX - startX;
+      let dy = clientY - startY;
+
+      if (isHorizontal === null && (Math.abs(dx) > 6 || Math.abs(dy) > 6)) {
+        isHorizontal = Math.abs(dx) > Math.abs(dy);
+      }
+
+      if (isHorizontal === true) {
+        if (e && e.cancelable) e.preventDefault();
+        curDx = (state.ads.length <= 1) ? (dx * 0.25) : dx;
+        let track = document.getElementById("ad_track_" + slot);
+        setTrackTransformPercent(track, getBaseVisualIdx(), curDx, false);
+      } else if (isHorizontal === false) {
+        activePointer = false;
+        state.isDragging = false;
+        setupSlotSlideshow(slot);
+      }
+    }
+
+    function onEnd() {
+      if (!activePointer) return;
+      activePointer = false;
+      state.isDragging = false;
+
+      if (isHorizontal === true) {
+        if (Math.abs(curDx) > 8) {
+          state.lastSwipeAt = Date.now();
+        }
+        let dt = Date.now() - startTime;
+        let width = viewport.clientWidth || 300;
+        let threshold = Math.min(55, width * 0.16);
+        let fastSwipe = dt < 260 && Math.abs(curDx) > 18;
+
+        if (state.ads.length > 1 && (curDx < -threshold || (fastSwipe && curDx < 0))) {
+          stepSlotSlide(slot, 1);
+          return;
+        } else if (state.ads.length > 1 && (curDx > threshold || (fastSwipe && curDx > 0))) {
+          stepSlotSlide(slot, -1);
+          return;
+        } else {
+          let track = document.getElementById("ad_track_" + slot);
+          setTrackTransformPercent(track, getBaseVisualIdx(), 0, true);
+        }
+      }
+      setupSlotSlideshow(slot);
+    }
+
+    viewport.addEventListener("touchstart", (e) => {
+      if (e.touches && e.touches.length === 1) {
+        onStart(e.touches[0].clientX, e.touches[0].clientY);
+      }
+    }, { passive: true });
+
+    viewport.addEventListener("touchmove", (e) => {
+      if (e.touches && e.touches.length === 1) {
+        onMove(e.touches[0].clientX, e.touches[0].clientY, e);
+      }
+    }, { passive: false });
+
+    viewport.addEventListener("touchend", () => onEnd(), { passive: true });
+    viewport.addEventListener("touchcancel", () => onEnd(), { passive: true });
+
+    // ডেস্কটপ মাউস ড্র্যাগ সাপোর্ট
+    viewport.addEventListener("mousedown", (e) => {
+      if (e.button === 0) onStart(e.clientX, e.clientY);
+    });
+    window.addEventListener("mousemove", (e) => {
+      if (activePointer) onMove(e.clientX, e.clientY, e);
+    });
+    window.addEventListener("mouseup", () => {
+      if (activePointer) onEnd();
+    });
   }
 
   // ৭. স্লাইডশো ব্যবস্থাপনা
   function setupSlotSlideshow(slot) {
     let state = appSlotState[slot];
+    if (!state) return;
     if (state.timer) { clearInterval(state.timer); state.timer = null; }
     if (!state.ads || state.ads.length <= 1) return;
 
     state.timer = setInterval(() => {
-      state.index = (state.index + 1) % state.ads.length;
-      displaySlotAd(slot, state.index);
+      if (!state.isDragging) {
+        stepSlotSlide(slot, 1);
+      }
     }, 5000);
   }
 
@@ -10470,28 +10820,33 @@ https://aionline.in.net`;
 
     dotsBox.style.display = "flex";
     dotsBox.innerHTML = state.ads.map((_, i) => `
-      <span style="width: 7px; height: 7px; border-radius: 50%; background: ${i === state.index ? '#0288d1' : '#cbd5e1'}; cursor: pointer; transition: all 0.2s;" onclick="selectSlotAdSlide('${slot}', ${i})"></span>
+      <span class="ad-dot-item ${i === state.index ? 'active' : ''}" onclick="selectSlotAdSlide('${slot}', ${i})"></span>
     `).join("");
   }
 
   function selectSlotAdSlide(slot, idx) {
     let state = appSlotState[slot];
     if (state && state.ads && idx >= 0 && idx < state.ads.length) {
-      displaySlotAd(slot, idx);
+      displaySlotAd(slot, idx, true);
       setupSlotSlideshow(slot);
     }
   }
 
-  function handleAdSlotImgError(slot) {
-    let elem = document.getElementById("ad_img_" + slot);
-    if (elem) elem.style.display = "none";
+  function handleAdSlotImgError(slot, realIdx) {
+    let state = appSlotState[slot];
+    if (!state) return;
+    if (realIdx !== undefined) {
+      if (!state.failedSlides) state.failedSlides = new Set();
+      state.failedSlides.add(realIdx);
+      if (state.ads && state.failedSlides.size < state.ads.length) {
+        return;
+      }
+    }
     let container = document.getElementById("ad_slot_" + slot);
     if (container) container.style.display = "none";
   }
 
   function handleAdSlotImgSuccess(slot) {
-    let elem = document.getElementById("ad_img_" + slot);
-    if (elem) elem.style.display = "block";
     let container = document.getElementById("ad_slot_" + slot);
     if (container) container.style.display = "block";
   }
@@ -10504,6 +10859,7 @@ https://aionline.in.net`;
   function onAppAdClicked(slot) {
     let state = appSlotState[slot];
     if (!state || !state.currentAd) return;
+    if (state.lastSwipeAt && (Date.now() - state.lastSwipeAt < 350)) return;
     let ad = state.currentAd;
     let contact = (ad.contactNumber || "").trim();
     let link = (ad.link || "").trim();
