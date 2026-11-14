@@ -387,7 +387,79 @@ object VoiceAnnouncementManager {
     } catch (_: Exception) {}
   }
 
-  fun formatTextForTts(text: String): String {
+  val HINDI_STOP_DICTIONARY = mapOf(
+    "LABPUR" to "लाभपुर",
+    "SURI" to "सिउड़ी",
+    "BOLPUR" to "बोलपुर",
+    "KIRNAHAR" to "कीर्णहार",
+    "SAINTHIA" to "सैंथिया",
+    "AHMEDPUR" to "अहमदपुर",
+    "AHMADPUR" to "अहमदपुर",
+    "AHMADPUR STATION" to "अहमदपुर स्टेशन",
+    "AHMEDPUR STATION" to "अहमदपुर स्टेशन",
+    "DUBRAJPUR" to "दुबराजपुर",
+    "ILLAMBAZAR" to "इलामबाजार",
+    "RAMPURHAT" to "रामपुरहाट",
+    "NALHATI" to "नलहाटी",
+    "MURARAI" to "मुरारई",
+    "MALLARPUR" to "मल्लारपुर",
+    "MAYURESWAR" to "मयूरेश्वर",
+    "PRANTIK" to "प्रांतिक",
+    "KANKALITALA" to "कंकालीतला",
+    "NANOOR" to "नानूर",
+    "GUSHKARA" to "गुसकरा",
+    "BARDHAMAN" to "बर्धमान",
+    "BURDWAN" to "बर्धमान",
+    "DURGAPUR" to "दुर्गापुर",
+    "ASANSOL" to "आसनसोल",
+    "KOLKATA" to "कोलकाता",
+    "CHOWHATTA" to "चौहाट्टा",
+    "TETULTALA" to "तेतुलतला",
+    "KADAMTALA" to "कदमताला",
+    "BUS STAND" to "बस स्टैंड",
+    "STATION" to "स्टेशन",
+    "BDO OFFICE" to "बीडीओ ऑफिस",
+    "BDO OFFICE AHMADPUR" to "बीडीओ ऑफिस अहमदपुर"
+  )
+
+  fun toHindiSpokenStopName(raw: String): String {
+    val clean = raw.replace(Regex("\\(.*?\\)"), "").replace(Regex("[🚏🚌📍🏁]"), "").trim()
+    if (clean.isBlank() || clean == "--") return ""
+    val upper = clean.uppercase()
+    HINDI_STOP_DICTIONARY[upper]?.let { return it }
+    val parts = upper.split(Regex("\\s+"))
+    if (parts.size > 1) {
+      val mapped = parts.map { p -> HINDI_STOP_DICTIONARY[p] ?: toTitleCaseWord(p) }
+      return mapped.joinToString(" ")
+    }
+    return toTitleCaseWord(clean)
+  }
+
+  private fun toTitleCaseWord(input: String): String {
+    if (input.isBlank()) return ""
+    return input.trim().split(Regex("\\s+")).joinToString(" ") { w ->
+      if (w.length <= 1) w.uppercase()
+      else w.lowercase().replaceFirstChar { it.uppercase() }
+    }
+  }
+
+  fun formatTextForTts(text: String, langCode: String = "bn"): String {
+    val baseLang = langCode.lowercase().substringBefore("-")
+    if (baseLang != "bn") {
+      // অন্যান্য ভাষার ক্ষেত্রে বাংলা রূপান্তর করবেন না; কেবল : ও ALL-CAPS স্বাভাবিক করুন
+      var clean = text.replace(":", " ")
+        .replace(Regex("(?i)\\bB\\.D\\.O\\.?\\b"), "B D O")
+        .replace(Regex("(?i)\\bS\\.D\\.O\\.?\\b"), "S D O")
+      if (baseLang == "en") {
+        clean = Regex("\\b[A-Z]{4,}\\b").replace(clean) { m -> toTitleCaseWord(m.value) }
+      } else if (baseLang == "hi") {
+        clean = Regex("\\b[A-Za-z]{2,}(?:\\s+[A-Za-z]{2,})*\\b").replace(clean) { m ->
+          toHindiSpokenStopName(m.value)
+        }
+      }
+      return clean.replace(Regex("\\s+"), " ").trim()
+    }
+
     var out = text
     // কোলন (:) বাদ দেওয়া যাতে টিটিএস অপ্রয়োজনীয় বিরতি বা অদ্ভুত উচ্চারণ না করে
     out = out.replace(":", " ")
@@ -431,8 +503,8 @@ object VoiceAnnouncementManager {
 
   fun speak(text: String, langCode: String = "bn") {
     if (text.isBlank()) return
-    val preparedText = formatTextForTts(text)
     val curLang = if (langCode.isBlank()) "bn" else langCode
+    val preparedText = formatTextForTts(text, curLang)
 
     val now = System.currentTimeMillis()
     // একই টেক্সট ১০ সেকেন্ডের মধ্যে পুনরাবৃত্তি করবেন না
@@ -500,14 +572,18 @@ object VoiceAnnouncementManager {
 
     val targetLang = when (langCode.lowercase()) {
       "en" -> "en-IN"
+      "bn" -> "bn"
       "hi" -> "hi"
-      else -> "bn"
+      "zh-cn" -> "zh-CN"
+      "zh-tw" -> "zh-TW"
+      else -> langCode.lowercase()
     }
 
     ioScope.launch {
       try {
         val encodedText = URLEncoder.encode(text, "UTF-8")
-        val urlStr = "https://translate.google.com/translate_tts?ie=UTF-8&q=$encodedText&tl=$targetLang&client=tw-ob"
+        val encodedLang = URLEncoder.encode(targetLang, "UTF-8")
+        val urlStr = "https://translate.google.com/translate_tts?ie=UTF-8&q=$encodedText&tl=$encodedLang&client=tw-ob"
         val url = URL(urlStr)
 
         val connection = url.openConnection() as HttpURLConnection
@@ -662,7 +738,8 @@ object VoiceAnnouncementManager {
   }
 
   private fun getLocaleForLanguage(langCode: String): Locale {
-    return when (langCode.lowercase()) {
+    val norm = langCode.trim().lowercase()
+    return when (norm) {
       "bn" -> Locale("bn", "IN")
       "hi" -> Locale("hi", "IN")
       "en" -> Locale("en", "IN")
@@ -674,7 +751,11 @@ object VoiceAnnouncementManager {
       "ml" -> Locale("ml", "IN")
       "pa" -> Locale("pa", "IN")
       "or" -> Locale("or", "IN")
-      else -> Locale("bn", "IN")
+      "as" -> Locale("as", "IN")
+      "ur" -> Locale("ur", "PK")
+      "ne" -> Locale("ne", "NP")
+      "si" -> Locale("si", "LK")
+      else -> Locale.forLanguageTag(langCode)
     }
   }
 }

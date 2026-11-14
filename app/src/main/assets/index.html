@@ -23,15 +23,6 @@
       user-select: text;
     }
 
-    #goog-gt-tt, .goog-te-balloon-frame, .goog-tooltip, .goog-tooltip:hover {
-      display: none !important;
-      visibility: hidden !important;
-    }
-    .goog-text-highlight {
-      background-color: transparent !important;
-      box-shadow: none !important;
-    }
-
     .translate-top-bar{ 
       display:flex; 
       align-items:center; 
@@ -47,17 +38,18 @@
     }
     .translate-top-bar span{ font-size:13px; font-weight:800; color:#1e293b; display: flex; align-items: center; gap: 4px; }
 
-    #google_translate_element { 
-      position: absolute !important; 
-      left: -9999px !important; 
-      width: 1px !important; 
-      height: 1px !important; 
-      overflow: hidden !important; 
-      opacity: 0 !important; 
-      pointer-events: none !important; 
+    .lang-spinner {
+      display: inline-block;
+      font-size: 12px;
+      animation: spinSlow 1.1s linear infinite;
     }
-    .goog-te-gadget { font-size: 0 !important; line-height: 0 !important; }
-    .goog-te-gadget span, .goog-te-gadget a, .goog-logo-link { display: none !important; }
+    .lang-spinner.hidden {
+      display: none !important;
+    }
+    @keyframes spinSlow {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
 
     #appLanguageSelect { display: none !important; }
 
@@ -114,7 +106,6 @@
       font-weight: 700;
     }
 
-    iframe.goog-te-banner-frame { display: none !important; visibility: hidden !important; }
     body { top: 0px !important; }
 
     input, select, textarea {
@@ -1411,14 +1402,15 @@
   </div>
 </div>
 
-<!-- সবার উপরে গুগলের সবগুলো ভাষা সহ ল্যাঙ্গুয়েজ সিলেকশন অপশন -->
+<!-- সবার উপরে ট্রেনের মতো পরিষ্কার নিজস্ব ভাষা নির্বাচন বার (কোনো গুগল ব্যানার ছাড়াই) -->
 <div class="translate-top-bar" id="translateBar" onclick="openLanguageModal()">
   <span>🌐 ভাষা (LANGUAGE):</span>
-  <button type="button" class="lang-picker-btn" id="langPickerBtn" onclick="openLanguageModal(); event.stopPropagation();">
-    <span id="currentLangLabel">বাংলা (BENGALI)</span>
-    <span class="lang-arrow">▼</span>
+  <button type="button" class="lang-picker-btn notranslate" id="langPickerBtn" onclick="openLanguageModal(); event.stopPropagation();">
+    <span id="currentLangLabel" class="notranslate">বাংলা (BENGALI)</span>
+    <span id="langSpinner" class="lang-spinner hidden notranslate">⏳</span>
+    <span class="lang-arrow notranslate">▼</span>
   </button>
-  <select id="appLanguageSelect" style="display:none;" onchange="onAppLanguageChange(this.value)">
+  <select id="appLanguageSelect" class="notranslate" style="display:none;" onchange="onAppLanguageChange(this.value)">
     <option value="bn">বাংলা (Bengali)</option>
     <option value="en">English</option>
     <option value="hi">हिन्दी (Hindi)</option>
@@ -1450,12 +1442,11 @@
     <option value="nl">Nederlands (Dutch)</option>
     <option value="pl">Polski (Polish)</option>
     <option value="fa">فارسی (Persian)</option>
-    <option value="ne">নেपाली (Nepali)</option>
+    <option value="ne">नेपाली (Nepali)</option>
     <option value="si">සිංහල (Sinhala)</option>
     <option value="my">မြန်မာ (Burmese)</option>
     <option value="sw">Kiswahili (Swahili)</option>
   </select>
-  <div id="google_translate_element"></div>
 </div>
 
 <!-- ভাষা নির্বাচনের কাস্টম মডাল (Language Selection Modal) -->
@@ -1472,7 +1463,7 @@
       <input type="text" id="langSearchInput" placeholder="🔍 ভাষা খুঁজুন (যেমন: Hindi, English, বাংলা, Arabic)..." oninput="filterLanguageList(this.value)" style="margin: 0; padding: 9px 12px; font-size: 14px; border: 1.5px solid #cbd5e1; border-radius: 8px;">
     </div>
     
-    <div id="languageOptionsList" style="overflow-y: auto; flex: 1; max-height: 55vh; display: flex; flex-direction: column; gap: 6px; padding-right: 2px;">
+    <div id="languageOptionsList" class="notranslate" style="overflow-y: auto; flex: 1; max-height: 55vh; display: flex; flex-direction: column; gap: 6px; padding-right: 2px;">
     </div>
   </div>
 </div>
@@ -2460,17 +2451,6 @@
 </div>
   
 <script type="text/javascript">
-  function googleTranslateElementInit() {
-    try {
-      new google.translate.TranslateElement({
-        pageLanguage: 'bn',
-        autoDisplay: false
-      }, 'google_translate_element');
-    } catch(e) {
-      console.log("Google translate init error:", e);
-    }
-  }
-
   const APP_LANGUAGES = [
     // প্রধান ভারতীয় ও আঞ্চলিক ভাষা (Indian & Regional Languages)
     { code: "bn", name: "বাংলা", eng: "Bengali" },
@@ -2608,6 +2588,680 @@
     { code: "zu", name: "isiZulu", eng: "Zulu" }
   ];
 
+  // ==========================================
+  // পরিষ্কার নিজস্ব অনুবাদ ইঞ্জিন (Train/index.html স্টাইলে - কোনো গুগল ব্যানার ছাড়াই)
+  // ==========================================
+  const PREBUILT_UI_DICT = {
+    en: {
+      "🌐 ভাষা (LANGUAGE):": "🌐 LANGUAGE:",
+      "🚌 বাস লাইভ লোকেশন (ভারত)": "🚌 BUS LIVE LOCATION (INDIA)",
+      "+ নতুন বাসের তথ্য যুক্ত করুন": "+ ADD NEW BUS INFORMATION",
+      "এই জায়গাটি বাস স্টপ হিসাবে যুক্ত করুন": "ADD THIS PLACE AS A BUS STOP",
+      "আপনি কোথা থেকে বাসে উঠবেন?": "WHERE DO YOU CATCH THE BUS FROM?",
+      "শুরু বা মাঝের যেকোনো স্থান...": "Anywhere in the beginning or middle...",
+      "কোথায় যাবেন?": "WHERE TO GO?",
+      "গন্তব্য বা মাঝের যেকোনো স্থান...": "Destination or anywhere in between...",
+      "বাসের নাম / নম্বর": "BUS NAME / NUMBER",
+      "বাসের নাম বা নম্বর লিখুন (যেমন: Shyamal বা 7000)": "Enter bus name or number (e.g. Shyamal or 7000)",
+      "আপনি কি এই বাসের চালক বা কন্ডাক্টর? (স্টাফ পিন কোড)": "ARE YOU THE DRIVER OR CONDUCTOR OF THIS BUS? (STAFF PIN CODE)",
+      "ঘোষণা: চালু": "Announcements: ON",
+      "ঘোষণা: বন্ধ": "Announcements: OFF",
+      "ম্যাপে চলমান বাস দেখুন (Live on Map)": "View Running Buses on Map (Live on Map)",
+      "ম্যাপে চলমান বাস বন্ধ করুন (Hide)": "Hide Running Buses on Map (Hide)",
+      "🎯 অবস্থান দেখান": "🎯 Show Location",
+      "বাসের দূরত্ব:": "Bus Distance:",
+      "বিজ্ঞাপন": "Advertisement",
+      "নিকটস্থ অফার": "Nearby Offer",
+      "বর্তমান স্টপেজ": "Current Stop",
+      "পরবর্তী স্টপেজ": "Next Stop",
+      "গন্তব্য": "Destination",
+      "গতি": "Speed",
+      "আপডেট": "Updated",
+      "ট্র্যাকিং বন্ধ": "Stop Tracking",
+      "বাস নম্বর": "Bus No",
+      "তথ্য লোড হচ্ছে...": "Loading details...",
+      "বাসের তথ্য খোঁজা হচ্ছে...": "Searching bus information...",
+      "👆 লাইভ ট্র্যাকিংয়ের জন্য উপরের লিস্ট থেকে যেকোনো বাস বেছে নিন": "👆 Select any bus from the list above for live tracking",
+      "ম্যাপ সক্রিয়: সকল স্টপ ও অবস্থান": "Map Active: All Stops & Locations",
+      "ম্যাপে ক্লিক করে সরাসরি নতুন স্টপ যোগ করুন (অফলাইন মোড)": "Click on map to add new stop directly (Offline Mode)"
+    },
+    hi: {
+      "🌐 ভাষা (LANGUAGE):": "🌐 भाषा (LANGUAGE):",
+      "🚌 বাস লাইভ লোকেশন (ভারত)": "🚌 बस की लाइव लोकेशन (भारत)",
+      "+ নতুন বাসের তথ্য যুক্ত করুন": "+ नई बस जानकारी जोड़ें",
+      "এই জায়গাটি বাস স্টপ হিসাবে যুক্ত করুন": "इस स्थान को बस स्टॉप के रूप में जोड़ें",
+      "আপনি কোথা থেকে বাসে উঠবেন?": "आप बस कहाँ से पकड़ेंगे?",
+      "শুরু বা মাঝের যেকোনো স্থান...": "शुरुआत या बीच में कहीं भी...",
+      "কোথায় যাবেন?": "कहाँ जाना है?",
+      "গন্তব্য বা মাঝের যেকোনো স্থান...": "गंतव्य स्थान या बीच में कहीं भी...",
+      "বাসের নাম / নম্বর": "बस का नाम / नंबर",
+      "বাসের নাম বা নম্বর লিখুন (যেমন: Shyamal বা 7000)": "बस का नाम या नंबर दर्ज करें (जैसे: Shyamal या 7000)",
+      "আপনি কি এই বাসের চালক বা কন্ডাক্টর? (স্টাফ পিন কোড)": "क्या आप इस बस के चालक या कंडक्टर हैं? (स्टाफ पिन कोड)",
+      "ঘোষণা: চালু": "घोषणा: चालू",
+      "ঘোষণা: বন্ধ": "घोषणा: बंद",
+      "ম্যাপে চলমান বাস দেখুন (Live on Map)": "मानचित्र पर चलती बसें देखें (Live on Map)",
+      "ম্যাপে চলমান বাস বন্ধ করুন (Hide)": "मानचित्र पर चलती बसें छिपाएं (Hide)",
+      "🎯 অবস্থান দেখান": "🎯 स्थान दिखाएं",
+      "বাসের দূরত্ব:": "बस की दूरी:",
+      "বিজ্ঞাপন": "विज्ञापन",
+      "নিকটস্থ অফার": "निकटतम ऑफर",
+      "বর্তমান স্টপেজ": "वर्तमान स्टॉप",
+      "পরবর্তী স্টপেজ": "अगला स्टॉप",
+      "গন্তব্য": "गंतव्य",
+      "গতি": "गति",
+      "আপডেট": "अपडेट",
+      "ট্র্যাকিং বন্ধ": "ट्रैकिंग बंद करें",
+      "বাস নম্বর": "बस नंबर",
+      "তথ্য লোড হচ্ছে...": "जानकारी लोड हो रही है...",
+      "বাসের তথ্য খোঁজা হচ্ছে...": "बस की जानकारी खोजी जा रही है...",
+      "👆 লাইভ ট্র্যাকিংয়ের জন্য উপরের লিস্ট থেকে যেকোনো বাস বেছে নিন": "👆 लाइव ट्रैकिंग के लिए ऊपर दी गई सूची से कोई भी बस चुनें",
+      "ম্যাপ সক্রিয়: সকল স্টপ ও অবস্থান": "मानचित्र सक्रिय: सभी स्टॉप और स्थान",
+      "ম্যাপে ক্লিক করে সরাসরি নতুন স্টপ যোগ করুন (অফলাইন মোড)": "नक्शे पर क्लिक करके सीधे नया स्टॉप जोड़ें (ऑफलाइन मोड)"
+    }
+  };
+
+  const ANNOUNCE_TEMPLATES = {
+    bn: {
+      voiceEnabled: "ঘোষণা চালু করা হয়েছে।",
+      trackingStarted: "বাস {BUS} লাইভ ট্র্যাকিং শুরু হয়েছে।",
+      destArrived: "আমরা গন্তব্য {CUR}-এ পৌঁছে গেছি। আমাদের সাথে ভ্রমণের জন্য ধন্যবাদ!",
+      curStop: "বর্তমান স্টপেজ {CUR}।",
+      nextStop: "পরবর্তী স্টপেজ {NXT}।",
+      curNextStop: "বর্তমান স্টপেজ {CUR}। পরবর্তী স্টপেজ {NXT}।",
+      testAlarm: "এটি ওয়েক-আপ অ্যালার্টের পরীক্ষামূলক শব্দ।",
+      wakeAlarm: "সতর্কবার্তা! আপনার গন্তব্য {DEST} আর মাত্র {DIST} মিটার দূরে। নামার প্রস্তুতি নিন।"
+    },
+    en: {
+      voiceEnabled: "Voice announcements enabled.",
+      trackingStarted: "Live tracking started for bus {BUS}.",
+      destArrived: "We have arrived at destination {CUR}. Thank you for traveling with us!",
+      curStop: "Current stop {CUR}.",
+      nextStop: "Next stop is {NXT}.",
+      curNextStop: "Current stop {CUR}. Next stop is {NXT}.",
+      testAlarm: "This is a test sound for the wake-up alert.",
+      wakeAlarm: "Attention! Your destination {DEST} is only {DIST} meters away. Please get ready to get off."
+    },
+    hi: {
+      voiceEnabled: "घोषणा चालू कर दी गई है।",
+      trackingStarted: "बस {BUS} की लाइव ट्रैकिंग शुरू हो गई है।",
+      destArrived: "हम गंतव्य {CUR} पहुँच चुके हैं। यात्रा के लिए धन्यवाद!",
+      curStop: "वर्तमान स्टॉप {CUR}।",
+      nextStop: "अगला स्टॉप {NXT} है।",
+      curNextStop: "वर्तमान स्टॉप {CUR}। अगला स्टॉप {NXT} है।",
+      testAlarm: "यह वेक-अप अलर्ट की परीक्षण ध्वनि है।",
+      wakeAlarm: "सावधान! आपका गंतव्य {DEST} अब केवल {DIST} मीटर दूर है। उतरने की तैयारी करें।"
+    },
+    ta: {
+      voiceEnabled: "குரல் அறிவிப்புகள் இயக்கப்பட்டுள்ளன.",
+      trackingStarted: "{BUS} பேருந்தின் நேரலை கண்காணிப்பு தொடங்கியுள்ளது.",
+      destArrived: "நாம் இலக்கு {CUR} வந்துவிட்டோம். எங்களுடன் பயணித்ததற்கு நன்றி!",
+      curStop: "தற்போதைய நிறுத்தம் {CUR}.",
+      nextStop: "அடுத்த நிறுத்தம் {NXT}.",
+      curNextStop: "தற்போதைய நிறுத்தம் {CUR}. அடுத்த நிறுத்தம் {NXT}.",
+      testAlarm: "இது விழிப்புணர்வு அலாரத்தின் சோதனை ஒலி.",
+      wakeAlarm: "கவனம்! உங்கள் இலக்கு {DEST} இன்னும் {DIST} மீட்டர் தொலைவில் உள்ளது. இறங்கத் தயாராகுங்கள்."
+    },
+    te: {
+      voiceEnabled: "వాయిస్ ప్రకటనలు ప్రారంభించబడ్డాయి.",
+      trackingStarted: "బస్సు {BUS} లైవ్ ట్రాకింగ్ ప్రారంభమైంది.",
+      destArrived: "మనం గమ్యస్థానం {CUR} చేరుకున్నాము. మాతో ప్రయాణించినందుకు ధన్యవాదాలు!",
+      curStop: "ప్రస్తుత స్టాప్ {CUR}.",
+      nextStop: "తదుపరి స్టాప్ {NXT}.",
+      curNextStop: "ప్రస్తుత స్టాప్ {CUR}. తదుపరి స్టాప్ {NXT}.",
+      testAlarm: "ఇది వేక్-అప్ అలర్ట్ పరీక్ష శబ్దం.",
+      wakeAlarm: "హెచ్చరిక! మీ గమ్యస్థానం {DEST} కేవలం {DIST} మీటర్ల దూరంలో ఉంది. దిగడానికి సిద్ధంగా ఉండండి."
+    },
+    mr: {
+      voiceEnabled: "आवाज घोषणा सुरू करण्यात आल्या आहेत.",
+      trackingStarted: "बस {BUS} चे थेट ट्रॅकिंग सुरू झाले आहे.",
+      destArrived: "आपण गंतव्यस्थान {CUR} येथे पोहोचलो आहोत. आमच्यासोबत प्रवास केल्याबद्दल धन्यवाद!",
+      curStop: "सध्याचा थांबा {CUR}.",
+      nextStop: "पुढील थांबा {NXT} आहे.",
+      curNextStop: "सध्याचा थांबा {CUR}. पुढील थांबा {NXT} आहे.",
+      testAlarm: "हा वेक-अप अलर्टचा चाचणी आवाज आहे.",
+      wakeAlarm: "सावधान! तुमचे गंतव्यस्थान {DEST} फक्त {DIST} मीटर अंतरावर आहे. उतरण्याची तयारी करा."
+    },
+    gu: {
+      voiceEnabled: "અવાજની જાહેરાત ચાલુ કરવામાં આવી છે.",
+      trackingStarted: "બસ {BUS} નું લાઇવ ટ્રેકિંગ શરૂ થઈ ગયું છે.",
+      destArrived: "આપણે ગંતવ્ય સ્થાન {CUR} પર પહોંચી ગયા છીએ. અમારી સાથે મુસાફરી કરવા બદલ આભાર!",
+      curStop: "વર્તમાન સ્ટોપ {CUR}.",
+      nextStop: "આગળનું સ્ટોપ {NXT} છે.",
+      curNextStop: "વર્તમાન સ્ટોપ {CUR}. આગળનું સ્ટોપ {NXT} છે.",
+      testAlarm: "આ વેક-અપ એલર્ટનો પરીક્ષણ અવાજ છે.",
+      wakeAlarm: "સાવધાન! તમારું ગંતવ્ય {DEST} માત્ર {DIST} મીટર દૂર છે. ઉતરવાની તૈયારી રાખો."
+    },
+    kn: {
+      voiceEnabled: "ಧ್ವನಿ ಪ್ರಕಟಣೆಗಳನ್ನು ಸಕ್ರಿಯಗೊಳಿಸಲಾಗಿದೆ.",
+      trackingStarted: "ಬಸ್ {BUS} ನೇರ ಟ್ರ್ಯಾಕಿಂಗ್ ಪ್ರಾರಂಭವಾಗಿದೆ.",
+      destArrived: "ನಾವು ಗಮ್ಯಸ್ಥಾನ {CUR} ತಲುಪಿದ್ದೇವೆ. ನಮ್ಮೊಂದಿಗೆ ಪ್ರಯಾಣಿಸಿದ್ದಕ್ಕಾಗಿ ಧನ್ಯವಾದಗಳು!",
+      curStop: "ಪ್ರಸ್ತುತ ನಿಲ್ದಾಣ {CUR}.",
+      nextStop: "ಮುಂದಿನ ನಿಲ್ದಾಣ {NXT}.",
+      curNextStop: "ಪ್ರಸ್ತುತ ನಿಲ್ದಾಣ {CUR}. ಮುಂದಿನ ನಿಲ್ದಾಣ {NXT}.",
+      testAlarm: "ಇದು ವೇಕ್-ಅಪ್ ಅಲರ್ಟ್‌ನ ಪರೀಕ್ಷಾ ಧ್ವನಿಯಾಗಿದೆ.",
+      wakeAlarm: "ಗಮನಿಸಿ! ನಿಮ್ಮ ಗಮ್ಯಸ್ಥಾನ {DEST} ಕೇವಲ {DIST} ಮೀಟರ್ ದೂರದಲ್ಲಿದೆ. ಇಳಿಯಲು ಸಿದ್ಧರಾಗಿ."
+    },
+    ml: {
+      voiceEnabled: "ശബ്ദ അറിയിപ്പുകൾ പ്രവർത്തനക്ഷമമാക്കി.",
+      trackingStarted: "ബസ് {BUS} ലൈവ് ട്രാക്കിംഗ് ആരംഭിച്ചു.",
+      destArrived: "ഞങ്ങൾ ലക്ഷ്യസ്ഥാനമായ {CUR} എത്തിച്ചേർന്നു. ഞങ്ങളോടൊപ്പം യാത്ര ചെയ്തതിന് നന്ദി!",
+      curStop: "ഇപ്പോഴത്തെ സ്റ്റോപ്പ് {CUR}.",
+      nextStop: "അടുത്ത സ്റ്റോപ്പ് {NXT}.",
+      curNextStop: "ഇപ്പോഴത്തെ സ്റ്റോപ്പ് {CUR}. അടുത്ത സ്റ്റോപ്പ് {NXT}.",
+      testAlarm: "ഇത് വേക്ക്-അപ്പ് അലർട്ടിന്റെ പരീക്ഷണ ശബ്ദമാണ്.",
+      wakeAlarm: "ശ്രദ്ധിക്കുക! നിങ്ങളുടെ ലക്ഷ്യസ്ഥാനം {DEST} ഇനി {DIST} മീറ്റർ മാത്രം അകലെയാണ്. ഇറങ്ങാൻ തയ്യാറാകുക."
+    },
+    pa: {
+      voiceEnabled: "ਆਵਾਜ਼ ਦੀਆਂ ਘੋਸ਼ਣਾਵਾਂ ਚਾਲੂ ਕਰ ਦਿੱਤੀਆਂ ਗਈਆਂ ਹਨ।",
+      trackingStarted: "ਬੱਸ {BUS} ਦੀ ਲਾਈਵ ਟਰੈਕਿੰਗ ਸ਼ੁਰੂ ਹੋ ਗਈ ਹੈ।",
+      destArrived: "ਅਸੀਂ ਮੰਜ਼ਿਲ {CUR} ਤੇ ਪਹੁੰਚ ਗਏ ਹਾਂ। ਸਾਡੇ ਨਾਲ ਯਾਤਰਾ ਕਰਨ ਲਈ ਧੰਨਵਾਦ!",
+      curStop: "ਮੌਜੂਦਾ ਸਟਾਪ {CUR}।",
+      nextStop: "ਅਗਲਾ ਸਟਾਪ {NXT} ਹੈ।",
+      curNextStop: "ਮੌਜੂਦਾ ਸਟਾਪ {CUR}। ਅਗਲਾ ਸਟਾਪ {NXT} ਹੈ।",
+      testAlarm: "ਇਹ ਵੇਕ-ਅੱਪ ਅਲਰਟ ਦੀ ਟੈਸਟ ਆਵਾਜ਼ ਹੈ।",
+      wakeAlarm: "ਸਾਵਧਾਨ! ਤੁਹਾਡੀ ਮੰਜ਼ਿਲ {DEST} ਸਿਰਫ਼ {DIST} ਮੀਟਰ ਦੂਰ ਹੈ। ਉਤਰਨ ਲਈ ਤਿਆਰ ਹੋ ਜਾਓ।"
+    },
+    or: {
+      voiceEnabled: "ଭଏସ୍ ଘୋଷଣା ଚାଲୁ କରାଯାଇଛି।",
+      trackingStarted: "ବସ୍ {BUS} ର ଲାଇଭ୍ ଟ୍ରାକିଂ ଆରମ୍ଭ ହୋଇଛି।",
+      destArrived: "ଆମେ ଗନ୍ତବ୍ୟସ୍ଥଳ {CUR} ରେ ପହଞ୍ଚିଛୁ। ଆମ ସହିତ ଯାତ୍ରା କରିଥିବାରୁ ଧନ୍ୟବାଦ!",
+      curStop: "ବର୍ତ୍ତମାନ ଷ୍ଟପ୍ {CUR}।",
+      nextStop: "ପରବର୍ତ୍ତୀ ଷ୍ଟପ୍ {NXT}।",
+      curNextStop: "ବର୍ତ୍ତମାନ ଷ୍ଟପ୍ {CUR}। ପରବର୍ତ୍ତୀ ଷ୍ଟପ୍ {NXT}।",
+      testAlarm: "ଏହା ୱେକ୍-ଅପ୍ ଆଲର୍ଟର ପରୀକ୍ଷାମୂଳକ ଶବ୍ଦ।",
+      wakeAlarm: "ସାବଧାନ! ଆପଣଙ୍କ ଗନ୍ତବ୍ୟସ୍ଥଳ {DEST} ମାତ୍ର {DIST} ମିଟର ଦୂରରେ। ଓହ୍ଲାଇବାକୁ ପ୍ରସ୍ତୁତ ହୁଅନ୍ତୁ।"
+    },
+    as: {
+      voiceEnabled: "ঘোষণা আৰম্ভ কৰা হৈছে।",
+      trackingStarted: "বাছ {BUS} ৰ লাইভ ট্ৰেকিং আৰম্ভ হৈছে।",
+      destArrived: "আমি গন্তব্যস্থল {CUR} ত উপস্থিত হৈছো। আমাৰ সৈতে যাত্ৰা কৰাৰ বাবে ধন্যবাদ!",
+      curStop: "বৰ্তমান ষ্টপেজ {CUR}।",
+      nextStop: "পৰৱৰ্তী ষ্টপেজ {NXT}।",
+      curNextStop: "বৰ্তমান ষ্টপেজ {CUR}। পৰৱৰ্তী ষ্টপেজ {NXT}।",
+      testAlarm: "এইটো ৱেক-আপ এলাৰ্টৰ পৰীক্ষামূলক শব্দ।",
+      wakeAlarm: "সাৱধান! আপোনাৰ গন্তব্যস্থল {DEST} মাত্ৰ {DIST} মিটাৰ দূৰত। নামিবলৈ সাজু হওক।"
+    },
+    ur: {
+      voiceEnabled: "آواز کے اعلانات فعال کر دیے گئے ہیں۔",
+      trackingStarted: "بس {BUS} کی لائیو ٹریکنگ شروع ہو گئی ہے۔",
+      destArrived: "ہم منزل {CUR} پر پہنچ چکے ہیں۔ ہمارے ساتھ سفر کرنے کا شکریہ!",
+      curStop: "موجودہ اسٹاپ {CUR}۔",
+      nextStop: "اگلا اسٹاپ {NXT} ہے۔",
+      curNextStop: "موجودہ اسٹاپ {CUR}۔ اگلا اسٹاپ {NXT} ہے۔",
+      testAlarm: "یہ ویک اپ الرٹ کی آزمائشی آواز ہے۔",
+      wakeAlarm: "توجہ! آپ کی منزل {DEST} صرف {DIST} میٹر دور ہے۔ اترنے کے لیے تیار ہو جائیں۔"
+    },
+    ne: {
+      voiceEnabled: "आवाज घोषणाहरू सक्षम पारिएका छन्।",
+      trackingStarted: "बस {BUS} को लाइभ ट्र्याकिङ सुरु भएको छ।",
+      destArrived: "हामी गन्तव्य {CUR} मा आइपुगेका छौं। हामीसँग यात्रा गर्नुभएकोमा धन्यवाद!",
+      curStop: "हालको स्टप {CUR}।",
+      nextStop: "अर्को स्टप {NXT} हो।",
+      curNextStop: "हालको स्टप {CUR}। अर्को स्टप {NXT} हो।",
+      testAlarm: "यो वेक-अप अलर्टको परीक्षण आवाज हो।",
+      wakeAlarm: "सावधान! तपाईंको गन्तव्य {DEST} मात्र {DIST} मिटर टाढा छ। ओर्लन तयार हुनुहोस्।"
+    }
+  };
+
+  const origTextNodeMap = new WeakMap();
+  const origElemAttrMap = new WeakMap();
+  const domTranslationMemCache = {};
+  const dynamicAnnounceTplCache = {};
+  const translatedStopCache = {};
+  let isApplyingDomTranslation = false;
+  let pendingDomTranslateTimer = null;
+  let activeTranslationGeneration = 0;
+
+  function loadLangTranslationCache(lang) {
+    if (!lang || lang === "bn") return {};
+    if (domTranslationMemCache[lang]) return domTranslationMemCache[lang];
+    let map = Object.assign({}, PREBUILT_UI_DICT[lang] || {});
+    try {
+      let saved = JSON.parse(localStorage.getItem("bll_tr_cache_v1_" + lang) || "{}");
+      if (saved && typeof saved === "object") {
+        Object.assign(map, saved);
+      }
+    } catch (_) {}
+    domTranslationMemCache[lang] = map;
+    return map;
+  }
+
+  function saveLangTranslationCache(lang) {
+    if (!lang || lang === "bn") return;
+    try {
+      let map = domTranslationMemCache[lang] || {};
+      let keys = Object.keys(map);
+      if (keys.length > 2200) {
+        let trimmed = {};
+        let pre = PREBUILT_UI_DICT[lang] || {};
+        Object.assign(trimmed, pre);
+        keys.slice(-1800).forEach(k => { trimmed[k] = map[k]; });
+        domTranslationMemCache[lang] = trimmed;
+        localStorage.setItem("bll_tr_cache_v1_" + lang, JSON.stringify(trimmed));
+      } else {
+        localStorage.setItem("bll_tr_cache_v1_" + lang, JSON.stringify(map));
+      }
+    } catch (_) {}
+  }
+
+  async function googleTranslateSingleText(text, sourceLang, targetLang) {
+    let clean = (text || "").trim();
+    if (!clean || !targetLang || targetLang === "bn") return clean;
+    if (sourceLang === targetLang) return clean;
+    let url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${encodeURIComponent(sourceLang)}&tl=${encodeURIComponent(targetLang)}&dt=t&q=${encodeURIComponent(clean)}`;
+    try {
+      let resp = await fetch(url);
+      if (resp.ok) {
+        let arr = await resp.json();
+        if (Array.isArray(arr) && Array.isArray(arr[0])) {
+          return arr[0].map(p => (Array.isArray(p) && p[0]) ? p[0] : "").join("");
+        }
+      }
+    } catch (_) {
+      if (window.AndroidBridge && typeof window.AndroidBridge.fetchUrl === "function") {
+        try {
+          let raw = window.AndroidBridge.fetchUrl(url);
+          if (raw) {
+            let arr = JSON.parse(raw);
+            if (Array.isArray(arr) && Array.isArray(arr[0])) {
+              return arr[0].map(p => (Array.isArray(p) && p[0]) ? p[0] : "").join("");
+            }
+          }
+        } catch (__) {}
+      }
+    }
+    return clean;
+  }
+
+  async function translateBatchTexts(items, targetLang) {
+    let out = {};
+    if (!items || !items.length || !targetLang || targetLang === "bn") return out;
+
+    let bnItems = [];
+    let enItems = [];
+    items.forEach(s => {
+      if (/[\u0980-\u09FF]/.test(s)) bnItems.push(s);
+      else enItems.push(s);
+    });
+
+    async function runGroup(groupItems, srcLang) {
+      if (!groupItems.length || srcLang === targetLang) {
+        groupItems.forEach(s => { out[s] = s; });
+        return;
+      }
+      const sep = "\n###SEP###\n";
+      let chunk = [];
+      let len = 0;
+
+      async function flushChunk(c) {
+        if (!c.length) return;
+        try {
+          let joined = c.join(sep);
+          let translated = await googleTranslateSingleText(joined, srcLang, targetLang);
+          let parts = translated.split(/\s*###\s*SEP\s*###\s*/i);
+          if (parts.length === c.length) {
+            c.forEach((orig, idx) => {
+              let v = (parts[idx] || "").trim();
+              if (v) out[orig] = v;
+            });
+            return;
+          }
+        } catch (_) {}
+        const concurrency = 4;
+        for (let i = 0; i < c.length; i += concurrency) {
+          let slice = c.slice(i, i + concurrency);
+          await Promise.all(slice.map(async orig => {
+            try {
+              let v = await googleTranslateSingleText(orig, srcLang, targetLang);
+              if (v && v.trim()) out[orig] = v.trim();
+            } catch (_) {}
+          }));
+        }
+      }
+
+      for (let item of groupItems) {
+        if (len + item.length > 1100 && chunk.length) {
+          await flushChunk(chunk);
+          chunk = [];
+          len = 0;
+        }
+        chunk.push(item);
+        len += item.length + sep.length;
+      }
+      if (chunk.length) await flushChunk(chunk);
+    }
+
+    await runGroup(bnItems, "bn");
+    await runGroup(enItems, "en");
+    return out;
+  }
+
+  function isTranslatableString(str) {
+    if (!str) return false;
+    let t = str.trim();
+    if (!t || t.length < 2) return false;
+    // URL বা ইমেইল বাদ দিন
+    if (/^https?:\/\//i.test(t) || /^www\./i.test(t) || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(t)) return false;
+    // কেবল সংখ্যা, সময়, স্থানাঙ্ক, চিহ্ন বাদ দিন
+    if (/^[0-9\s.,:%+\-–—()\/•|°±₹?!*🚌📍🎯⏱️🔔⚡🟢🟡🔴⚪📢🗺️🧭🔍✕▼✓⏳]+$/.test(t)) return false;
+    // বাসের নম্বর (যেমন WB537117 বা 12145) বা রোড কোড (NH114) অক্ষত রাখুন
+    if (!/\s/.test(t) && /^[A-Z0-9\-_]{2,}$/i.test(t) && /\d/.test(t)) return false;
+    // অক্ষর থাকতে হবে (যেকোনো ভাষার)
+    if (!/[A-Za-z\u0980-\u09FF\u0900-\u097F\u0B80-\u0BFF]/.test(t)) return false;
+    return true;
+  }
+
+  function isSkippedDomElement(el) {
+    if (!el || el.nodeType !== 1) return false;
+    let tag = el.tagName;
+    if (tag === "SCRIPT" || tag === "STYLE" || tag === "NOSCRIPT" || tag === "CODE" || tag === "PRE" || tag === "SVG" || tag === "TEXTAREA") {
+      return true;
+    }
+    if (el.classList && (el.classList.contains("notranslate") || el.classList.contains("leaflet-control-attribution") || el.classList.contains("leaflet-control-zoom"))) {
+      return true;
+    }
+    return false;
+  }
+
+  function shouldSkipNode(node) {
+    let p = node.nodeType === 1 ? node : node.parentElement;
+    while (p && p !== document.body && p !== document.documentElement) {
+      if (isSkippedDomElement(p)) return true;
+      p = p.parentElement;
+    }
+    return false;
+  }
+
+  function collectTranslatableTargets(rootNode) {
+    let textNodes = [];
+    let attrElems = [];
+    let root = rootNode || document.body;
+    if (!root) return { textNodes, attrElems };
+
+    let walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+      acceptNode: function(node) {
+        if (!node.nodeValue || !node.nodeValue.trim()) return NodeFilter.FILTER_REJECT;
+        if (shouldSkipNode(node)) return NodeFilter.FILTER_REJECT;
+        return NodeFilter.FILTER_ACCEPT;
+      }
+    });
+
+    let cur;
+    while ((cur = walker.nextNode())) {
+      if (!origTextNodeMap.has(cur)) {
+        origTextNodeMap.set(cur, cur.nodeValue);
+      }
+      let orig = origTextNodeMap.get(cur);
+      if (isTranslatableString(orig)) {
+        textNodes.push(cur);
+      }
+    }
+
+    let elems = root.querySelectorAll ? root.querySelectorAll("input[placeholder], textarea[placeholder], [title]") : [];
+    elems.forEach(el => {
+      if (shouldSkipNode(el)) return;
+      let stored = origElemAttrMap.get(el) || {};
+      let ph = el.getAttribute("placeholder");
+      let ttl = el.getAttribute("title");
+      if (ph && stored.placeholder === undefined) stored.placeholder = ph;
+      if (ttl && stored.title === undefined) stored.title = ttl;
+      if (stored.placeholder !== undefined || stored.title !== undefined) {
+        origElemAttrMap.set(el, stored);
+        attrElems.push(el);
+      }
+    });
+
+    return { textNodes, attrElems };
+  }
+
+  let origDocTitle = document.title;
+
+  function applyCachedDomTranslations(targetLang, rootNode) {
+    let { textNodes, attrElems } = collectTranslatableTargets(rootNode);
+    let cache = (targetLang && targetLang !== "bn") ? loadLangTranslationCache(targetLang) : null;
+    let missingSet = new Set();
+
+    isApplyingDomTranslation = true;
+    try {
+      if (!targetLang || targetLang === "bn") {
+        document.title = origDocTitle;
+        textNodes.forEach(n => {
+          let orig = origTextNodeMap.get(n);
+          if (orig !== undefined && n.nodeValue !== orig) {
+            n.nodeValue = orig;
+          }
+        });
+        attrElems.forEach(el => {
+          let st = origElemAttrMap.get(el);
+          if (!st) return;
+          if (st.placeholder !== undefined && el.getAttribute("placeholder") !== st.placeholder) {
+            el.setAttribute("placeholder", st.placeholder);
+          }
+          if (st.title !== undefined && el.getAttribute("title") !== st.title) {
+            el.setAttribute("title", st.title);
+          }
+        });
+        return [];
+      }
+
+      // শিরোনাম অনুবাদ
+      let titleCore = origDocTitle.trim();
+      if (cache[titleCore]) {
+        document.title = cache[titleCore];
+      } else if (isTranslatableString(titleCore)) {
+        missingSet.add(titleCore);
+      }
+
+      textNodes.forEach(n => {
+        let orig = origTextNodeMap.get(n);
+        if (orig === undefined) return;
+        let leading = (orig.match(/^\s*/) || [""])[0];
+        let trailing = (orig.match(/\s*$/) || [""])[0];
+        let core = orig.trim();
+        if (!core || !isTranslatableString(core)) return;
+
+        let tr = cache[core];
+        if (tr) {
+          let newVal = leading + tr + trailing;
+          if (n.nodeValue !== newVal) n.nodeValue = newVal;
+        } else {
+          missingSet.add(core);
+        }
+      });
+
+      attrElems.forEach(el => {
+        let st = origElemAttrMap.get(el);
+        if (!st) return;
+        if (st.placeholder) {
+          let core = st.placeholder.trim();
+          if (isTranslatableString(core)) {
+            if (cache[core]) el.setAttribute("placeholder", cache[core]);
+            else missingSet.add(core);
+          }
+        }
+        if (st.title) {
+          let core = st.title.trim();
+          if (isTranslatableString(core)) {
+            if (cache[core]) el.setAttribute("title", cache[core]);
+            else missingSet.add(core);
+          }
+        }
+      });
+    } finally {
+      isApplyingDomTranslation = false;
+    }
+
+    return Array.from(missingSet);
+  }
+
+  async function translatePageToLanguage(targetLang, rootNode) {
+    let gen = activeTranslationGeneration;
+    let spinner = document.getElementById("langSpinner");
+
+    let missing = applyCachedDomTranslations(targetLang, rootNode);
+    if (!targetLang || targetLang === "bn" || missing.length === 0) {
+      if (spinner) spinner.classList.add("hidden");
+      return;
+    }
+
+    if (spinner) spinner.classList.remove("hidden");
+    try {
+      let cache = loadLangTranslationCache(targetLang);
+      let uncached = missing.filter(m => !cache[m]);
+      if (uncached.length > 0) {
+        let fresh = await translateBatchTexts(uncached, targetLang);
+        if (gen !== activeTranslationGeneration) return;
+        let hasUpdates = false;
+        Object.keys(fresh).forEach(k => {
+          if (fresh[k]) {
+            cache[k] = fresh[k];
+            hasUpdates = true;
+          }
+        });
+        if (hasUpdates) {
+          saveLangTranslationCache(targetLang);
+          applyCachedDomTranslations(targetLang, document.body);
+        }
+      }
+    } finally {
+      if (gen === activeTranslationGeneration && spinner) {
+        spinner.classList.add("hidden");
+      }
+    }
+  }
+
+  function scheduleIncrementalTranslation() {
+    let curLang = getCurrentAppLanguage();
+    if (!curLang || curLang === "bn") return;
+    // ক্যাশে থাকা অনুবাদগুলো সাথে সাথে প্রয়োগ (কোনো ঝাঁকুনি ছাড়াই)
+    applyCachedDomTranslations(curLang, document.body);
+    if (pendingDomTranslateTimer) clearTimeout(pendingDomTranslateTimer);
+    pendingDomTranslateTimer = setTimeout(() => {
+      let latestLang = getCurrentAppLanguage();
+      if (latestLang && latestLang !== "bn") {
+        translatePageToLanguage(latestLang, document.body);
+      }
+    }, 80);
+  }
+
+  // আনুষ্ঠানিক ঘোষণা টেমপ্লেট ও স্টপ নাম অনুবাদ (১০০+ ভাষায়)
+  async function ensureAnnounceTemplatesLoaded(lang) {
+    let norm = (lang || "bn").trim();
+    if (!norm || ANNOUNCE_TEMPLATES[norm]) return ANNOUNCE_TEMPLATES[norm] || ANNOUNCE_TEMPLATES.en;
+    let base = norm.split("-")[0].toLowerCase();
+    if (ANNOUNCE_TEMPLATES[base]) return ANNOUNCE_TEMPLATES[base];
+    if (dynamicAnnounceTplCache[norm]) return dynamicAnnounceTplCache[norm];
+
+    let cacheKey = "bll_announce_tpl_v1_" + norm;
+    try {
+      let saved = JSON.parse(localStorage.getItem(cacheKey) || "null");
+      if (saved && saved.curStop && saved.nextStop) {
+        dynamicAnnounceTplCache[norm] = saved;
+        return saved;
+      }
+    } catch (_) {}
+
+    let en = ANNOUNCE_TEMPLATES.en;
+    let keys = Object.keys(en);
+    let vals = keys.map(k => en[k].replace(/\{([A-Z]+)\}/g, "[$1]"));
+    let mapped = await translateBatchTexts(vals, norm);
+    let built = Object.assign({}, en);
+    let okCount = 0;
+    keys.forEach((k, i) => {
+      let tr = mapped[vals[i]];
+      if (tr && tr.trim()) {
+        built[k] = tr.replace(/\[\s*([A-Za-z]+)\s*\]/g, (_, ph) => `{${ph.toUpperCase()}}`);
+        okCount++;
+      }
+    });
+    dynamicAnnounceTplCache[norm] = built;
+    if (okCount >= 4) {
+      try { localStorage.setItem(cacheKey, JSON.stringify(built)); } catch (_) {}
+    }
+    return built;
+  }
+
+  function getLocalizedAnnouncement(key, vars, lang) {
+    let curLang = lang || getCurrentAppLanguage() || "bn";
+    let base = curLang.split("-")[0].toLowerCase();
+    let tplSet = ANNOUNCE_TEMPLATES[curLang] || ANNOUNCE_TEMPLATES[base] || dynamicAnnounceTplCache[curLang] || ANNOUNCE_TEMPLATES.en;
+    let text = (tplSet && tplSet[key]) ? tplSet[key] : (ANNOUNCE_TEMPLATES.en[key] || "");
+    if (vars) {
+      Object.keys(vars).forEach(k => {
+        text = text.split(`{${k}}`).join(vars[k] !== undefined ? String(vars[k]) : "");
+      });
+    }
+    return text;
+  }
+
+  async function syncLocalizedDataToAndroid(lang) {
+    if (!window.AndroidBridge || typeof window.AndroidBridge.setLocalizedStringsJson !== "function") return;
+    let curLang = lang || getCurrentAppLanguage() || "bn";
+    let tplSet = await ensureAnnounceTemplatesLoaded(curLang);
+    let cache = (curLang !== "bn") ? loadLangTranslationCache(curLang) : {};
+
+    let labels = {
+      currentStop: "বর্তমান স্টপেজ",
+      nextStop: "পরবর্তী স্টপেজ",
+      dest: "গন্তব্য",
+      speed: "গতি",
+      update: "আপডেট",
+      stopTracking: "ট্র্যাকিং বন্ধ",
+      busNo: "বাস নম্বর",
+      waiting: "তথ্য লোড হচ্ছে..."
+    };
+
+    let payload = {
+      destArrivedTpl: tplSet.destArrived || "",
+      curStopTpl: tplSet.curStop || "",
+      nextStopTpl: tplSet.nextStop || "",
+      stops: {}
+    };
+
+    if (curLang === "bn") {
+      Object.assign(payload, labels);
+    } else {
+      let missing = [];
+      Object.keys(labels).forEach(k => {
+        let bnVal = labels[k];
+        if (cache[bnVal]) payload[k] = cache[bnVal];
+        else missing.push(bnVal);
+      });
+      if (missing.length > 0) {
+        let fresh = await translateBatchTexts(missing, curLang);
+        Object.keys(labels).forEach(k => {
+          let bnVal = labels[k];
+          if (fresh[bnVal]) {
+            cache[bnVal] = fresh[bnVal];
+            payload[k] = fresh[bnVal];
+          }
+        });
+        saveLangTranslationCache(curLang);
+      }
+
+      // চলমান রুটের স্টপ নামগুলোও ব্যাকগ্রাউন্ডে পাঠান
+      let stopCache = translatedStopCache[curLang] || {};
+      let stopNames = new Set();
+      if (typeof currentBusStopsList !== "undefined" && Array.isArray(currentBusStopsList)) {
+        currentBusStopsList.forEach(s => { if (s && s.name) stopNames.add(s.name); });
+      }
+      if (typeof trackingBus !== "undefined" && trackingBus && Array.isArray(trackingBus.selectedStops)) {
+        trackingBus.selectedStops.forEach(s => { if (s) stopNames.add(s); });
+      }
+      let missingStops = Array.from(stopNames).filter(n => n && !stopCache[n]);
+      if (missingStops.length > 0 && curLang !== "en") {
+        let freshStops = await translateBatchTexts(missingStops.slice(0, 35), curLang);
+        Object.assign(stopCache, freshStops);
+        translatedStopCache[curLang] = stopCache;
+      }
+      payload.stops = stopCache;
+    }
+
+    try {
+      window.AndroidBridge.setLocalizedStringsJson(curLang, JSON.stringify(payload));
+    } catch (_) {}
+  }
+
   function getLanguageLabel(code) {
     let item = APP_LANGUAGES.find(l => l.code === code);
     if (!item) return "বাংলা (BENGALI)";
@@ -2688,12 +3342,10 @@
     try {
       if (window.AndroidBridge && typeof window.AndroidBridge.getStoredLanguage === "function") {
         let nativeLang = window.AndroidBridge.getStoredLanguage();
-        if (nativeLang && nativeLang.trim()) return nativeLang.trim().toLowerCase();
+        if (nativeLang && nativeLang.trim()) return nativeLang.trim();
       }
       var saved = localStorage.getItem('app_language');
-      if (saved) return saved.toLowerCase();
-      var match = document.cookie.match(/googtrans=\/[^/]+\/([a-z]{2,3}(-[a-z0-9]+)?)/i);
-      if (match && match[1]) return match[1].toLowerCase();
+      if (saved) return saved;
     } catch (_) {}
     return "bn";
   }
@@ -2706,7 +3358,7 @@
   function getCurrentAppLanguage() {
     try {
       var select = document.getElementById('appLanguageSelect');
-      if (select && select.value) return select.value.toLowerCase();
+      if (select && select.value) return select.value;
       var stored = getStoredAppLanguage();
       if (stored) return stored;
     } catch (_) {}
@@ -2719,97 +3371,81 @@
     }
     let vText = document.getElementById("voiceToggleText");
     if (vText) {
-      if (typeof voiceAnnouncementEnabled !== "undefined" && voiceAnnouncementEnabled) {
-        vText.innerText = (lang === "hi" ? "घोषणा: चालू" : (lang === "en" ? "Announcements: ON" : "ঘোষণা: চালু"));
-      } else {
-        vText.innerText = (lang === "hi" ? "घोषणा: बंद" : (lang === "en" ? "Announcements: OFF" : "ঘোষণা: বন্ধ"));
+      let rawText = (typeof voiceAnnouncementEnabled !== "undefined" && voiceAnnouncementEnabled) ? "ঘোষণা: চালু" : "ঘোষণা: বন্ধ";
+      if (vText.firstChild && vText.firstChild.nodeType === 3) {
+        origTextNodeMap.set(vText.firstChild, rawText);
       }
+      vText.innerText = rawText;
     }
     if (typeof updateDistanceAndTracking === "function") {
       updateDistanceAndTracking();
     }
   }
 
-  function syncGoogleTranslateCombo(lang) {
-    let combo = document.querySelector('.goog-te-combo');
-    if (combo) {
-      let targetVal = (lang === "bn") ? "" : lang;
-      if (combo.value !== targetVal) {
-        combo.value = targetVal;
-        combo.dispatchEvent(new Event('change'));
-      }
-      return true;
-    }
-    return false;
-  }
-
-  function onAppLanguageChange(lang) {
+  async function onAppLanguageChange(lang) {
     if (!lang) lang = "bn";
+    activeTranslationGeneration++;
     try {
       localStorage.setItem('app_language', lang);
     } catch (_) {}
 
+    document.documentElement.lang = lang;
     updateCurrentLanguageDisplay(lang);
-
-    // সেট করুন গুগল ট্রান্সলেট কুকি
-    if (lang === "bn") {
-      document.cookie = "googtrans=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT;";
-      document.cookie = "googtrans=; path=/; domain=" + location.hostname + "; expires=Thu, 01 Jan 1970 00:00:00 GMT;";
-    } else {
-      document.cookie = "googtrans=/bn/" + lang + "; path=/;";
-      document.cookie = "googtrans=/bn/" + lang + "; path=/; domain=" + location.hostname + ";";
-    }
-
-    // কম্বো পরিবর্তন করুন
-    let synced = syncGoogleTranslateCombo(lang);
-    if (!synced && lang !== "bn") {
-      let attempts = 0;
-      let syncInterval = setInterval(() => {
-        attempts++;
-        if (syncGoogleTranslateCombo(lang) || attempts > 10) {
-          clearInterval(syncInterval);
-        }
-      }, 300);
-    }
-
     notifyLanguageChanged(lang);
+
+    // ঘোষণা টেমপ্লেট, স্টপ নাম ও UI DOM পরিষ্কারভাবে অনুবাদ করুন
+    await Promise.all([
+      ensureAnnounceTemplatesLoaded(lang),
+      translatePageToLanguage(lang, document.body),
+      syncLocalizedDataToAndroid(lang)
+    ]);
   }
 
   function applyLanguageFallback(lang) {
     onAppLanguageChange(lang);
   }
 
-  // পেজ লোড হলে সংরক্ষিত ভাষা পুনরুদ্ধার করা
+  // পেজ লোড হলে সংরক্ষিত ভাষা পুনরুদ্ধার ও লাইভ DOM মিউটেশন পর্যবেক্ষক চালু করা
+  let domTranslateObserver = null;
   document.addEventListener("DOMContentLoaded", () => {
-    let savedLang = getStoredAppLanguage();
-    updateCurrentLanguageDisplay(savedLang || "bn");
-    notifyLanguageChanged(savedLang || "bn");
+    let savedLang = getStoredAppLanguage() || "bn";
+    updateCurrentLanguageDisplay(savedLang);
+    notifyLanguageChanged(savedLang);
+
+    domTranslateObserver = new MutationObserver((mutations) => {
+      if (isApplyingDomTranslation) return;
+      let curLang = getCurrentAppLanguage();
+      if (!curLang || curLang === "bn") return;
+
+      let shouldProcess = false;
+      for (let m of mutations) {
+        if (m.type === "characterData") {
+          if (!shouldSkipNode(m.target)) {
+            origTextNodeMap.set(m.target, m.target.nodeValue);
+            shouldProcess = true;
+          }
+        } else if (m.type === "childList" && m.addedNodes && m.addedNodes.length > 0) {
+          for (let an of m.addedNodes) {
+            if (!shouldSkipNode(an)) {
+              shouldProcess = true;
+              break;
+            }
+          }
+        }
+        if (shouldProcess) break;
+      }
+
+      if (shouldProcess) {
+        scheduleIncrementalTranslation();
+      }
+    });
+    domTranslateObserver.observe(document.body, { childList: true, subtree: true, characterData: true });
+
     if (savedLang && savedLang !== "bn") {
       onAppLanguageChange(savedLang);
     }
   });
-
-  // গুগল ট্রান্সলেট কম্বো রেডি হলে সিঙ্ক করা
-  let comboSyncCheck = setInterval(() => {
-    let combo = document.querySelector('.goog-te-combo');
-    if (combo) {
-      let currentLang = getCurrentAppLanguage();
-      if (currentLang && currentLang !== "bn") {
-        syncGoogleTranslateCombo(currentLang);
-      }
-      clearInterval(comboSyncCheck);
-    }
-  }, 500);
-  setTimeout(() => clearInterval(comboSyncCheck), 15000);
-
-  const observer = new MutationObserver(() => {
-    const tooltip = document.querySelector('.goog-tooltip');
-    if (tooltip) tooltip.style.display = 'none';
-  });
-  observer.observe(document.body, { childList: true, subtree: true });
 </script>
-  
-<script type="text/javascript" src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 <script>
@@ -3148,25 +3784,92 @@
       .replace(/\bআহমাদ\b/g, "আমেদ");
   }
 
-  // স্টপের নাম কণ্ঠ ঘোষণার জন্য প্রস্তুতকরণ
+  const HINDI_STOP_DICTIONARY = {
+    "LABPUR": "लाभपुर",
+    "SURI": "सिउड़ी",
+    "BOLPUR": "बोलपुर",
+    "KIRNAHAR": "कीर्णहार",
+    "SAINTHIA": "सैंथिया",
+    "AHMEDPUR": "अहमदपुर",
+    "AHMADPUR": "अहमदपुर",
+    "AHMADPUR STATION": "अहमदपुर स्टेशन",
+    "AHMEDPUR STATION": "अहमदपुर स्टेशन",
+    "DUBRAJPUR": "दुबराजपुर",
+    "ILLAMBAZAR": "इलामबाजार",
+    "RAMPURHAT": "रामपुरहाट",
+    "NALHATI": "नलहाटी",
+    "MURARAI": "मुरारई",
+    "MALLARPUR": "मल्लारपुर",
+    "MAYURESWAR": "मयूरेश्वर",
+    "PRANTIK": "प्रांतिक",
+    "KANKALITALA": "कंकालीतला",
+    "NANOOR": "नानूर",
+    "GUSHKARA": "गुसकरा",
+    "BARDHAMAN": "बर्धमान",
+    "BURDWAN": "बर्धमान",
+    "DURGAPUR": "दुर्गापुर",
+    "ASANSOL": "आसनसोल",
+    "KOLKATA": "कोलकाता",
+    "CHOWHATTA": "चौहाट्टा",
+    "TETULTALA": "तेतुलतला",
+    "KADAMTALA": "कदमताला",
+    "BUS STAND": "बस स्टैंड",
+    "STATION": "स्टेशन",
+    "BDO OFFICE": "बीडीओ ऑफिस",
+    "BDO OFFICE AHMADPUR": "बीडीओ ऑफिस अहमदपुर"
+  };
+
+  // স্টপের নাম কণ্ঠ ঘোষণার জন্য প্রস্তুতকরণ (সকল ভাষায় সঠিক স্ক্রিপ্ট/উচ্চারণ)
   function getSpokenStopName(rawName, lang) {
     if (!rawName) return "";
     let clean = rawName.replace(/\(.*?\)/g, "").replace(/[🚏🚌📍🏁]/g, "").trim();
     if (!clean || clean === "--") return "";
 
     let curLang = lang || getCurrentAppLanguage() || "bn";
+    let baseLang = curLang.split("-")[0].toLowerCase();
 
-    // বাংলা ভাষার জন্য: সম্পূর্ণ নির্ভুল বাংলা লিপিতে রূপান্তর করা
-    if (curLang === "bn" || curLang === "hi") {
+    // ১. বাংলা ভাষার জন্য: নির্ভুল বাংলা লিপিতে রূপান্তর করা
+    if (baseLang === "bn") {
       if (/[\u0980-\u09FF]/.test(clean)) return fixBengaliPronunciation(clean);
       let upper = clean.toUpperCase();
       if (BENGALI_STOP_DICTIONARY[upper]) return fixBengaliPronunciation(BENGALI_STOP_DICTIONARY[upper]);
       return fixBengaliPronunciation(transliterateEnglishToBengali(clean));
     }
 
-    // ইংরেজি ভাষার জন্য: ALL-CAPS থেকে স্বাভাবিক Title Case করা ("Sundipur") যাতে অক্ষর করে না পড়ে
+    // ২. হিন্দি ভাষার জন্য: হিন্দি অভিধান অথবা অনুবাদ ক্যাশ, ফলব্যাক Title Case (কখনোই বাংলা নয়)
+    if (baseLang === "hi") {
+      let upper = clean.toUpperCase();
+      if (HINDI_STOP_DICTIONARY[upper]) return HINDI_STOP_DICTIONARY[upper];
+      let stopCache = translatedStopCache[curLang] || {};
+      if (stopCache[clean]) return stopCache[clean];
+      let parts = upper.split(/\s+/);
+      if (parts.length > 1) {
+        let mapped = parts.map(p => HINDI_STOP_DICTIONARY[p] || toTitleCaseWord(p));
+        if (mapped.some(m => /[\u0900-\u097F]/.test(m))) return mapped.join(" ");
+      }
+      return toTitleCaseWord(clean);
+    }
+
+    // ৩. ইংরেজি বাদে অন্যান্য ভাষায় যদি আগে থেকে অনূদিত স্টপ নাম থাকে
+    if (baseLang !== "en") {
+      let stopCache = translatedStopCache[curLang] || {};
+      if (stopCache[clean]) return stopCache[clean];
+      let domCache = loadLangTranslationCache(curLang);
+      if (domCache[clean]) return domCache[clean];
+    }
+
+    // ইংরেজি ও অন্যান্য ল্যাটিন/অজানা ভাষার জন্য Title Case
     return toTitleCaseWord(clean);
   }
+
+  const SPEECH_LANG_FALLBACKS = {
+    bn: "bn-IN", hi: "hi-IN", ta: "ta-IN", te: "te-IN", mr: "mr-IN",
+    gu: "gu-IN", kn: "kn-IN", ml: "ml-IN", pa: "pa-IN", or: "or-IN",
+    ur: "ur-PK", as: "as-IN", ne: "ne-NP", si: "si-LK", en: "en-IN",
+    ar: "ar-SA", fr: "fr-FR", es: "es-ES", de: "de-DE", ru: "ru-RU",
+    ja: "ja-JP", ko: "ko-KR", pt: "pt-BR", id: "id-ID", ms: "ms-MY",
+    th: "th-TH", vi: "vi-VN", tr: "tr-TR", it: "it-IT", nl: "nl-NL"
+  };
 
   // ==========================================
   // মিষ্টি ও সুরেলা নারী কণ্ঠের ঘোষণা এবং স্টপ এলার্ট (Sweet Female Singer Announcement)
@@ -3178,9 +3881,12 @@
 
   function playVoiceAnnouncement(text, lang) {
     if (!voiceAnnouncementEnabled || !text) return;
-    let cleanText = fixBengaliPronunciation(text.trim());
-    if (!cleanText) return;
     let curLang = lang || getCurrentAppLanguage() || "bn";
+    let cleanText = text.trim();
+    if (curLang.split("-")[0].toLowerCase() === "bn") {
+      cleanText = fixBengaliPronunciation(cleanText);
+    }
+    if (!cleanText) return;
 
     // অ্যান্ড্রয়েড অ্যাপ্লিকেশনে চললে সরাসরি নেটিভ অ্যান্ড্রয়েড ব্রিজের মাধ্যমে মিষ্টি অনলাইন/অফলাইন টিটিএস ব্যবহার করুন
     if (window.AndroidBridge && window.AndroidBridge.speakAnnouncement) {
@@ -3221,16 +3927,11 @@
     if ('speechSynthesis' in window) {
       try {
         let utter = new SpeechSynthesisUtterance(item.text);
-        let localeMap = {
-          "bn": "bn-IN", "hi": "hi-IN", "en": "en-IN",
-          "ta": "ta-IN", "te": "te-IN", "mr": "mr-IN",
-          "gu": "gu-IN", "kn": "kn-IN", "ml": "ml-IN",
-          "pa": "pa-IN", "or": "or-IN"
-        };
-        utter.lang = localeMap[item.lang] || "bn-IN";
+        let baseLang = (item.lang || "bn").split("-")[0].toLowerCase();
+        utter.lang = SPEECH_LANG_FALLBACKS[baseLang] || item.lang || "bn-IN";
         
         let voices = window.speechSynthesis.getVoices();
-        let matchingVoices = voices.filter(v => v.lang && v.lang.replace('_', '-').toLowerCase().startsWith(item.lang));
+        let matchingVoices = voices.filter(v => v.lang && v.lang.replace('_', '-').toLowerCase().startsWith(baseLang));
         if (matchingVoices.length === 0) {
           matchingVoices = voices;
         }
@@ -3256,18 +3957,9 @@
           }) || matchingVoices[0];
         }
 
-        let isRealFemale = femaleVoice && (
-          (femaleVoice.name || "").toLowerCase().includes("female") ||
-          (femaleVoice.name || "").toLowerCase().includes("woman") ||
-          (femaleVoice.name || "").toLowerCase().includes("bnc") ||
-          (femaleVoice.name || "").toLowerCase().includes("bne") ||
-          (femaleVoice.name || "").toLowerCase().includes("bnf") ||
-          (femaleVoice.name || "").toLowerCase().includes("swara") ||
-          (femaleVoice.name || "").toLowerCase().includes("aditi")
-        );
-
         if (femaleVoice) {
           utter.voice = femaleVoice;
+          utter.lang = femaleVoice.lang || utter.lang;
         }
 
         // মিষ্টি, সুরেলা, নরম ও স্বাভাবিক ভারতীয় নারী কণ্ঠ (কোনো ফাটা ভাব ছাড়া প্রাকৃতিক পিচ ও শান্ত গতি)
@@ -3317,28 +4009,12 @@
     let cleanCur = getSpokenStopName(rawCur, curLang);
     let cleanNext = rawNext ? getSpokenStopName(rawNext, curLang) : "";
 
-    switch (curLang) {
-      case "hi":
-        return isDest 
-          ? `हम गंतव्य ${cleanCur} पहुँच चुके हैं। यात्रा के लिए धन्यवाद!`
-          : (cleanNext ? `वर्तमान स्टॉप ${cleanCur}। अगला स्टॉप ${cleanNext} है।` : `वर्तमान स्टॉप ${cleanCur} पहुँच चुके हैं।`);
-      case "en":
-        return isDest
-          ? `We have arrived at destination ${cleanCur}. Thank you for traveling with us!`
-          : (cleanNext ? `Current stop ${cleanCur}. Next stop is ${cleanNext}.` : `Current stop ${cleanCur}.`);
-      case "ta":
-        return isDest
-          ? `நாம் இலக்கு ${cleanCur} வந்துவிட்டோம்!`
-          : (cleanNext ? `நாம் இப்போது ${cleanCur} நிறுத்தத்திற்கு வந்துவிட்டோம். அடுத்த நிறுத்தம் ${cleanNext}.` : `நாம் இப்போது ${cleanCur} வந்துவிட்டோம்.`);
-      case "te":
-        return isDest
-          ? `మనం గమ్యస్థానం ${cleanCur} చేరుకున్నాము!`
-          : (cleanNext ? `మనం ఇప్పుడు ${cleanCur} స్టాప్‌కు చేరుకున్నాము. తదుపరి స్టాప్ ${cleanNext}.` : `మనం ఇప్పుడు ${cleanCur} చేరుకున్నాము.`);
-      default: // Bengali ("bn")
-        return isDest
-          ? `আমরা গন্তব্য ${cleanCur}-এ পৌঁছে গেছি। আমাদের সাথে ভ্রমণের জন্য ধন্যবাদ!`
-          : (cleanNext ? `বর্তমান স্টপেজ ${cleanCur}। পরবর্তী স্টপেজ ${cleanNext}।` : `বর্তমান স্টপেজ ${cleanCur}।`);
+    if (isDest) {
+      return getLocalizedAnnouncement("destArrived", { CUR: cleanCur }, curLang);
     }
+    return cleanNext
+      ? getLocalizedAnnouncement("curNextStop", { CUR: cleanCur, NXT: cleanNext }, curLang)
+      : getLocalizedAnnouncement("curStop", { CUR: cleanCur }, curLang);
   }
 
   function getNextStopAnnouncement(nextStop, lang) {
@@ -3348,14 +4024,7 @@
     let cleanNext = getSpokenStopName(rawNext, curLang);
     if (!cleanNext) return "";
 
-    switch (curLang) {
-      case "hi":
-        return `अगला स्टॉप ${cleanNext} है।`;
-      case "en":
-        return `Next stop is ${cleanNext}.`;
-      default: // Bengali ("bn")
-        return `পরবর্তী স্টপেজ ${cleanNext}।`;
-    }
+    return getLocalizedAnnouncement("nextStop", { NXT: cleanNext }, curLang);
   }
 
   function showArrivalAlertBanner(curStop, nextStop, isDest) {
@@ -6366,7 +7035,8 @@
     }
 
     let spokenBusName = getSpokenStopName(bName, lang);
-    playVoiceAnnouncement(lang === "hi" ? `बस ${spokenBusName} की लाइव ट्रैकिंग शुरू हो गई है।` : (lang === "en" ? `Live tracking started for bus ${spokenBusName}.` : `বাস ${spokenBusName} লাইভ ট্র্যাকিং শুরু হয়েছে।`), lang);
+    playVoiceAnnouncement(getLocalizedAnnouncement("trackingStarted", { BUS: spokenBusName }, lang), lang);
+    syncLocalizedDataToAndroid(lang);
 
     if (window.AndroidBridge) {
       if (window.AndroidBridge.startBackgroundTrackingWithDetails) {
@@ -7942,16 +8612,9 @@
         
         let curLang = getCurrentAppLanguage();
         let cleanCurSpoken = getSpokenStopName(baseStopName, curLang);
-        let curSpeech = "";
-        if (isDestination) {
-          curSpeech = (curLang === "hi") ? `हम गंतव्य ${cleanCurSpoken} पहुँच चुके हैं। यात्रा के लिए धन्यवाद!` :
-                      (curLang === "en") ? `We have arrived at destination ${cleanCurSpoken}. Thank you for traveling with us!` :
-                      `আমরা গন্তব্য ${cleanCurSpoken}-এ পৌঁছে গেছি। আমাদের সাথে ভ্রমণের জন্য ধন্যবাদ!`;
-        } else {
-          curSpeech = (curLang === "hi") ? `वर्तमान स्टॉप ${cleanCurSpoken}।` :
-                      (curLang === "en") ? `Current stop ${cleanCurSpoken}.` :
-                      `বর্তমান স্টপেজ ${cleanCurSpoken}।`;
-        }
+        let curSpeech = isDestination
+          ? getLocalizedAnnouncement("destArrived", { CUR: cleanCurSpoken }, curLang)
+          : getLocalizedAnnouncement("curStop", { CUR: cleanCurSpoken }, curLang);
         playVoiceAnnouncement(curSpeech, curLang);
       }
 
@@ -7962,9 +8625,7 @@
         nextAnnouncementTimer = setTimeout(() => {
           let curLang = getCurrentAppLanguage();
           let cleanNextSpoken = getSpokenStopName(nextStopName, curLang);
-          let nextSpeech = (curLang === "hi") ? `अगला स्टॉप ${cleanNextSpoken} है।` :
-                           (curLang === "en") ? `Next stop is ${cleanNextSpoken}.` :
-                           `পরবর্তী স্টপেজ ${cleanNextSpoken}।`;
+          let nextSpeech = getLocalizedAnnouncement("nextStop", { NXT: cleanNextSpoken }, curLang);
           playVoiceAnnouncement(nextSpeech, curLang);
         }, 3200);
       }
@@ -8064,7 +8725,8 @@
     try {
       if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
     } catch (_) {}
-    playVoiceAnnouncement("এটি ওয়েক-আপ অ্যালার্টের পরীক্ষামূলক শব্দ।", getCurrentAppLanguage());
+    let curLang = getCurrentAppLanguage();
+    playVoiceAnnouncement(getLocalizedAnnouncement("testAlarm", null, curLang), curLang);
   }
 
   function checkDestinationWakeAlarm(distanceMeters, destName) {
@@ -8098,7 +8760,7 @@
 
     let curLang = getCurrentAppLanguage();
     let spokenDest = getSpokenStopName(destName, curLang);
-    let msg = `সতর্কবার্তা! আপনার গন্তব্য ${spokenDest} আর মাত্র ${dist} মিটার দূরে। নামার প্রস্তুতি নিন।`;
+    let msg = getLocalizedAnnouncement("wakeAlarm", { DEST: spokenDest, DIST: dist }, curLang);
     playVoiceAnnouncement(msg, curLang);
   }
 

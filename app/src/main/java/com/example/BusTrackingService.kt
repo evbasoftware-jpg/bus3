@@ -85,6 +85,13 @@ class BusTrackingService : Service() {
     )
 
     var activeRouteStops: List<RouteStop> = emptyList()
+    private val localizedStringsCache = mutableMapOf<String, JSONObject>()
+
+    fun updateLocalizedStringsCache(lang: String, jsonStr: String) {
+      try {
+        localizedStringsCache[lang.lowercase()] = JSONObject(jsonStr)
+      } catch (_: Exception) {}
+    }
 
     fun setFullRouteStops(stopsJson: String) {
       try {
@@ -477,6 +484,39 @@ class BusTrackingService : Service() {
     checkBackgroundScreenOffAnnouncements(directDestM)
   }
 
+  private fun getLocalizedJsonFor(lang: String): JSONObject? {
+    val norm = lang.lowercase()
+    localizedStringsCache[norm]?.let { return it }
+    return try {
+      val str = getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
+        .getString("localized_strings_$norm", null)
+      if (!str.isNullOrBlank()) {
+        val obj = JSONObject(str)
+        localizedStringsCache[norm] = obj
+        obj
+      } else null
+    } catch (_: Exception) {
+      null
+    }
+  }
+
+  private fun formatStopNameForLanguage(rawStop: String, lang: String): String {
+    if (rawStop.isBlank()) return ""
+    val norm = lang.lowercase()
+    val json = getLocalizedJsonFor(norm)
+    val stopsObj = json?.optJSONObject("stops")
+    val translated = stopsObj?.optString(rawStop, "") ?: stopsObj?.optString(rawStop.uppercase(), "") ?: ""
+    if (translated.isNotBlank()) return translated
+
+    return when (norm.substringBefore("-")) {
+      "bn" -> VoiceAnnouncementManager.toBengaliSpokenStopName(rawStop)
+      "hi" -> VoiceAnnouncementManager.toHindiSpokenStopName(rawStop)
+      else -> rawStop.split(Regex("\\s+")).joinToString(" ") { w ->
+        if (w.length <= 1) w.uppercase() else w.lowercase().replaceFirstChar { it.uppercase() }
+      }
+    }
+  }
+
   private fun checkBackgroundScreenOffAnnouncements(destMeters: Float) {
     // স্ক্রিন অন থাকলে অ্যাপের স্ক্রিন (UI) নিজেই স্টপের সঠিক নাম একবার ঘোষণা করবে।
     // সার্ভিস শুধুমাত্র স্ক্রিন অফ বা অ্যাপ মিনিমাইজ থাকলে (!MainActivity.isActivityResumed) ঘোষণা করবে।
@@ -486,21 +526,29 @@ class BusTrackingService : Service() {
     val cleanNext = getCleanStopBaseName(nextName.ifBlank { nextStopText })
     val cleanDest = getCleanStopBaseName(destName)
 
-    val spokenCur = VoiceAnnouncementManager.toBengaliSpokenStopName(cleanCur)
-    val spokenNext = VoiceAnnouncementManager.toBengaliSpokenStopName(cleanNext)
-    val spokenDest = VoiceAnnouncementManager.toBengaliSpokenStopName(cleanDest)
+    val spokenCur = formatStopNameForLanguage(cleanCur, currentLangCode)
+    val spokenNext = formatStopNameForLanguage(cleanNext, currentLangCode)
+    val spokenDest = formatStopNameForLanguage(cleanDest, currentLangCode)
 
+    val locJson = getLocalizedJsonFor(currentLangCode)
     val now = System.currentTimeMillis()
+    val baseLang = currentLangCode.lowercase().substringBefore("-")
 
     // ১. গন্তব্যে পৌঁছানো ঘোষণা (অ্যাপ ওপেন থাকার সময়ের মতো হুবহু একই বাক্য)
     val isDestinationReached = (destMeters in 1f..80f) || (cleanDest.isNotBlank() && cleanCur.equals(cleanDest, ignoreCase = true))
     if (isDestinationReached && cleanDest.isNotBlank() && cleanDest != lastAnnouncedServiceDest) {
       lastAnnouncedServiceDest = cleanDest
       lastAnnouncementTime = now
-      val destSpeech = when (currentLangCode.lowercase()) {
-        "hi" -> "हम गंतव्य $spokenDest पहुँच चुके हैं। यात्रा के लिए धन्यवाद!"
-        "en" -> "We have arrived at destination $cleanDest. Thank you for traveling with us!"
-        else -> "আমরা গন্তব্য $spokenDest-এ পৌঁছে গেছি। আমাদের সাথে ভ্রমণের জন্য ধন্যবাদ!"
+      val customTpl = locJson?.optString("destArrivedTpl", "") ?: ""
+      val destSpeech = if (customTpl.isNotBlank()) {
+        customTpl.replace("{CUR}", spokenDest)
+      } else {
+        when (baseLang) {
+          "hi" -> "हम गंतव्य $spokenDest पहुँच चुके हैं। यात्रा के लिए धन्यवाद!"
+          "en" -> "We have arrived at destination $spokenDest. Thank you for traveling with us!"
+          "bn" -> "আমরা গন্তব্য $spokenDest-এ পৌঁছে গেছি। আমাদের সাথে ভ্রমণের জন্য ধন্যবাদ!"
+          else -> "We have arrived at destination $spokenDest."
+        }
       }
       VoiceAnnouncementManager.speak(destSpeech, currentLangCode)
       return
@@ -510,10 +558,16 @@ class BusTrackingService : Service() {
     if (cleanCur.isNotBlank() && cleanCur != "--" && cleanCur != lastAnnouncedServiceCurrent) {
       lastAnnouncedServiceCurrent = cleanCur
       lastAnnouncementTime = now
-      val curSpeech = when (currentLangCode.lowercase()) {
-        "hi" -> "वर्तमान स्टॉप $spokenCur।"
-        "en" -> "Current stop $cleanCur."
-        else -> "বর্তমান স্টপেজ $spokenCur।"
+      val curTpl = locJson?.optString("curStopTpl", "") ?: ""
+      val curSpeech = if (curTpl.isNotBlank()) {
+        curTpl.replace("{CUR}", spokenCur)
+      } else {
+        when (baseLang) {
+          "hi" -> "वर्तमान स्टॉप $spokenCur।"
+          "en" -> "Current stop $spokenCur."
+          "bn" -> "বর্তমান স্টপেজ $spokenCur।"
+          else -> "Current stop $spokenCur."
+        }
       }
       VoiceAnnouncementManager.speak(curSpeech, currentLangCode)
 
@@ -523,10 +577,16 @@ class BusTrackingService : Service() {
         nextAnnouncementRunnable?.let { serviceHandler.removeCallbacks(it) }
         val r = Runnable {
           if (!MainActivity.isActivityResumed) {
-            val nextSpeech = when (currentLangCode.lowercase()) {
-              "hi" -> "अगला स्टॉप $spokenNext है।"
-              "en" -> "Next stop is $cleanNext."
-              else -> "পরবর্তী স্টপেজ $spokenNext।"
+            val nextTpl = getLocalizedJsonFor(currentLangCode)?.optString("nextStopTpl", "") ?: ""
+            val nextSpeech = if (nextTpl.isNotBlank()) {
+              nextTpl.replace("{NXT}", spokenNext)
+            } else {
+              when (baseLang) {
+                "hi" -> "अगला स्टॉप $spokenNext है।"
+                "en" -> "Next stop is $spokenNext."
+                "bn" -> "পরবর্তী স্টপেজ $spokenNext।"
+                else -> "Next stop is $spokenNext."
+              }
             }
             VoiceAnnouncementManager.speak(nextSpeech, currentLangCode)
           }
@@ -542,10 +602,16 @@ class BusTrackingService : Service() {
       if (now - lastAnnouncementTime < 4000L) return
       lastAnnouncedServiceNext = cleanNext
       lastAnnouncementTime = now
-      val nextSpeech = when (currentLangCode.lowercase()) {
-        "hi" -> "अगला स्टॉप $spokenNext है।"
-        "en" -> "Next stop is $cleanNext."
-        else -> "পরবর্তী স্টপেজ $spokenNext।"
+      val nextTpl = locJson?.optString("nextStopTpl", "") ?: ""
+      val nextSpeech = if (nextTpl.isNotBlank()) {
+        nextTpl.replace("{NXT}", spokenNext)
+      } else {
+        when (baseLang) {
+          "hi" -> "अगला स्टॉप $spokenNext है।"
+          "en" -> "Next stop is $spokenNext."
+          "bn" -> "পরবর্তী স্টপেজ $spokenNext।"
+          else -> "Next stop is $spokenNext."
+        }
       }
       VoiceAnnouncementManager.speak(nextSpeech, currentLangCode)
     }
@@ -658,6 +724,8 @@ class BusTrackingService : Service() {
   }
 
   private fun getTranslation(lang: String, key: String): String {
+    val dynamicVal = getLocalizedJsonFor(lang)?.optString(key, "") ?: ""
+    if (dynamicVal.isNotBlank()) return dynamicVal
     return when (lang.lowercase()) {
       "hi" -> when (key) {
         "currentStop" -> "वर्तमान स्टॉप"

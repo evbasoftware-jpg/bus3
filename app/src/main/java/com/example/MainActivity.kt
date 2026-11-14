@@ -430,18 +430,6 @@ class MainActivity : ComponentActivity() {
       }
     }
 
-    val prefs = getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
-    val savedLang = prefs.getString("saved_lang", "") ?: ""
-    if (savedLang.isNotEmpty() && savedLang != "bn") {
-      try {
-        val cookieManager = CookieManager.getInstance()
-        cookieManager.setAcceptCookie(true)
-        cookieManager.setAcceptThirdPartyCookies(wv, true)
-        cookieManager.setCookie("file:///android_asset/index.html", "googtrans=/bn/$savedLang; path=/;")
-        cookieManager.flush()
-      } catch (_: Exception) {}
-    }
-
     wv.loadUrl("file:///android_asset/index.html")
     this.webView = wv
     return wv
@@ -641,6 +629,17 @@ class WebAppInterface(private val activity: MainActivity) {
     } catch (_: Exception) {
       ""
     }
+  }
+
+  @JavascriptInterface
+  fun setLocalizedStringsJson(lang: String, jsonStr: String) {
+    try {
+      activity.getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
+        .edit()
+        .putString("localized_strings_${lang.lowercase()}", jsonStr)
+        .apply()
+      BusTrackingService.updateLocalizedStringsCache(lang, jsonStr)
+    } catch (_: Exception) {}
   }
 
   @JavascriptInterface
