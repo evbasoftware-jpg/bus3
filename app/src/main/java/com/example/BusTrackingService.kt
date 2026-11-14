@@ -345,11 +345,13 @@ class BusTrackingService : Service() {
         val hours = nextKm / effSpeed
         val mins = Math.round(hours * 60)
         val nextEtaStr = if (distToNextM < 60f) {
-          when (currentLangCode.lowercase()) {
-            "en" -> "Arrived"
-            "hi" -> "पहुँच गया"
-            else -> "পৌঁছে গেছে"
-          }
+          getLocalizedJsonFor(currentLangCode)?.optString("arrivedText", "")?.takeIf { it.isNotBlank() }
+            ?: when (currentLangCode.lowercase().substringBefore("-")) {
+              "en" -> "Arrived"
+              "hi" -> "पहुँच गया"
+              "bn" -> "পৌঁছে গেছে"
+              else -> "Arrived"
+            }
         } else if (mins < 1) {
           "< 1 MIN"
         } else {
@@ -910,11 +912,13 @@ class BusTrackingService : Service() {
         } else if (destName.isNotBlank() && !getCleanStopBaseName(destName).equals(cleanCurDisp, ignoreCase = true)) {
           nextDisplay = destName
         } else {
-          nextDisplay = when (currentLangCode.lowercase()) {
-            "en" -> "Final Destination"
-            "hi" -> "अंतिम गंतव्य"
-            else -> "গন্তব্যের শেষ স্টপেজ"
-          }
+          nextDisplay = getLocalizedJsonFor(currentLangCode)?.optString("finalDestText", "")?.takeIf { it.isNotBlank() }
+            ?: when (currentLangCode.lowercase().substringBefore("-")) {
+              "en" -> "Final Destination"
+              "hi" -> "अंतिम गंतव्य"
+              "bn" -> "গন্তব্যের শেষ স্টপেজ"
+              else -> "Final Destination"
+            }
         }
       } else if (destName.isNotBlank() && !getCleanStopBaseName(destName).equals(cleanCurDisp, ignoreCase = true)) {
         nextDisplay = destName

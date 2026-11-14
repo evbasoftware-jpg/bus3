@@ -777,15 +777,52 @@ class WebAppInterface(private val activity: MainActivity) {
     return try {
       val url = java.net.URL(urlString)
       val conn = url.openConnection() as java.net.HttpURLConnection
-      conn.connectTimeout = 8000
-      conn.readTimeout = 8000
+      conn.connectTimeout = 5000
+      conn.readTimeout = 6000
       conn.requestMethod = "GET"
-      conn.setRequestProperty("User-Agent", "Mozilla/5.0")
-      if (conn.responseCode == 200) {
+      conn.setRequestProperty(
+        "User-Agent",
+        "Mozilla/5.0 (Linux; Android 13; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
+      )
+      conn.setRequestProperty("Accept", "application/json, text/plain, */*")
+      val code = conn.responseCode
+      val res = if (code in 200..299) {
         conn.inputStream.bufferedReader().use { it.readText() }
       } else {
         ""
       }
+      conn.disconnect()
+      res
+    } catch (_: Exception) {
+      ""
+    }
+  }
+
+  @JavascriptInterface
+  fun postForm(urlString: String, formBody: String): String {
+    return try {
+      val url = java.net.URL(urlString)
+      val conn = url.openConnection() as java.net.HttpURLConnection
+      conn.connectTimeout = 5000
+      conn.readTimeout = 6000
+      conn.requestMethod = "POST"
+      conn.doOutput = true
+      conn.setRequestProperty(
+        "User-Agent",
+        "Mozilla/5.0 (Linux; Android 13; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
+      )
+      conn.setRequestProperty("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8")
+      conn.setRequestProperty("Accept", "application/json, text/plain, */*")
+      val bytes = formBody.toByteArray(Charsets.UTF_8)
+      conn.outputStream.use { it.write(bytes) }
+      val code = conn.responseCode
+      val res = if (code in 200..299) {
+        conn.inputStream.bufferedReader().use { it.readText() }
+      } else {
+        ""
+      }
+      conn.disconnect()
+      res
     } catch (_: Exception) {
       ""
     }

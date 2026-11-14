@@ -307,52 +307,47 @@ object VoiceAnnouncementManager {
     return (res + foundSuffix).trim()
   }
 
-  fun setupTtsVoice(langCode: String) {
-    val tts = textToSpeech ?: return
-    val targetLocale = getLocaleForLanguage(langCode)
-    try {
-      tts.language = targetLocale
+  data class VoicePickResult(
+    val langSupported: Boolean = false,
+    val hasMatchingVoice: Boolean = false,
+    val isFemaleVoice: Boolean = false,
+    val isMaleVoice: Boolean = false
+  )
 
-      var isFemaleSelected = false
+  fun setupTtsVoice(langCode: String): VoicePickResult {
+    val tts = textToSpeech ?: return VoicePickResult()
+    val targetLocale = getLocaleForLanguage(langCode)
+    var langSupported = false
+    var hasMatchingVoice = false
+    var isFemaleSelected = false
+    var isMaleSelected = false
+
+    try {
+      val langStatus = tts.setLanguage(targetLocale)
+      langSupported = langStatus != TextToSpeech.LANG_MISSING_DATA &&
+        langStatus != TextToSpeech.LANG_NOT_SUPPORTED
+
       if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
         val availableVoices = tts.voices
         if (!availableVoices.isNullOrEmpty()) {
-          // ভারতীয় স্ট্যান্ডার্ড ভয়েস (country = IN বা নাম bn-in) অগ্রাধিকার দিন
-          val matchingLocaleVoices = availableVoices.filter {
-            it.locale.language.equals(targetLocale.language, ignoreCase = true) &&
-            (it.locale.country.equals("IN", ignoreCase = true) || it.name.lowercase().contains("-in") || it.name.lowercase().contains("_in"))
-          }.ifEmpty {
-            availableVoices.filter {
-              it.locale.language.equals(targetLocale.language, ignoreCase = true)
-            }
-          }.ifEmpty {
-            availableVoices.toList()
+          val langVoices = availableVoices.filter {
+            it.locale.language.equals(targetLocale.language, ignoreCase = true)
           }
+          hasMatchingVoice = langVoices.isNotEmpty()
 
-          fun isExplicitlyFemale(v: Voice): Boolean {
-            val n = v.name.lowercase()
-            if (n.contains("female") || n.contains("woman") || n.contains("girl") ||
-              n.contains("bnc") || n.contains("bne") || n.contains("bnf") || n.contains("bdf") || n.contains("bif") || n.contains("baf") ||
-              n.contains("hic") || n.contains("hid") || n.contains("hie") || n.contains("hif") ||
-              n.contains("-fem") || n.contains("_fem") || n.contains("fem_") ||
-              n.contains("-f-") || n.contains("_f_") || n.endsWith("-f") || n.endsWith("_f") ||
-              n.contains("voice-2") || n.contains("voice-4") || n.contains("voice_2") || n.contains("voice_4") ||
-              n.contains("swara") || n.contains("aditi") || n.contains("kavya") ||
-              n.contains("lekha") || n.contains("sangeeta") || n.contains("priya") ||
-              n.contains("zira") || n.contains("ananya") || n.contains("shruti") || n.contains("maya") || n.contains("kalpana")
-            ) return true
-            return v.features.any {
-              val fl = it.lowercase()
-              fl.contains("female") || fl.contains("gender=female")
-            }
-          }
+          val matchingLocaleVoices = langVoices.filter {
+            it.locale.country.equals("IN", ignoreCase = true) ||
+              it.locale.country.equals(targetLocale.country, ignoreCase = true) ||
+              it.name.lowercase().contains("-in") ||
+              it.name.lowercase().contains("_in")
+          }.ifEmpty { langVoices }
 
           fun isExplicitlyMale(v: Voice): Boolean {
             val n = v.name.lowercase()
-            if ((n.contains("male") && !n.contains("female")) ||
-              n.contains("man") || n.contains("boy") ||
-              n.contains("bin") || n.contains("bnd") || n.contains("ban") ||
-              n.contains("hia") || n.contains("hib") ||
+            if (Regex("(^|[-_])x-[a-z]{2}[bdm]([-_]|$)").containsMatchIn(n) ||
+              Regex("wavenet-[bd]|neural2-[bd]|standard-[bd]").containsMatchIn(n) ||
+              (n.contains("male") && !n.contains("female")) ||
+              Regex("\\b(man|boy|ravi|david|mark|daniel|alex|prabhat|hemant|madhur|rishi|otoya|tarik|maged)\\b").containsMatchIn(n) ||
               n.contains("-m-") || n.contains("_m_") || n.endsWith("-m") || n.endsWith("_m")
             ) return true
             return v.features.any {
@@ -361,30 +356,64 @@ object VoiceAnnouncementManager {
             }
           }
 
-          val femaleVoices = matchingLocaleVoices.filter { isExplicitlyFemale(it) && !isExplicitlyMale(it) }
-          val selectedVoice = if (femaleVoices.isNotEmpty()) {
-            femaleVoices.sortedWith(
-              compareByDescending<Voice> { !it.isNetworkConnectionRequired && !it.name.contains("network") }
-                .thenByDescending { it.quality }
-            ).firstOrNull() ?: femaleVoices.firstOrNull()
-          } else {
-            matchingLocaleVoices.filter { !isExplicitlyMale(it) }
-              .sortedByDescending { it.quality }
-              .firstOrNull() ?: matchingLocaleVoices.firstOrNull()
+          fun isExplicitlyFemale(v: Voice): Boolean {
+            if (isExplicitlyMale(v)) return false
+            val n = v.name.lowercase()
+            if (n.contains("female") || n.contains("woman") || n.contains("girl") ||
+              Regex("(^|[-_])x-[a-z]{2}[acef]([-_]|$)").containsMatchIn(n) ||
+              Regex("wavenet-[acef]|neural2-[acef]|standard-[acef]").containsMatchIn(n) ||
+              n.contains("-fem") || n.contains("_fem") || n.contains("fem_") ||
+              n.contains("-f-") || n.contains("_f_") || n.endsWith("-f") || n.endsWith("_f") ||
+              n.contains("voice-2") || n.contains("voice-4") || n.contains("voice_2") || n.contains("voice_4") ||
+              Regex("\\b(swara|aditi|kavya|lekha|sangeeta|priya|zira|ananya|shruti|maya|kalpana|heera|neerja|veena|samantha|victoria|karen|tessa|moira|fiona|jenny|aria|sonia|libby|kyoko|yuna|damayanti|kanya|linh|yelda|alice|anna|amelie|paulina|monica|laura|milena|katya|laila|carmit)\\b").containsMatchIn(n)
+            ) return true
+            return v.features.any {
+              val fl = it.lowercase()
+              fl.contains("female") || fl.contains("gender=female")
+            }
           }
 
-          if (selectedVoice != null) {
-            tts.voice = selectedVoice
-            isFemaleSelected = isExplicitlyFemale(selectedVoice)
+          if (matchingLocaleVoices.isNotEmpty()) {
+            val femaleVoices = matchingLocaleVoices.filter { isExplicitlyFemale(it) }
+            val selectedVoice = if (femaleVoices.isNotEmpty()) {
+              femaleVoices.sortedWith(
+                compareByDescending<Voice> { !it.isNetworkConnectionRequired && !it.name.contains("network") }
+                  .thenByDescending { it.quality }
+              ).firstOrNull() ?: femaleVoices.firstOrNull()
+            } else {
+              matchingLocaleVoices.filter { !isExplicitlyMale(it) }
+                .sortedWith(
+                  compareByDescending<Voice> { !it.isNetworkConnectionRequired && !it.name.contains("network") }
+                    .thenByDescending { it.quality }
+                )
+                .firstOrNull() ?: matchingLocaleVoices.firstOrNull()
+            }
+
+            if (selectedVoice != null) {
+              tts.voice = selectedVoice
+              isFemaleSelected = isExplicitlyFemale(selectedVoice)
+              isMaleSelected = isExplicitlyMale(selectedVoice)
+            }
           }
         }
       }
 
-      // মিষ্টি, সফট, মার্জিত ও স্পষ্ট স্বাভাবিক ভারতীয় মহিলা কণ্ঠ
-      // অতিরিক্ত পিচ বিকৃতি (ফাটা ফাটা ভাব) রোধ করতে প্রাকৃতিক পিচ ১.০২f এবং শান্ত গতি ০.৯২f
-      tts.setPitch(1.02f)
+      // স্পষ্ট ও মিষ্টি স্বাভাবিক নারী কণ্ঠ (মহিলা ভয়েস নিশ্চিত না হলে পিচ সামান্য উঁচু রাখা)
+      val targetPitch = when {
+        isFemaleSelected -> 1.03f
+        isMaleSelected -> 1.22f
+        else -> 1.10f
+      }
+      tts.setPitch(targetPitch)
       tts.setSpeechRate(0.92f)
     } catch (_: Exception) {}
+
+    return VoicePickResult(
+      langSupported = langSupported,
+      hasMatchingVoice = hasMatchingVoice,
+      isFemaleVoice = isFemaleSelected,
+      isMaleVoice = isMaleSelected
+    )
   }
 
   val HINDI_STOP_DICTIONARY = mapOf(
@@ -543,17 +572,31 @@ object VoiceAnnouncementManager {
       }
     }
 
-    // ডিভাইসের নিজস্ব গুগল টেক্সট-টু-স্পিচ (com.google.android.tts) সর্বদা খাঁটি ভারতীয় কণ্ঠ প্রদান করে
-    if (isTtsInitialized && textToSpeech != null) {
-      speakViaNativeTts(preparedText, curLang, onDoneCallback)
-      return
+    val nativePick = if (isTtsInitialized && textToSpeech != null) {
+      setupTtsVoice(curLang)
+    } else {
+      VoicePickResult()
     }
 
-    // ফলব্যাক: যদি ডিভাইসে নেটিভ টিটিএস ইনিশিয়ালাইজ না হয়ে থাকে
-    if (isNetworkAvailable() && preparedText.length < 250) {
+    // সকল ভাষায় নিশ্চিত নারী কণ্ঠের জন্য:
+    // যদি অনলাইন সংযোগ থাকে এবং নেটিভ TTS-এ ওই ভাষার নিশ্চিত নারী কণ্ঠ না থাকে (অথবা ভাষাটি অফলাইনে না থাকে),
+    // তবে সরাসরি গুগলের অনলাইন নারী কণ্ঠ (Google Female TTS) ব্যবহার করুন।
+    val shouldPreferOnlineFemale = isNetworkAvailable() && (
+      !isTtsInitialized ||
+        textToSpeech == null ||
+        !nativePick.langSupported ||
+        !nativePick.hasMatchingVoice ||
+        !nativePick.isFemaleVoice
+      )
+
+    if (shouldPreferOnlineFemale) {
       playGoogleOnlineFemaleVoice(preparedText, curLang) { success ->
         if (!success) {
-          speakViaNativeTts(preparedText, curLang, onDoneCallback)
+          if (isTtsInitialized && textToSpeech != null) {
+            speakViaNativeTts(preparedText, curLang, onDoneCallback)
+          } else {
+            onDoneCallback()
+          }
         } else {
           onDoneCallback()
         }
@@ -561,7 +604,100 @@ object VoiceAnnouncementManager {
       return
     }
 
-    speakViaNativeTts(preparedText, curLang, onDoneCallback)
+    if (isTtsInitialized && textToSpeech != null) {
+      speakViaNativeTts(preparedText, curLang, onDoneCallback)
+      return
+    }
+
+    onDoneCallback()
+  }
+
+  private fun splitTextForTtsChunks(text: String, maxLen: Int = 180): List<String> {
+    val clean = text.trim()
+    if (clean.length <= maxLen) return listOf(clean)
+    val result = mutableListOf<String>()
+    val sentences = clean.split(Regex("(?<=[।.!?])\\s+"))
+    var cur = StringBuilder()
+    for (s in sentences) {
+      val trimmed = s.trim()
+      if (trimmed.isEmpty()) continue
+      if (cur.length + trimmed.length + 1 <= maxLen) {
+        if (cur.isNotEmpty()) cur.append(' ')
+        cur.append(trimmed)
+      } else {
+        if (cur.isNotEmpty()) {
+          result.add(cur.toString())
+          cur = StringBuilder()
+        }
+        if (trimmed.length <= maxLen) {
+          cur.append(trimmed)
+        } else {
+          val words = trimmed.split(Regex("\\s+"))
+          for (w in words) {
+            if (cur.length + w.length + 1 <= maxLen) {
+              if (cur.isNotEmpty()) cur.append(' ')
+              cur.append(w)
+            } else {
+              if (cur.isNotEmpty()) {
+                result.add(cur.toString())
+                cur = StringBuilder()
+              }
+              cur.append(w.take(maxLen))
+            }
+          }
+        }
+      }
+    }
+    if (cur.isNotEmpty()) result.add(cur.toString())
+    return if (result.isEmpty()) listOf(clean.take(maxLen)) else result
+  }
+
+  private fun resolveGoogleTtsLangCode(langCode: String): String {
+    return when (langCode.trim().lowercase()) {
+      "en" -> "en-IN"
+      "bn" -> "bn"
+      "hi" -> "hi"
+      "zh-cn" -> "zh-CN"
+      "zh-tw" -> "zh-TW"
+      "he" -> "iw"
+      "fil" -> "tl"
+      "jv" -> "jw"
+      else -> langCode.trim()
+    }
+  }
+
+  private fun downloadGoogleTtsAudio(ctx: Context, chunkText: String, targetLang: String): File? {
+    var connection: HttpURLConnection? = null
+    return try {
+      val encodedText = URLEncoder.encode(chunkText, "UTF-8")
+      val encodedLang = URLEncoder.encode(targetLang, "UTF-8")
+      val urlStr = "https://translate.google.com/translate_tts?ie=UTF-8&q=$encodedText&tl=$encodedLang&client=tw-ob"
+      connection = (URL(urlStr).openConnection() as HttpURLConnection).apply {
+        requestMethod = "GET"
+        connectTimeout = 4500
+        readTimeout = 4500
+        setRequestProperty(
+          "User-Agent",
+          "Mozilla/5.0 (Linux; Android 13; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
+        )
+        setRequestProperty("Referer", "https://translate.google.com/")
+      }
+      if (connection.responseCode != 200) return null
+      val cacheFile = File(ctx.cacheDir, "tts_voice_${System.currentTimeMillis()}_${chunkText.hashCode()}.mp3")
+      connection.inputStream.use { input ->
+        cacheFile.outputStream().use { output ->
+          input.copyTo(output)
+        }
+      }
+      if (cacheFile.exists() && cacheFile.length() > 300) cacheFile else {
+        try { cacheFile.delete() } catch (_: Exception) {}
+        null
+      }
+    } catch (_: Exception) {
+      null
+    } finally {
+      try { connection?.disconnect() } catch (_: Exception) {}
+    }
   }
 
   private fun playGoogleOnlineFemaleVoice(text: String, langCode: String, onComplete: (Boolean) -> Unit) {
@@ -570,49 +706,35 @@ object VoiceAnnouncementManager {
       return
     }
 
-    val targetLang = when (langCode.lowercase()) {
-      "en" -> "en-IN"
-      "bn" -> "bn"
-      "hi" -> "hi"
-      "zh-cn" -> "zh-CN"
-      "zh-tw" -> "zh-TW"
-      else -> langCode.lowercase()
-    }
+    val targetLang = resolveGoogleTtsLangCode(langCode)
+    val chunks = splitTextForTtsChunks(text, 180)
 
     ioScope.launch {
       try {
-        val encodedText = URLEncoder.encode(text, "UTF-8")
-        val encodedLang = URLEncoder.encode(targetLang, "UTF-8")
-        val urlStr = "https://translate.google.com/translate_tts?ie=UTF-8&q=$encodedText&tl=$encodedLang&client=tw-ob"
-        val url = URL(urlStr)
-
-        val connection = url.openConnection() as HttpURLConnection
-        connection.requestMethod = "GET"
-        connection.connectTimeout = 4000
-        connection.readTimeout = 4000
-        connection.setRequestProperty(
-          "User-Agent",
-          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36"
-        )
-
-        if (connection.responseCode != 200) {
+        val files = chunks.mapNotNull { ch -> downloadGoogleTtsAudio(ctx, ch, targetLang) }
+        if (files.isEmpty()) {
           withContext(Dispatchers.Main) { onComplete(false) }
           return@launch
         }
 
-        val cacheFile = File(ctx.cacheDir, "tts_voice_${System.currentTimeMillis()}.mp3")
-        connection.inputStream.use { input ->
-          cacheFile.outputStream().use { output ->
-            input.copyTo(output)
-          }
-        }
-
         withContext(Dispatchers.Main) {
-          if (cacheFile.exists() && cacheFile.length() > 500) {
-            playAudioFile(cacheFile, onComplete)
-          } else {
-            onComplete(false)
+          fun playIndex(idx: Int) {
+            if (idx >= files.size) {
+              onComplete(true)
+              return
+            }
+            playAudioFile(files[idx]) { ok ->
+              if (ok) {
+                playIndex(idx + 1)
+              } else {
+                for (remIdx in idx + 1 until files.size) {
+                  try { files[remIdx].delete() } catch (_: Exception) {}
+                }
+                onComplete(idx > 0)
+              }
+            }
           }
+          playIndex(0)
         }
       } catch (_: Exception) {
         withContext(Dispatchers.Main) {
