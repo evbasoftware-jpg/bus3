@@ -175,6 +175,31 @@
       transform: scale(0.98);
     }
 
+    /* ওয়েক-আপ অ্যালার্ম দূরত্ব নির্বাচন বাটন - অসক্রিয় ও সক্রিয় উভয় অবস্থায় শতভাগ স্পষ্ট লেখা */
+    .btn-alarm-dist {
+      flex: 1;
+      padding: 10px 6px !important;
+      margin: 0 !important;
+      font-size: 12.5px !important;
+      font-weight: 800 !important;
+      letter-spacing: 0.2px;
+      border-radius: 10px !important;
+      background: #f1f5f9 !important;
+      color: #0f172a !important;
+      border: 1.5px solid #cbd5e1 !important;
+      text-shadow: none !important;
+      box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08) !important;
+    }
+    .btn-alarm-dist::before {
+      display: none !important;
+    }
+    .btn-alarm-dist.active {
+      background: linear-gradient(135deg, #1d4ed8 0%, #1565c0 100%) !important;
+      color: #ffffff !important;
+      border-color: #1e40af !important;
+      box-shadow: 0 3px 10px rgba(21, 101, 192, 0.35) !important;
+    }
+
     /* ১. "এই জায়গাটি বাসের স্টপেজ হিসাবে যুক্ত করুন" (ফিচার গ্রিড কার্ড স্টাইল) */
     .feature-action-btn.btn-add-stop {
       border-color: #ec4899;
@@ -1918,9 +1943,9 @@
     <div style="background:#f8fafc;border:1.5px solid #cbd5e1;border-radius:10px;padding:12px;margin:12px 0;">
       <div style="font-weight:bold;color:#0f172a;margin-bottom:6px;font-size:13.5px;">অ্যালার্মের দূরত্ব নির্ধারণ করুন:</div>
       <div style="display:flex;gap:8px;margin-bottom:10px;">
-        <button type="button" id="distBtn200" class="btn" style="flex:1;padding:8px 4px;font-size:12px;background:#e2e8f0;color:#0f172a;" onclick="setAlarmDistance(200)">২০০ মিটার</button>
-        <button type="button" id="distBtn500" class="btn" style="flex:1;padding:8px 4px;font-size:12px;background:#1565c0;color:#fff;font-weight:bold;" onclick="setAlarmDistance(500)">৫০০ মিটার (আদর্শ)</button>
-        <button type="button" id="distBtn1000" class="btn" style="flex:1;padding:8px 4px;font-size:12px;background:#e2e8f0;color:#0f172a;" onclick="setAlarmDistance(1000)">১ কিমি</button>
+        <button type="button" id="distBtn200" class="btn btn-alarm-dist" onclick="setAlarmDistance(200)">২০০ মিটার</button>
+        <button type="button" id="distBtn500" class="btn btn-alarm-dist active" onclick="setAlarmDistance(500)">৫০০ মিটার (আদর্শ)</button>
+        <button type="button" id="distBtn1000" class="btn btn-alarm-dist" onclick="setAlarmDistance(1000)">১ কিমি</button>
       </div>
 
       <div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px;padding-top:10px;border-top:1px solid #e2e8f0;">
@@ -2537,8 +2562,10 @@
     { code: "hi", name: "हिन्दी", eng: "Hindi" },
     { code: "as", name: "অসমীয়া", eng: "Assamese" },
     { code: "bho", name: "भोजपुरी", eng: "Bhojpuri" },
+    { code: "doi", name: "डोगरी", eng: "Dogri" },
     { code: "gu", name: "ગુજરાતી", eng: "Gujarati" },
     { code: "kn", name: "ಕನ್ನಡ", eng: "Kannada" },
+    { code: "kok", name: "कोंकणी", eng: "Konkani" },
     { code: "mai", name: "मैथिली", eng: "Maithili" },
     { code: "ml", name: "മലയാളം", eng: "Malayalam" },
     { code: "mni-Mtei", name: "মৈতৈলোন্", eng: "Meiteilon (Manipuri)" },
@@ -3556,6 +3583,19 @@
     } catch (_) {}
   }
 
+  let googleGtxBlockedUntil = 0;
+
+  function normalizeUiKey(str) {
+    return (str || "").replace(/\s+/g, " ").trim();
+  }
+
+  function toMyMemoryLangCode(code) {
+    const c = (code || "").trim();
+    if (!c) return "en";
+    if (c === "iw") return "he";
+    return c;
+  }
+
   function parseGtxResponseJson(arr) {
     if (Array.isArray(arr) && Array.isArray(arr[0])) {
       return arr[0].map(p => (Array.isArray(p) && p[0]) ? p[0] : "").join("");
@@ -3563,85 +3603,115 @@
     return "";
   }
 
-  // Train/index.html স্টাইলে অতি-দ্রুত ডাইরেক্ট GET অনুবাদ (কোনো অযথা ৮ সেকেন্ড POST/রিট্রাই অপেক্ষা নেই)
-  async function googleTranslateSingleText(text, sourceLang, targetLang) {
+  async function fetchTextViaTimeout(url, options, timeoutMs) {
+    const controller = typeof AbortController !== "undefined" ? new AbortController() : null;
+    const timer = controller ? setTimeout(() => controller.abort(), timeoutMs) : null;
+    try {
+      const resp = await fetch(url, Object.assign({}, options || {}, { signal: controller ? controller.signal : undefined }));
+      if (timer) clearTimeout(timer);
+      return resp;
+    } catch (e) {
+      if (timer) clearTimeout(timer);
+      throw e;
+    }
+  }
+
+  // ১. Google Translate GTX GET / AndroidBridge
+  async function requestGoogleGtx(text, sourceLang, targetLang) {
     let clean = (text || "").trim();
-    if (!clean || !targetLang || targetLang === "bn") return clean;
-    if (sourceLang === targetLang) return clean;
+    if (!clean || !targetLang || sourceLang === targetLang) return { ok: true, text: clean };
+    if (Date.now() < googleGtxBlockedUntil) return { ok: false, rateLimited: true, text: "" };
 
     const baseUrl = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${encodeURIComponent(sourceLang)}&tl=${encodeURIComponent(targetLang)}&dt=t`;
     const qParam = `q=${encodeURIComponent(clean)}`;
     const getUrl = `${baseUrl}&${qParam}`;
 
-    // ১. সরাসরি দ্রুত async GET (Train/index.html পদ্ধতি — ব্রাউজার ও অ্যান্ড্রয়েড WebView উভয়েই সবচেয়ে দ্রুত)
-    if (getUrl.length <= 1850) {
-      try {
-        const controller = typeof AbortController !== "undefined" ? new AbortController() : null;
-        const timer = controller ? setTimeout(() => controller.abort(), 4500) : null;
-        const resp = await fetch(getUrl, { signal: controller ? controller.signal : undefined });
-        if (timer) clearTimeout(timer);
-        if (resp.ok) {
-          const parsed = parseGtxResponseJson(await resp.json());
-          if (parsed) return parsed;
-        }
-      } catch (_) {}
-    } else {
-      // বড় টেক্সট হলে একক দ্রুত POST
-      try {
-        const controller = typeof AbortController !== "undefined" ? new AbortController() : null;
-        const timer = controller ? setTimeout(() => controller.abort(), 4500) : null;
-        const resp = await fetch(baseUrl, {
-          method: "POST",
-          headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" },
-          body: qParam,
-          signal: controller ? controller.signal : undefined
-        });
-        if (timer) clearTimeout(timer);
-        if (resp.ok) {
-          const parsed = parseGtxResponseJson(await resp.json());
-          if (parsed) return parsed;
-        }
-      } catch (_) {}
-    }
+    try {
+      let resp = (getUrl.length <= 1850)
+        ? await fetchTextViaTimeout(getUrl, null, 8500)
+        : await fetchTextViaTimeout(baseUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" },
+            body: qParam
+          }, 8500);
 
-    // ২. জরুরি অ্যান্ড্রয়েড নেটিভ ফলব্যাক (কেবল fetch ব্যর্থ হলেই)
-    if (window.AndroidBridge) {
-      if (typeof window.AndroidBridge.fetchUrl === "function" && getUrl.length <= 1850) {
-        try {
-          let raw = window.AndroidBridge.fetchUrl(getUrl);
-          if (raw) {
-            const parsed = parseGtxResponseJson(JSON.parse(raw));
-            if (parsed) return parsed;
-          }
-        } catch (_) {}
-      } else if (typeof window.AndroidBridge.postForm === "function") {
-        try {
-          let raw = window.AndroidBridge.postForm(baseUrl, qParam);
-          if (raw) {
-            const parsed = parseGtxResponseJson(JSON.parse(raw));
-            if (parsed) return parsed;
-          }
-        } catch (_) {}
+      if (resp.status === 429) {
+        googleGtxBlockedUntil = Date.now() + 45000;
+        return { ok: false, rateLimited: true, text: "" };
       }
-    }
+      if (resp.ok) {
+        const parsed = parseGtxResponseJson(await resp.json());
+        if (parsed && parsed.trim()) return { ok: true, text: parsed.trim() };
+      }
+    } catch (_) {}
 
-    // ৩. ওয়েব ব্রাউজারে একক ছোট টেক্সটের জন্য জরুরি MyMemory ফলব্যাক
-    if (!window.AndroidBridge && clean.length <= 450 && !clean.includes("###SEP###")) {
+    if (window.AndroidBridge) {
       try {
-        const srcCode = sourceLang === "auto" ? "en" : sourceLang;
-        const mmUrl = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(clean)}&langpair=${encodeURIComponent(srcCode + "|" + targetLang)}`;
-        const controller = typeof AbortController !== "undefined" ? new AbortController() : null;
-        const timer = controller ? setTimeout(() => controller.abort(), 3500) : null;
-        const resp = await fetch(mmUrl, { signal: controller ? controller.signal : undefined });
-        if (timer) clearTimeout(timer);
-        if (resp.ok) {
-          const j = await resp.json();
-          const tr = j && j.responseData && j.responseData.translatedText;
-          if (tr && typeof tr === "string" && tr.trim() && !/MYMEMORY WARNING/i.test(tr)) {
-            return tr.trim();
-          }
+        let raw = "";
+        if (getUrl.length <= 1850 && typeof window.AndroidBridge.fetchUrl === "function") {
+          raw = window.AndroidBridge.fetchUrl(getUrl);
+        } else if (typeof window.AndroidBridge.postForm === "function") {
+          raw = window.AndroidBridge.postForm(baseUrl, qParam);
+        }
+        if (raw) {
+          const parsed = parseGtxResponseJson(JSON.parse(raw));
+          if (parsed && parsed.trim()) return { ok: true, text: parsed.trim() };
         }
       } catch (_) {}
+    }
+
+    return { ok: false, text: "" };
+  }
+
+  // ২. MyMemory API (Browser + Android উভয়েই ৪৮০-অক্ষরের ব্যাচে ১০০% কার্যকর ফলব্যাক)
+  async function requestMyMemory(text, sourceLang, targetLang) {
+    let clean = (text || "").trim();
+    if (!clean || clean.length > 485 || !targetLang) return { ok: false, text: "" };
+    const srcCode = toMyMemoryLangCode(sourceLang === "auto" ? "en" : sourceLang);
+    const tgtCode = toMyMemoryLangCode(targetLang);
+    if (srcCode === tgtCode) return { ok: true, text: clean };
+
+    const mmUrl = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(clean)}&langpair=${encodeURIComponent(srcCode + "|" + tgtCode)}`;
+    const parseMmJson = (j) => {
+      if (!j || (j.responseStatus && Number(j.responseStatus) !== 200)) return "";
+      const tr = j.responseData && j.responseData.translatedText;
+      if (tr && typeof tr === "string" && tr.trim() && !/MYMEMORY WARNING|INVALID TARGET LANGUAGE|PLEASE SELECT/i.test(tr)) {
+        return tr.trim();
+      }
+      return "";
+    };
+
+    try {
+      const resp = await fetchTextViaTimeout(mmUrl, null, 8500);
+      if (resp.ok) {
+        const parsed = parseMmJson(await resp.json());
+        if (parsed) return { ok: true, text: parsed };
+      }
+    } catch (_) {}
+
+    if (window.AndroidBridge && typeof window.AndroidBridge.fetchUrl === "function") {
+      try {
+        const raw = window.AndroidBridge.fetchUrl(mmUrl);
+        if (raw) {
+          const parsed = parseMmJson(JSON.parse(raw));
+          if (parsed) return { ok: true, text: parsed };
+        }
+      } catch (_) {}
+    }
+    return { ok: false, text: "" };
+  }
+
+  async function translateSingleSmart(text, sourceLang, targetLang) {
+    let clean = (text || "").trim();
+    if (!clean || !targetLang || targetLang === "bn") return clean;
+    if (sourceLang === targetLang) return clean;
+
+    const gtx = await requestGoogleGtx(clean, sourceLang, targetLang);
+    if (gtx.ok && gtx.text) return gtx.text;
+
+    if (clean.length <= 480) {
+      const mm = await requestMyMemory(clean, sourceLang, targetLang);
+      if (mm.ok && mm.text) return mm.text;
     }
     return "";
   }
@@ -3676,15 +3746,15 @@
       inFlightTrMap[flightKey] = new Promise(res => { resolvers[s] = res; });
     });
 
-    // সব স্ট্যাটিক UI স্ট্রিংকে সংক্ষিপ্ত ও নির্ভুল ইংরেজি উৎস (sl=en) হিসেবে পাঠান —
-    // বাংলার তুলনায় URL সাইজ ৫-৬ গুণ ছোট হয় এবং সব ভাষায় ১-২ সেকেন্ডেই নিখুঁত অনুবাদ হয়!
+    // সব স্ট্যাটিক UI স্ট্রিংকে সংক্ষিপ্ত ও নির্ভুল ইংরেজি উৎস (sl=en) হিসেবে পাঠান
     let bnItems = [];
     let enItems = [];
     let canonReverse = {};
 
     uniqueItems.forEach(s => {
-      let prebuiltEn = PREBUILT_UI_DICT.en ? PREBUILT_UI_DICT.en[s] : null;
-      let canonEn = CANONICAL_EN_SOURCE_MAP[s] || prebuiltEn;
+      let normS = normalizeUiKey(s);
+      let prebuiltEn = PREBUILT_UI_DICT.en ? (PREBUILT_UI_DICT.en[s] || PREBUILT_UI_DICT.en[normS]) : null;
+      let canonEn = CANONICAL_EN_SOURCE_MAP[s] || CANONICAL_EN_SOURCE_MAP[normS] || prebuiltEn;
       if (canonEn) {
         if (targetLang === "en") {
           out[s] = canonEn;
@@ -3702,8 +3772,10 @@
       }
     });
 
-    const sep = "\n###SEP###\n";
-    const splitRegex = /\s*[#＃]{3}\s*SEP\s*[#＃]{3}\s*/i;
+    const gtxSep = "\n###SEP###\n";
+    const gtxSplitRegex = /\s*[#＃]{2,4}\s*(?:SEP|sep)\s*[#＃]{2,4}\s*/i;
+    const mmSep = "\n###\n";
+    const mmSplitRegex = /\s*[#＃]{2,4}\s*/;
 
     function recordTranslatedPair(queryStr, val) {
       if (!val || !val.trim()) return;
@@ -3715,46 +3787,103 @@
       }
     }
 
-    // Train/index.html স্টাইলে সমান্তরাল চাঙ্ক অনুবাদ + বিভাজক অমিল হলে একযোগে ৫টি করে প্যারালাল রিকোয়েস্ট
-    async function runChunkFast(chunk, srcLang) {
-      if (!chunk.length) return;
-      if (chunk.length === 1) {
-        try {
-          let v = await googleTranslateSingleText(chunk[0], srcLang, targetLang);
-          if (v && v.trim()) {
-            recordTranslatedPair(chunk[0], v);
-            if (typeof onChunkDone === "function") onChunkDone(out);
-          }
-        } catch (_) {}
+    function splitTranslatedParts(translated, origChunk, primaryRegex) {
+      if (!translated) return null;
+      let parts = translated.split(primaryRegex);
+      if (parts.length === origChunk.length) return parts;
+      let lineParts = translated.split(/\r?\n+/).map(p => p.trim()).filter(Boolean);
+      if (lineParts.length === origChunk.length) return lineParts;
+      return null;
+    }
+
+    // MyMemory নিরাপদ ব্যাচ রানার (সর্বোচ্চ ৪২০ অক্ষর, বিভাজক না মিললে বাইসেক্ট)
+    async function runChunkMyMemory(subChunk, srcLang) {
+      if (!subChunk.length) return;
+      if (subChunk.length === 1) {
+        const mm = await requestMyMemory(subChunk[0], srcLang, targetLang);
+        if (mm.ok && mm.text) {
+          recordTranslatedPair(subChunk[0], mm.text);
+          if (typeof onChunkDone === "function") onChunkDone(out);
+        }
         return;
       }
-      try {
-        let joined = chunk.join(sep);
-        let translated = await googleTranslateSingleText(joined, srcLang, targetLang);
-        if (translated && translated !== joined) {
-          let parts = translated.split(splitRegex);
-          if (parts.length === chunk.length) {
+
+      let packs = [];
+      let pack = [];
+      let rawLen = 0;
+      for (const s of subChunk) {
+        if ((rawLen + s.length + mmSep.length > 420 || pack.length >= 15) && pack.length) {
+          packs.push(pack);
+          pack = [];
+          rawLen = 0;
+        }
+        pack.push(s);
+        rawLen += s.length + mmSep.length;
+      }
+      if (pack.length) packs.push(pack);
+
+      for (const p of packs) {
+        if (p.length === 1) {
+          const mm = await requestMyMemory(p[0], srcLang, targetLang);
+          if (mm.ok && mm.text) {
+            recordTranslatedPair(p[0], mm.text);
+            if (typeof onChunkDone === "function") onChunkDone(out);
+          }
+          continue;
+        }
+        const joined = p.join(mmSep);
+        const mm = await requestMyMemory(joined, srcLang, targetLang);
+        const parts = mm.ok ? splitTranslatedParts(mm.text, p, mmSplitRegex) : null;
+        if (parts) {
+          p.forEach((orig, idx) => {
+            if (parts[idx] && parts[idx].trim()) recordTranslatedPair(orig, parts[idx].trim());
+          });
+          if (typeof onChunkDone === "function") onChunkDone(out);
+        } else {
+          // বাইসেক্ট: একসাথে ২০টি রিকোয়েস্ট পাঠিয়ে ৪২৯ না করে দুই ভাগে ভাগ করুন
+          const mid = Math.ceil(p.length / 2);
+          await runChunkMyMemory(p.slice(0, mid), srcLang);
+          await runChunkMyMemory(p.slice(mid), srcLang);
+        }
+      }
+    }
+
+    // স্মার্ট চাঙ্ক অনুবাদক: প্রথমে Google GTX (৪২৯ বিহীন), ব্যর্থ/৪২৯ হলে সরাসরি MyMemory ব্যাচ
+    async function runChunkSmart(chunk, srcLang) {
+      if (!chunk.length) return;
+      if (chunk.length === 1) {
+        const v = await translateSingleSmart(chunk[0], srcLang, targetLang);
+        if (v && v.trim()) {
+          recordTranslatedPair(chunk[0], v);
+          if (typeof onChunkDone === "function") onChunkDone(out);
+        }
+        return;
+      }
+
+      if (Date.now() >= googleGtxBlockedUntil) {
+        const joined = chunk.join(gtxSep);
+        const gtx = await requestGoogleGtx(joined, srcLang, targetLang);
+        if (gtx.ok && gtx.text && gtx.text !== joined) {
+          const parts = splitTranslatedParts(gtx.text, chunk, gtxSplitRegex);
+          if (parts) {
             chunk.forEach((orig, idx) => {
-              let v = (parts[idx] || "").trim();
-              if (v) recordTranslatedPair(orig, v);
+              if (parts[idx] && parts[idx].trim()) recordTranslatedPair(orig, parts[idx].trim());
             });
             if (typeof onChunkDone === "function") onChunkDone(out);
             return;
           }
+          // GTX রেসপন্স পেলেও বিভাজক অমিল হলে দুই ভাগে বাইসেক্ট করে আবার চেষ্টা
+          if (chunk.length > 3) {
+            const mid = Math.ceil(chunk.length / 2);
+            await runChunkSmart(chunk.slice(0, mid), srcLang);
+            await runChunkSmart(chunk.slice(mid), srcLang);
+            return;
+          }
         }
-      } catch (_) {}
-
-      const fallbackConcurrency = 5;
-      for (let i = 0; i < chunk.length; i += fallbackConcurrency) {
-        let slice = chunk.slice(i, i + fallbackConcurrency);
-        await Promise.all(slice.map(async (orig) => {
-          try {
-            let v = await googleTranslateSingleText(orig, srcLang, targetLang);
-            if (v && v.trim()) recordTranslatedPair(orig, v);
-          } catch (_) {}
-        }));
-        if (typeof onChunkDone === "function") onChunkDone(out);
       }
+
+      // Google GTX ৪২৯ বা ব্যর্থ হলে MyMemory ব্যাচ দিয়ে নির্ভুল অনুবাদ
+      await runChunkMyMemory(chunk, srcLang);
     }
 
     async function runGroup(groupItems, srcLang) {
@@ -3767,8 +3896,8 @@
       let encLen = 0;
 
       for (let item of groupItems) {
-        let itemEncLen = encodeURIComponent(item + sep).length;
-        if ((encLen + itemEncLen > 1250 || chunk.length >= 25) && chunk.length) {
+        let itemEncLen = encodeURIComponent(item + gtxSep).length;
+        if ((encLen + itemEncLen > 900 || chunk.length >= 14) && chunk.length) {
           chunks.push(chunk);
           chunk = [];
           encLen = 0;
@@ -3778,19 +3907,21 @@
       }
       if (chunk.length) chunks.push(chunk);
 
-      const concurrency = 5;
+      // নিয়ন্ত্রিত সমান্তরাল (concurrency = 2): ৪২৯ ছাড়াই সর্বোচ্চ গতিতে দৃশ্যমান UI অনুবাদ
+      const concurrency = 2;
       for (let i = 0; i < chunks.length; i += concurrency) {
         let batch = chunks.slice(i, i + concurrency);
-        await Promise.all(batch.map(c => runChunkFast(c, srcLang)));
+        await Promise.all(batch.map(c => runChunkSmart(c, srcLang)));
+        if (i + concurrency < chunks.length) {
+          await new Promise(r => setTimeout(r, 40));
+        }
       }
     }
 
     activeBatchTranslateCount++;
     try {
-      await Promise.all([
-        runGroup(enItems, "en"),
-        runGroup(bnItems, "bn")
-      ]);
+      await runGroup(enItems, "en");
+      await runGroup(bnItems, "bn");
       if (pendingWaiters.length) await Promise.all(pendingWaiters);
     } finally {
       activeBatchTranslateCount = Math.max(0, activeBatchTranslateCount - 1);
@@ -3947,7 +4078,8 @@
         let core = orig.trim();
         if (!core || !isTranslatableString(core)) return;
 
-        let tr = cache[core];
+        let normCore = normalizeUiKey(core);
+        let tr = cache[core] || cache[normCore];
         if (tr) {
           let newVal = leading + tr + trailing;
           if (n.nodeValue !== newVal) n.nodeValue = newVal;
@@ -3962,14 +4094,16 @@
         if (st.placeholder) {
           let core = st.placeholder.trim();
           if (isTranslatableString(core)) {
-            if (cache[core]) el.setAttribute("placeholder", cache[core]);
+            let trPh = cache[core] || cache[normalizeUiKey(core)];
+            if (trPh) el.setAttribute("placeholder", trPh);
             else missingSet.add(core);
           }
         }
         if (st.title) {
           let core = st.title.trim();
           if (isTranslatableString(core)) {
-            if (cache[core]) el.setAttribute("title", cache[core]);
+            let trTtl = cache[core] || cache[normalizeUiKey(core)];
+            if (trTtl) el.setAttribute("title", trTtl);
             else missingSet.add(core);
           }
         }
@@ -4308,10 +4442,10 @@
     let vText = document.getElementById("voiceToggleText");
     if (vText) {
       let rawText = (typeof voiceAnnouncementEnabled !== "undefined" && voiceAnnouncementEnabled) ? "ঘোষণা: চালু" : "ঘোষণা: বন্ধ";
+      vText.textContent = rawText;
       if (vText.firstChild && vText.firstChild.nodeType === 3) {
         origTextNodeMap.set(vText.firstChild, rawText);
       }
-      vText.innerText = rawText;
     }
     if (typeof updateDistanceAndTracking === "function") {
       updateDistanceAndTracking();
@@ -4336,19 +4470,22 @@
     // ১. বাংলা, ইংরেজি ও হিন্দি এবং পূর্বের সংরক্ষিত ক্যাশ: ০ মিলিসেকেন্ডে সম্পূর্ণ অ্যাপ + সব সাবমেনু অনুবাদ
     applyCachedDomTranslations(lang, document.body, false);
 
-    // ২. অন্যান্য ১০০+ ভাষায়: প্রথমে দৃশ্যমান UI (~০.৪ সেকেন্ড), তারপর সাথে সাথেই সব সাবমেনু/মডাল (~১ সেকেন্ড)
+    // ২. অন্যান্য ১২৫+ ভাষায়: প্রথমে দৃশ্যমান UI সরাসরি লাইভ আপডেট হবে
     await translatePageToLanguage(lang, document.body, true, true);
     if (gen !== activeTranslationGeneration) return;
 
     notifyLanguageChanged(lang);
     applyCachedDomTranslations(lang, document.body, true);
 
+    // ৩. দৃশ্যমান অংশ শেষ হওয়ার পর ধারাবাহিকভাবে সব সাবমেনু/মডাল, ঘোষণা ও স্টপ নাম অনুবাদ করুন (কোনো ৪২৯ ফ্লাড ছাড়াই)
     if (lang !== "bn") {
-      await Promise.all([
-        translatePageToLanguage(lang, document.body, false, false),
-        ensureAnnounceTemplatesLoaded(lang),
-        ensureRouteStopsTranslated(lang)
-      ]);
+      await translatePageToLanguage(lang, document.body, false, false);
+      if (gen !== activeTranslationGeneration) return;
+      applyCachedDomTranslations(lang, document.body, false);
+
+      await ensureAnnounceTemplatesLoaded(lang);
+      if (gen !== activeTranslationGeneration) return;
+      await ensureRouteStopsTranslated(lang);
       if (gen !== activeTranslationGeneration) return;
       applyCachedDomTranslations(lang, document.body, false);
     }
@@ -9720,24 +9857,35 @@
       let btn = document.getElementById("distBtn" + d);
       if (btn) {
         if (d == dist) {
-          btn.style.background = "#1565c0";
-          btn.style.color = "#ffffff";
-          btn.style.fontWeight = "bold";
+          btn.classList.add("active");
+          btn.style.setProperty("background", "linear-gradient(135deg, #1d4ed8 0%, #1565c0 100%)", "important");
+          btn.style.setProperty("color", "#ffffff", "important");
+          btn.style.setProperty("border-color", "#1e40af", "important");
+          btn.style.fontWeight = "800";
         } else {
-          btn.style.background = "#e2e8f0";
-          btn.style.color = "#0f172a";
-          btn.style.fontWeight = "normal";
+          btn.classList.remove("active");
+          btn.style.setProperty("background", "#f1f5f9", "important");
+          btn.style.setProperty("color", "#0f172a", "important");
+          btn.style.setProperty("border-color", "#cbd5e1", "important");
+          btn.style.fontWeight = "700";
         }
       }
     });
 
     let badge = document.getElementById("wakeAlarmBadge");
     if (badge) {
-      badge.innerText = wakeAlarmEnabled ? `🔔 ${dist}মি. সক্রিয়` : "অ্যালার্ট বন্ধ";
+      let rawBadge = wakeAlarmEnabled ? `🔔 ${dist}মি. সক্রিয়` : "অ্যালার্ট বন্ধ";
+      badge.textContent = rawBadge;
+      if (badge.firstChild && badge.firstChild.nodeType === 3) origTextNodeMap.set(badge.firstChild, rawBadge);
     }
     let statusCard = document.getElementById("infoAlarmStatus");
     if (statusCard) {
-      statusCard.innerText = wakeAlarmEnabled ? `${dist}মি সক্রিয় 🔔` : "বন্ধ";
+      let rawStatus = wakeAlarmEnabled ? `${dist}মি সক্রিয় 🔔` : "বন্ধ";
+      statusCard.textContent = rawStatus;
+      if (statusCard.firstChild && statusCard.firstChild.nodeType === 3) origTextNodeMap.set(statusCard.firstChild, rawStatus);
+    }
+    if (getCurrentAppLanguage() !== "bn") {
+      scheduleIncrementalTranslation(document.body);
     }
   }
 
