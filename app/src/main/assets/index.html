@@ -175,30 +175,21 @@
       transform: scale(0.98);
     }
 
-    /* ১. "নতুন বাসের তথ্য যুক্ত করুন" (ভাইব্রেন্ট রয়াল ব্লু) */
-    #toggleBusFormBtn {
-      background: linear-gradient(180deg, #1e88e5 0%, #1565c0 60%, #0d47a1 100%) !important;
-      box-shadow: 0 6px 16px rgba(21, 101, 192, 0.45) !important;
+    /* ১. "এই জায়গাটি বাসের স্টপেজ হিসাবে যুক্ত করুন" (ফিচার গ্রিড কার্ড স্টাইল) */
+    .feature-action-btn.btn-add-stop {
+      border-color: #ec4899;
+      background: linear-gradient(135deg, #ffffff 0%, #fdf2f8 100%);
     }
+    .feature-action-btn.btn-add-stop .feat-label { color: #be185d; }
+    .feature-action-btn.btn-add-stop .feat-sub { color: #db2777; }
 
-    #toggleBusFormBtn:hover {
-      background: linear-gradient(180deg, #42a5f5 0%, #1976d2 60%, #1565c0 100%) !important;
-      box-shadow: 0 8px 22px rgba(21, 101, 192, 0.55) !important;
-      transform: translateY(-2px);
+    /* ১০. "+ নতুন বাসের তথ্য যুক্ত করুন" (ফিচার গ্রিড কার্ড স্টাইল) */
+    .feature-action-btn.btn-add-new-bus {
+      border-color: #2563eb;
+      background: linear-gradient(135deg, #ffffff 0%, #eff6ff 100%);
     }
-
-    /* ২. "এই জায়গাটি বাসের স্টপেজ হিসাবে যুক্ত করুন" (হট পিঙ্ক/ম্যাজেন্টা) */
-    #addStopBtn {
-      background: linear-gradient(180deg, #ff2a85 0%, #d81b60 60%, #880e4f 100%) !important;
-      box-shadow: 0 6px 16px rgba(216, 27, 96, 0.45) !important;
-      border: 1.5px solid rgba(255, 255, 255, 0.65) !important;
-    }
-
-    #addStopBtn:hover {
-      background: linear-gradient(180deg, #ff4081 0%, #e91e63 60%, #ad1457 100%) !important;
-      box-shadow: 0 8px 22px rgba(216, 27, 96, 0.55) !important;
-      transform: translateY(-2px);
-    }
+    .feature-action-btn.btn-add-new-bus .feat-label { color: #1d4ed8; }
+    .feature-action-btn.btn-add-new-bus .feat-sub { color: #2563eb; }
 
     /* ৩. ম্যাপের নিচের অফলাইন মোড বোতাম (উজ্জ্বল টিল ব্লু) */
     .btn-map-mode {
@@ -1579,74 +1570,6 @@
 
   <h2>🚌 বাস লাইভ লোকেশন (ভারত)</h2>
 
-  <button id="toggleBusFormBtn" class="btn">+ নতুন বাসের তথ্য যুক্ত করুন</button>
-
-  <div id="busFormBox" class="box hidden">
-    <h3>নতুন বাসের বিবরণ</h3>
-    <div class="grid">
-      <div><label>রাজ্য</label><input type="text" id="state" placeholder="STATE"></div>
-      <div><label>জেলা</label><input type="text" id="district" placeholder="DISTRICT"></div>
-      <div><label>বাস নম্বর</label><input type="text" id="busNoInput" placeholder="BUS NUMBER"></div>
-      <div><label>বাসের নাম</label><input type="text" id="busNameInput" placeholder="BUS NAME"></div>
-      <div>
-        <label>বাস ক্যাটাগরি</label>
-        <select id="category">
-          <option value="PUBLIC">PUBLIC</option>
-          <option value="PRIVATE">PRIVATE</option>
-          <option value="NBSTC">NBSTC</option>
-          <option value="SBSTC">SBSTC</option>
-          <option value="WBTC">WBTC</option>
-          <option value="EXPRESS">EXPRESS</option>
-          <option value="LOCAL">LOCAL</option>
-        </select>
-      </div>
-      <div><label>চলাচলের দিন</label><input type="text" id="days" placeholder="DAILY / MON-FRI"></div>
-      <div><label>বাস কোথা থেকে ছাড়বে?</label><input type="text" id="src" placeholder="FROM" onchange="renderStopsCheckboxes()"></div>
-      
-      <div>
-        <label>বাস কখন ছাড়বে?</label>
-        <div class="time-picker-row">
-          <input type="text" id="srcTimeVal" placeholder="04:10">
-          <select id="srcTimeAmpm" class="ampm-select">
-            <option value="AM">AM</option>
-            <option value="PM">PM</option>
-          </select>
-        </div>
-      </div>
-
-      <div><label>বাস কতদূর যাবে (গন্তব্য)?</label><input type="text" id="dest" placeholder="TO" onchange="renderStopsCheckboxes()"></div>
-
-      <div>
-        <label>বাস কখন পৌঁছাবে?</label>
-        <div class="time-picker-row">
-          <input type="text" id="destTimeVal" placeholder="06:00">
-          <select id="destTimeAmpm" class="ampm-select">
-            <option value="AM">AM</option>
-            <option value="PM" selected>PM</option>
-          </select>
-        </div>
-      </div>
-
-      <!-- স্টপেজের চেকবক্স তালিকা -->
-      <div class="stop-checkbox-container" id="stopCheckboxContainer">
-        <b>🛑 এই রুটের স্টপেজগুলো নির্বাচন করুন (যেখানে বাসটি দাঁড়াবে টিক রাখুন):</b>
-        <div id="stopsCheckboxList" style="margin-top:8px;">
-          <i>সোর্স ও গন্তব্য লিখলে স্টপ লোড হবে...</i>
-        </div>
-      </div>
-
-    </div>
-    <button class="btn" onclick="saveNewBus()">সংরক্ষণ করুন</button>
-    <button class="btn btn-cancel" onclick="toggleBusForm(false)">বন্ধ করুন</button>
-  </div>
-
-  <button id="addStopBtn" class="btn" onclick="openConfirmDialog()" style="align-items: flex-start; text-align: left;">
-    <svg viewBox="0 0 24 24" width="20" height="20" fill="#ffffff" style="flex-shrink: 0; margin-top: 2px; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.4));">
-      <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
-    </svg>
-    <span id="addStopBtnText" style="line-height: 1.35;">এই জায়গাটি বাসের স্টপেজ হিসাবে যুক্ত করুন</span>
-  </button>
-  
   <hr>
 
   <div class="search-inputs-wrapper">
@@ -1818,56 +1741,127 @@
     </div>
   </div>
 
-  <!-- ব্যবহারকারীর নির্দেশনা: ফিচার বাটনসমূহ -->
+  <!-- ব্যবহারকারীর নির্দেশনা: ফিচার বাটনসমূহ (১ থেকে ১০ পর্যন্ত ক্রমানুসারে) -->
   <div class="features-quick-grid">
+    <button type="button" id="addStopBtn" class="feature-action-btn btn-add-stop" onclick="openConfirmDialog()" title="এই জায়গাটি বাসের স্টপেজ হিসাবে যুক্ত করুন">
+      <span class="feat-icon">📍</span>
+      <span class="feat-label">১) <span id="addStopBtnText">এই জায়গাটি বাসের স্টপেজ হিসাবে যুক্ত করুন</span></span>
+      <span class="feat-sub">বর্তমান GPS স্থানে স্টপেজ যোগ</span>
+      <span class="feat-badge" style="background:#fce7f3;color:#9d174d;">➕ স্টপেজ যোগ</span>
+    </button>
+    <button type="button" class="feature-action-btn btn-timetable" onclick="openTimeTableModal()" title="বাস ছাড়ার সময়সূচি ও স্টপেজ সূচি">
+      <span class="feat-icon">🕒</span>
+      <span class="feat-label">২) বাসের সময়সূচি</span>
+      <span class="feat-sub">পরপর স্টপ ও সঠিক সময়</span>
+      <span class="feat-badge" style="background:#dbeafe;color:#1e40af;">📅 সময় দেখুন</span>
+    </button>
     <button type="button" class="feature-action-btn btn-wake-alarm" onclick="openWakeAlarmModal()" title="গন্তব্যের ৫০০ মিটার পূর্বে ওয়েক-আপ অ্যালার্ট">
       <span class="feat-icon">⏰</span>
-      <span class="feat-label">১) ওয়েক-আপ অ্যালার্ট</span>
+      <span class="feat-label">৩) ওয়েক-আপ অ্যালার্ট</span>
       <span class="feat-sub">৫০০ মিটার পূর্বে অ্যালার্ম</span>
       <span class="feat-badge" id="wakeAlarmBadge">🔔 ৫০০মি. সক্রিয়</span>
     </button>
     <button type="button" class="feature-action-btn btn-fare" onclick="openFareModal()" title="বাসের ভাড়া তালিকা ও স্টেজ হিসাব">
       <span class="feat-icon">💰</span>
-      <span class="feat-label">২) ভাড়া তালিকা</span>
+      <span class="feat-label">৪) ভাড়া তালিকা</span>
       <span class="feat-sub">স্টপ ও দূরত্ব ভিত্তিক ভাড়া</span>
       <span class="feat-badge" style="background:#d1fae5;color:#065f46;">₹ তালিকা দেখুন</span>
     </button>
-    <button type="button" class="feature-action-btn btn-timetable" onclick="openTimeTableModal()" title="বাস ছাড়ার সময়সূচি ও স্টপেজ সূচি">
-      <span class="feat-icon">🕒</span>
-      <span class="feat-label">৩) বাসের সময়সূচি</span>
-      <span class="feat-sub">পরপর স্টপ ও সঠিক সময়</span>
-      <span class="feat-badge" style="background:#dbeafe;color:#1e40af;">📅 সময় দেখুন</span>
-    </button>
     <button type="button" class="feature-action-btn btn-share" onclick="shareLiveTrip()" title="লাইভ ট্র্যাকিং শেয়ারিং">
       <span class="feat-icon">📲</span>
-      <span class="feat-label">৪) লাইভ শেয়ার</span>
+      <span class="feat-label">৫) লাইভ শেয়ার</span>
       <span class="feat-sub">হোয়াটসঅ্যাপ / লিঙ্ক</span>
       <span class="feat-badge" style="background:#fcfce3;color:#15803d;">🚀 শেয়ার করুন</span>
     </button>
     <button type="button" class="feature-action-btn btn-helpline" onclick="openHelplineModal()" title="কন্ডাক্টর ও জরুরি হেল্পলাইন নম্বর">
       <span class="feat-icon">📞</span>
-      <span class="feat-label">৫) হেল্পলাইন নম্বর</span>
+      <span class="feat-label">৬) হেল্পলাইন নম্বর</span>
       <span class="feat-sub">কন্ডাক্টর ও পুলিশ / অ্যাম্বুলেন্স</span>
       <span class="feat-badge" style="background:#fee2e2;color:#991b1b;">🚨 জরুরি কল</span>
     </button>
     <button type="button" class="feature-action-btn btn-crowd" onclick="openCrowdModal()" title="বাসে ভিড়ের মাত্রা নির্দেশক">
       <span class="feat-icon">👥</span>
-      <span class="feat-label">৬) ভিড়ের মাত্রা</span>
+      <span class="feat-label">৭) ভিড়ের মাত্রা</span>
       <span class="feat-sub" id="quickCrowdSub">স্বাভাবিক</span>
       <span class="feat-badge badge-crowd-status" id="quickCrowdBadge">🟢 কম ভিড়</span>
     </button>
     <button type="button" class="feature-action-btn btn-bus-off" onclick="openBusOffModal()" title="কোনো বাস কোনো নির্দিষ্ট দিন বা সময় বন্ধ থাকলে আপডেট করুন">
       <span class="feat-icon">🚫</span>
-      <span class="feat-label">৭) বাস বন্ধের তথ্য</span>
+      <span class="feat-label">৮) বাস বন্ধের তথ্য</span>
       <span class="feat-sub">দিন বা সময় বন্ধ আপডেট</span>
       <span class="feat-badge" id="quickBusOffBadge" style="background:#fee2e2;color:#991b1b;">🚫 বন্ধ/চালু আপডেট</span>
     </button>
     <button type="button" class="feature-action-btn btn-bus-stop-time" onclick="openBusStopScheduleModal()" title="BusStops শিটে বাসের স্টপেজের নির্দিষ্ট সময় (UP বা DOWN) যুক্ত করুন">
       <span class="feat-icon">⏱️</span>
-      <span class="feat-label">৮) স্টপেজের সময় যুক্ত</span>
+      <span class="feat-label">৯) স্টপেজের সময় যুক্ত</span>
       <span class="feat-sub">BusStops শিটে UP/DOWN সময়</span>
       <span class="feat-badge" style="background:#e0f2fe;color:#0369a1;">⏱️ সময় যুক্ত করুন</span>
     </button>
+    <button type="button" id="toggleBusFormBtn" class="feature-action-btn btn-add-new-bus" title="+ নতুন বাসের তথ্য যুক্ত করুন">
+      <span class="feat-icon">🚌</span>
+      <span class="feat-label">১০) + নতুন বাসের তথ্য যুক্ত করুন</span>
+      <span class="feat-sub">নতুন বাস, রুট ও স্টপ যোগ করুন</span>
+      <span class="feat-badge" style="background:#dbeafe;color:#1e40af;">➕ নতুন বাস যোগ</span>
+    </button>
+  </div>
+
+  <div id="busFormBox" class="box hidden">
+    <h3>নতুন বাসের বিবরণ</h3>
+    <div class="grid">
+      <div><label>রাজ্য</label><input type="text" id="state" placeholder="STATE"></div>
+      <div><label>জেলা</label><input type="text" id="district" placeholder="DISTRICT"></div>
+      <div><label>বাস নম্বর</label><input type="text" id="busNoInput" placeholder="BUS NUMBER"></div>
+      <div><label>বাসের নাম</label><input type="text" id="busNameInput" placeholder="BUS NAME"></div>
+      <div>
+        <label>বাস ক্যাটাগরি</label>
+        <select id="category">
+          <option value="PUBLIC">PUBLIC</option>
+          <option value="PRIVATE">PRIVATE</option>
+          <option value="NBSTC">NBSTC</option>
+          <option value="SBSTC">SBSTC</option>
+          <option value="WBTC">WBTC</option>
+          <option value="EXPRESS">EXPRESS</option>
+          <option value="LOCAL">LOCAL</option>
+        </select>
+      </div>
+      <div><label>চলাচলের দিন</label><input type="text" id="days" placeholder="DAILY / MON-FRI"></div>
+      <div><label>বাস কোথা থেকে ছাড়বে?</label><input type="text" id="src" placeholder="FROM" onchange="renderStopsCheckboxes()"></div>
+      
+      <div>
+        <label>বাস কখন ছাড়বে?</label>
+        <div class="time-picker-row">
+          <input type="text" id="srcTimeVal" placeholder="04:10">
+          <select id="srcTimeAmpm" class="ampm-select">
+            <option value="AM">AM</option>
+            <option value="PM">PM</option>
+          </select>
+        </div>
+      </div>
+
+      <div><label>বাস কতদূর যাবে (গন্তব্য)?</label><input type="text" id="dest" placeholder="TO" onchange="renderStopsCheckboxes()"></div>
+
+      <div>
+        <label>বাস কখন পৌঁছাবে?</label>
+        <div class="time-picker-row">
+          <input type="text" id="destTimeVal" placeholder="06:00">
+          <select id="destTimeAmpm" class="ampm-select">
+            <option value="AM">AM</option>
+            <option value="PM" selected>PM</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- স্টপেজের চেকবক্স তালিকা -->
+      <div class="stop-checkbox-container" id="stopCheckboxContainer">
+        <b>🛑 এই রুটের স্টপেজগুলো নির্বাচন করুন (যেখানে বাসটি দাঁড়াবে টিক রাখুন):</b>
+        <div id="stopsCheckboxList" style="margin-top:8px;">
+          <i>সোর্স ও গন্তব্য লিখলে স্টপ লোড হবে...</i>
+        </div>
+      </div>
+
+    </div>
+    <button class="btn" onclick="saveNewBus()">সংরক্ষণ করুন</button>
+    <button class="btn btn-cancel" onclick="toggleBusForm(false)">বন্ধ করুন</button>
   </div>
 
   <!-- ১ নম্বর নির্দেশনা অনুযায়ী: ব্যবহারকারীর GPS এবং GPS সংকেত অপশন দুটি ৮) স্টপেজের সময় যুক্ত বোতামের নিচে স্থানান্তরিত -->
@@ -2681,6 +2675,7 @@
       "🌐 ভাষা (LANGUAGE):": "🌐 LANGUAGE:",
       "🚌 বাস লাইভ লোকেশন (ভারত)": "🚌 BUS LIVE LOCATION (INDIA)",
       "+ নতুন বাসের তথ্য যুক্ত করুন": "+ ADD NEW BUS INFORMATION",
+      "এই জায়গাটি বাসের স্টপেজ হিসাবে যুক্ত করুন": "ADD THIS PLACE AS A BUS STOP",
       "এই জায়গাটি বাস স্টপ হিসাবে যুক্ত করুন": "ADD THIS PLACE AS A BUS STOP",
       "আপনি কোথা থেকে বাসে উঠবেন?": "WHERE DO YOU CATCH THE BUS FROM?",
       "শুরু বা মাঝের যেকোনো স্থান...": "Anywhere in the beginning or middle...",
@@ -2714,6 +2709,7 @@
       "🌐 ভাষা (LANGUAGE):": "🌐 भाषा (LANGUAGE):",
       "🚌 বাস লাইভ লোকেশন (ভারত)": "🚌 बस की लाइव लोकेशन (भारत)",
       "+ নতুন বাসের তথ্য যুক্ত করুন": "+ नई बस जानकारी जोड़ें",
+      "এই জায়গাটি বাসের স্টপেজ হিসাবে যুক্ত করুন": "इस स्थान को बस स्टॉप के रूप में जोड़ें",
       "এই জায়গাটি বাস স্টপ হিসাবে যুক্ত করুন": "इस स्थान को बस स्टॉप के रूप में जोड़ें",
       "আপনি কোথা থেকে বাসে উঠবেন?": "आप बस कहाँ से पकड़ेंगे?",
       "শুরু বা মাঝের যেকোনো স্থান...": "शुरुआत या बीच में कहीं भी...",
