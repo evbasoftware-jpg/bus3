@@ -2814,6 +2814,8 @@
       "MEDIUM (85%)": "MEDIUM (85%)",
       "LOW (50%)": "LOW (50%)",
       "বিজ্ঞাপনের জন্য WhatsApp এ যোগাযোগ করুন": "Contact on WhatsApp for Advertisement",
+      "নমস্কার, বাস লাইভ লোকেশন অ্যাপে বিজ্ঞাপন দেওয়ার জন্য যোগাযোগ করছি।": "Hello, I am contacting you regarding advertising on the Bus Live Location app.",
+      "নমস্কার, আমি বাস লাইভ লোকেশন অ্যাপে আপনার বিজ্ঞাপনটি দেখে যোগাযোগ করছি।": "Hello, I saw your advertisement on the Bus Live Location app and would like to contact you.",
       "কাজ শেষ? অ্যাপ সম্পূর্ণ বন্ধ করুন (Exit App)": "Finished? Exit App Completely",
       "⏰ গন্তব্যের ওয়েক-আপ অ্যালার্ট (Wake-up Alarm)": "⏰ Destination Wake-up Alarm",
       "বাস আপনার গন্তব্যের নির্দিষ্ট দূরত্বের মধ্যে পৌঁছালে সতর্কবার্তা বেজে উঠবে যাতে আপনি সময়মতো নামার প্রস্তুতি নিতে পারেন।": "An alert will ring when the bus reaches within your chosen distance of the destination so you can get ready to disembark on time.",
@@ -3095,6 +3097,8 @@
       "MEDIUM (85%)": "मध्यम (85%)",
       "LOW (50%)": "कम (50%)",
       "বিজ্ঞাপনের জন্য WhatsApp এ যোগাযোগ করুন": "विज्ञापन के लिए WhatsApp पर संपर्क करें",
+      "নমস্কার, বাস লাইভ লোকেশন অ্যাপে বিজ্ঞাপন দেওয়ার জন্য যোগাযোগ করছি।": "नमस्ते, मैं बस लाइव लोकेशन ऐप पर विज्ञापन देने के लिए संपर्क कर रहा हूँ।",
+      "নমস্কার, আমি বাস লাইভ লোকেশন অ্যাপে আপনার বিজ্ঞাপনটি দেখে যোগাযোগ করছি।": "नमस्ते, मैंने बस लाइव लोकेशन ऐप पर आपका विज्ञापन देखा है और आपसे संपर्क करना चाहता हूँ।",
       "কাজ শেষ? অ্যাপ সম্পূর্ণ বন্ধ করুন (Exit App)": "काम पूरा? ऐप पूरी तरह बंद करें (Exit App)",
       "⏰ গন্তব্যের ওয়েক-আপ অ্যালার্ট (Wake-up Alarm)": "⏰ गंतव्य वेक-अप अलार्म",
       "বাস আপনার গন্তব্যের নির্দিষ্ট দূরত্বের মধ্যে পৌঁছালে সতর্কবার্তা বেজে উঠবে যাতে আপনি সময়মতো নামার প্রস্তুতি নিতে পারেন।": "जब बस आपके गंतव्य की निर्धारित दूरी के भीतर पहुँचेगी तो अलार्म बजेगा ताकि आप समय पर उतरने की तैयारी कर सकें।",
@@ -4452,6 +4456,41 @@
     }
   }
 
+  const EXTRA_ACTION_STRINGS = [
+    "নমস্কার, বাস লাইভ লোকেশন অ্যাপে বিজ্ঞাপন দেওয়ার জন্য যোগাযোগ করছি।",
+    "নমস্কার, আমি বাস লাইভ লোকেশন অ্যাপে আপনার বিজ্ঞাপনটি দেখে যোগাযোগ করছি।"
+  ];
+
+  async function ensureExtraActionStringsTranslated(lang) {
+    if (!lang || lang === "bn") return;
+    let cache = loadLangTranslationCache(lang);
+    let missing = EXTRA_ACTION_STRINGS.filter(s => !cache[s]);
+    if (!missing.length) return;
+    let fresh = await translateBatchTexts(missing, lang);
+    let updated = false;
+    Object.keys(fresh || {}).forEach(k => {
+      if (fresh[k] && fresh[k].trim()) {
+        cache[k] = fresh[k].trim();
+        updated = true;
+      }
+    });
+    if (updated) saveLangTranslationCache(lang);
+  }
+
+  async function getLocalizedActionStringAsync(bnText) {
+    let lang = (typeof getCurrentAppLanguage === "function" ? getCurrentAppLanguage() : "bn") || "bn";
+    if (lang === "bn") return bnText;
+    let cache = loadLangTranslationCache(lang);
+    if (cache[bnText]) return cache[bnText];
+    let fresh = await translateBatchTexts([bnText], lang);
+    if (fresh && fresh[bnText] && fresh[bnText].trim()) {
+      cache[bnText] = fresh[bnText].trim();
+      saveLangTranslationCache(lang);
+      return cache[bnText];
+    }
+    return (PREBUILT_UI_DICT.en && PREBUILT_UI_DICT.en[bnText]) ? PREBUILT_UI_DICT.en[bnText] : bnText;
+  }
+
   async function onAppLanguageChange(lang) {
     if (!lang) lang = "bn";
     activeOrCompletedLangRun = lang;
@@ -4483,6 +4522,8 @@
       if (gen !== activeTranslationGeneration) return;
       applyCachedDomTranslations(lang, document.body, false);
 
+      await ensureExtraActionStringsTranslated(lang);
+      if (gen !== activeTranslationGeneration) return;
       await ensureAnnounceTemplatesLoaded(lang);
       if (gen !== activeTranslationGeneration) return;
       await ensureRouteStopsTranslated(lang);
@@ -11771,11 +11812,12 @@ https://aionline.in.net`;
     }
   }
 
-  function doAdWhatsAppChat() {
+  async function doAdWhatsAppChat() {
     if (!currentAdContactPhone) return;
     let phone = currentAdContactPhone;
     if (phone.length === 10) phone = "91" + phone;
-    let msg = encodeURIComponent("নমস্কার, আমি বাস লাইভ লোকেশন অ্যাপে আপনার বিজ্ঞাপনটি দেখে যোগাযোগ করছি।");
+    let rawMsg = await getLocalizedActionStringAsync("নমস্কার, আমি বাস লাইভ লোকেশন অ্যাপে আপনার বিজ্ঞাপনটি দেখে যোগাযোগ করছি।");
+    let msg = encodeURIComponent(rawMsg);
     let url = `https://api.whatsapp.com/send?phone=${phone}&text=${msg}`;
     closeAdContactModal();
     if (window.AndroidBridge && typeof window.AndroidBridge.openExternalUrl === "function") {
@@ -11795,10 +11837,17 @@ https://aionline.in.net`;
   }
 
   // ৯. সাধারণ বিজ্ঞাপন যোগাযোগ বোতাম (হোয়াটসঅ্যাপে 9800074626)
-  function openGeneralAdContactWhatsApp() {
+  async function openGeneralAdContactWhatsApp() {
     let phone = "919800074626";
-    let msg = encodeURIComponent("নমস্কার, বাস লাইভ লোকেশন অ্যাপে বিজ্ঞাপন দেওয়ার জন্য যোগাযোগ করছি।");
+    let rawMsg = await getLocalizedActionStringAsync("নমস্কার, বাস লাইভ লোকেশন অ্যাপে বিজ্ঞাপন দেওয়ার জন্য যোগাযোগ করছি।");
+    let msg = encodeURIComponent(rawMsg);
     let url = `https://api.whatsapp.com/send?phone=${phone}&text=${msg}`;
+    if (window.AndroidBridge && typeof window.AndroidBridge.openExternalUrl === "function") {
+      try {
+        window.AndroidBridge.openExternalUrl(url);
+        return;
+      } catch (_) {}
+    }
     window.location.href = url;
   }
 
