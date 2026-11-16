@@ -3,6 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <meta name="referrer" content="no-referrer">
   <title>🚌 বাস লাইভ লোকেশন (Bus Live Location)</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <style>
@@ -5226,20 +5227,28 @@
     return norm;
   }
 
+  if ('speechSynthesis' in window) {
+    try {
+      window.speechSynthesis.getVoices();
+      window.speechSynthesis.onvoiceschanged = () => {
+        try { window.speechSynthesis.getVoices(); } catch (_) {}
+      };
+    } catch (_) {}
+  }
+
   function pickSweetFemaleVoice(langCode) {
     if (!('speechSynthesis' in window)) return { voice: null, female: false, male: false, matched: false };
     const voices = window.speechSynthesis.getVoices() || [];
     const norm = (langCode || "bn").replace('_', '-').toLowerCase();
     const base = norm.split("-")[0];
-    let matches = voices.filter(v => (v.lang || "").replace('_', '-').toLowerCase() === norm);
-    if (!matches.length) {
-      matches = voices.filter(v => (v.lang || "").replace('_', '-').toLowerCase().split("-")[0] === base);
-    }
+    let allBaseMatches = voices.filter(v => (v.lang || "").replace('_', '-').toLowerCase().split("-")[0] === base);
+    let exactMatches = allBaseMatches.filter(v => (v.lang || "").replace('_', '-').toLowerCase() === norm);
+    let matches = exactMatches.length ? exactMatches : allBaseMatches;
     if (!matches.length) return { voice: null, female: false, male: false, matched: false };
 
     const fHints = [
       'female','woman','girl','wavenet-a','wavenet-c','wavenet-e','wavenet-f',
-      'neural2-a','neural2-c','neural2-e','neural2-f','x-bnf',
+      'neural2-a','neural2-c','neural2-e','neural2-f','x-bnf','x-ban',
       'x-hia','x-hic','x-hie','x-hif','x-ena','x-enc','x-ene','x-taf','x-tef',
       'x-mrf','x-guf','x-knf','x-mlf','x-paf','x-urf','x-nef','x-sif',
       'tanishaa','nabanita','swara','aditi','kavya','lekha','sangeeta','priya','ananya','shruti','maya',
@@ -5254,21 +5263,83 @@
       'x-bnm','x-bna','x-bnb','x-bnc','x-bnd','x-bdb','x-hid','x-end','x-m',
       'wavenet-b','wavenet-d','neural2-b','neural2-d'
     ];
+
+    const pool = (base === "bn" && allBaseMatches.length) ? allBaseMatches : matches;
     let best = null, bestScore = -9999;
-    for (const v of matches) {
+    for (const v of pool) {
       const n = ((v.name || "") + " " + (v.voiceURI || "")).toLowerCase();
+      const vLang = (v.lang || "").replace('_', '-').toLowerCase();
       const isM = mHints.some(h => n.includes(h)) && !n.includes("female");
       const isF = !isM && fHints.some(h => n.includes(h));
       let s = 0;
       if (isF) s += 500;
       if (isM) s -= 600;
-      if ((v.lang || "").toLowerCase().includes("-in")) s += 30;
+      if (vLang === norm) s += 40;
+      if (vLang.includes("-in")) s += 30;
+      if (n.includes("language")) s -= 20;
       if (s > bestScore) { bestScore = s; best = { voice: v, female: isF, male: isM, matched: true }; }
     }
     return best || { voice: matches[0], female: false, male: false, matched: true };
   }
 
   let browserAudioPlayer = null;
+  let ttsAudioUnlocked = false;
+  let ttsPlaybackToken = 0;
+  const SILENT_WAV_DATA_URI = "data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA";
+
+  function getOrCreateBrowserAudioPlayer() {
+    if (!browserAudioPlayer) {
+      browserAudioPlayer = document.createElement("audio");
+      browserAudioPlayer.id = "busTtsFemaleAudioPlayer";
+      browserAudioPlayer.setAttribute("preload", "auto");
+      browserAudioPlayer.setAttribute("playsinline", "");
+      browserAudioPlayer.setAttribute("referrerpolicy", "no-referrer");
+      browserAudioPlayer.style.display = "none";
+      if (document.body) {
+        document.body.appendChild(browserAudioPlayer);
+      }
+    }
+    return browserAudioPlayer;
+  }
+
+  function unlockBrowserTtsAudio() {
+    if (window.AndroidBridge && window.AndroidBridge.speakAnnouncement) return;
+    if (ttsAudioUnlocked || isAnnouncementPlaying) return;
+    try {
+      const el = getOrCreateBrowserAudioPlayer();
+      el.muted = true;
+      el.volume = 0;
+      el.src = SILENT_WAV_DATA_URI;
+      const p = el.play();
+      if (p && typeof p.then === "function") {
+        p.then(() => {
+          ttsAudioUnlocked = true;
+          if (!isAnnouncementPlaying) {
+            try { el.pause(); } catch (_) {}
+          }
+          el.muted = false;
+          el.volume = 1.0;
+        }).catch(() => {
+          el.muted = false;
+          el.volume = 1.0;
+        });
+      } else {
+        ttsAudioUnlocked = true;
+        try { el.pause(); } catch (_) {}
+        el.muted = false;
+        el.volume = 1.0;
+      }
+    } catch (_) {}
+  }
+
+  if (typeof document !== "undefined") {
+    ["pointerdown", "touchstart", "click"].forEach(evtName => {
+      document.addEventListener(evtName, () => {
+        if (!ttsAudioUnlocked) unlockBrowserTtsAudio();
+      }, { capture: true, passive: true });
+    });
+  }
+
   function splitTtsChunksForBrowser(text, maxLen = 175) {
     const clean = (text || "").trim();
     if (!clean) return [];
@@ -5303,48 +5374,80 @@
     return out.length ? out : [clean.slice(0, maxLen)];
   }
 
+  function buildBrowserTtsMirrorUrls(chunkText, tl) {
+    const q = encodeURIComponent(chunkText);
+    const l = encodeURIComponent(tl);
+    return [
+      `https://translate.google.com/translate_tts?ie=UTF-8&q=${q}&tl=${l}&client=tw-ob`,
+      `https://translate.googleapis.com/translate_tts?ie=UTF-8&q=${q}&tl=${l}&client=gtx`,
+      `https://clients5.google.com/translate_tts?ie=UTF-8&q=${q}&tl=${l}&client=tw-ob`
+    ];
+  }
+
   function playBrowserGoogleFemaleTts(text, langCode, onDone) {
     try {
-      if (browserAudioPlayer) {
-        browserAudioPlayer.pause();
-        browserAudioPlayer = null;
-      }
+      const audio = getOrCreateBrowserAudioPlayer();
+      const token = ++ttsPlaybackToken;
+      try { audio.pause(); } catch (_) {}
+      audio.muted = false;
+      audio.volume = 1.0;
+
       let tl = resolveGoogleTtsLang(langCode);
       let chunks = splitTtsChunksForBrowser(text, 175);
       if (!chunks.length) { onDone(false); return; }
 
       let idx = 0;
       let finished = false;
-      function playNextChunk() {
-        if (finished) return;
-        if (idx >= chunks.length) {
-          finished = true;
-          onDone(true);
+      function finish(ok) {
+        if (finished || token !== ttsPlaybackToken) return;
+        finished = true;
+        audio.onended = null;
+        audio.onerror = null;
+        onDone(ok);
+      }
+
+      function playChunkAt(chunkIdx, mirrorIdx) {
+        if (finished || token !== ttsPlaybackToken) return;
+        if (chunkIdx >= chunks.length) {
+          finish(true);
           return;
         }
-        let chunk = chunks[idx++];
-        let audio = new Audio(`https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(chunk)}&tl=${encodeURIComponent(tl)}&client=tw-ob`);
-        audio.referrerPolicy = "no-referrer";
-        try { audio.playbackRate = 0.95; } catch (_) {}
-        browserAudioPlayer = audio;
-        audio.onended = () => { playNextChunk(); };
-        audio.onerror = () => {
-          if (!finished) {
-            finished = true;
-            onDone(idx > 1);
-          }
+        const urls = buildBrowserTtsMirrorUrls(chunks[chunkIdx], tl);
+        if (mirrorIdx >= urls.length) {
+          finish(chunkIdx > 0);
+          return;
+        }
+
+        audio.onended = () => {
+          if (token !== ttsPlaybackToken) return;
+          playChunkAt(chunkIdx + 1, 0);
         };
+        audio.onerror = () => {
+          if (token !== ttsPlaybackToken) return;
+          playChunkAt(chunkIdx, mirrorIdx + 1);
+        };
+
+        audio.src = urls[mirrorIdx];
+        try { audio.load(); } catch (_) {}
+        try { audio.playbackRate = 1.0; } catch (_) {}
+
         let p = audio.play();
-        if (p && typeof p.catch === "function") {
-          p.catch(() => {
-            if (!finished) {
-              finished = true;
-              onDone(idx > 1);
+        if (p && typeof p.then === "function") {
+          p.then(() => {
+            ttsAudioUnlocked = true;
+          }).catch((err) => {
+            if (token !== ttsPlaybackToken) return;
+            const errName = (err && err.name) ? err.name : "";
+            if (errName === "NotAllowedError") {
+              finish(chunkIdx > 0);
+            } else {
+              playChunkAt(chunkIdx, mirrorIdx + 1);
             }
           });
         }
       }
-      playNextChunk();
+
+      playChunkAt(0, 0);
     } catch (_) {
       onDone(false);
     }
@@ -5395,7 +5498,7 @@
       }, 650);
     }
 
-    let estimatedDuration = Math.max(3000, item.text.length * 85 + 1500);
+    let estimatedDuration = Math.max(4000, item.text.length * 100 + 2000);
     voiceSafetyTimeout = setTimeout(() => {
       finishAndNext();
     }, estimatedDuration);
@@ -5404,7 +5507,7 @@
     let baseLang = (item.lang || "bn").split("-")[0].toLowerCase();
     let needOnlineFemale = (baseLang === "bn") || !pick.matched || !pick.female;
 
-    if (needOnlineFemale && navigator.onLine) {
+    if (needOnlineFemale && navigator.onLine !== false) {
       playBrowserGoogleFemaleTts(item.text, item.lang, (ok) => {
         if (ok) {
           finishAndNext();
@@ -5421,6 +5524,7 @@
   function speakViaWebSpeechOrNative(item, pick, finishAndNext) {
     if ('speechSynthesis' in window) {
       try {
+        try { window.speechSynthesis.cancel(); } catch (_) {}
         let utter = new SpeechSynthesisUtterance(item.text);
         let baseLang = (item.lang || "bn").split("-")[0].toLowerCase();
         utter.lang = SPEECH_LANG_FALLBACKS[item.lang.toLowerCase()] || SPEECH_LANG_FALLBACKS[baseLang] || item.lang || "bn-IN";
@@ -5430,8 +5534,12 @@
           utter.lang = pick.voice.lang || utter.lang;
         }
 
-        // সকল ভাষায় মিষ্টি নারী কণ্ঠের পিচ (পুরুষ কণ্ঠ বা অজানা কণ্ঠে পিচ কিছুটা উঁচু রাখা)
-        utter.pitch = (pick && pick.female) ? 1.04 : ((pick && pick.male) ? 1.24 : 1.12);
+        // সকল ভাষায় মিষ্টি নারী কণ্ঠের পিচ (অনলাইন ব্যর্থ হলে অফলাইন কণ্ঠে উঁচু ও স্নিগ্ধ পিচ)
+        if (baseLang === "bn") {
+          utter.pitch = (pick && pick.female) ? 1.05 : 1.38;
+        } else {
+          utter.pitch = (pick && pick.female) ? 1.04 : ((pick && pick.male) ? 1.32 : 1.18);
+        }
         utter.rate = 0.92;
 
         let hasEnded = false;
@@ -5544,6 +5652,11 @@
 
   function toggleVoiceAnnouncements() {
     voiceAnnouncementEnabled = !voiceAnnouncementEnabled;
+    if (voiceAnnouncementEnabled) {
+      unlockBrowserTtsAudio();
+    } else {
+      ttsPlaybackToken++;
+    }
     let btn = document.getElementById("toggleVoiceBtn");
     let text = document.getElementById("voiceToggleText");
     let lang = getCurrentAppLanguage() || "bn";
@@ -5558,9 +5671,15 @@
         text.innerText = (cache && cache[rawOn]) ? cache[rawOn] : rawOn;
         if (lang !== "bn" && (!cache || !cache[rawOn])) scheduleIncrementalTranslation();
       }
-      ensureAnnounceTemplatesLoaded(lang).then(() => {
+      let baseL = (lang || "bn").split("-")[0].toLowerCase();
+      if (ANNOUNCE_TEMPLATES[lang] || ANNOUNCE_TEMPLATES[baseL] || dynamicAnnounceTplCache[lang]) {
         playVoiceAnnouncement(getLocalizedAnnouncement("voiceEnabled", null, lang), lang);
-      });
+      } else {
+        unlockBrowserTtsAudio();
+        ensureAnnounceTemplatesLoaded(lang).then(() => {
+          playVoiceAnnouncement(getLocalizedAnnouncement("voiceEnabled", null, lang), lang);
+        });
+      }
     } else {
       if (btn) btn.classList.add("disabled");
       voiceQueue = [];
@@ -5570,7 +5689,7 @@
         voiceSafetyTimeout = null;
       }
       if (browserAudioPlayer) {
-        try { browserAudioPlayer.pause(); } catch (_) {}
+        try { browserAudioPlayer.pause(); browserAudioPlayer.onended = null; browserAudioPlayer.onerror = null; } catch (_) {}
       }
       if (text) {
         let rawOff = "ঘোষণা: বন্ধ";

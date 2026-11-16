@@ -21,6 +21,7 @@ import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
+import java.security.MessageDigest
 import java.util.Locale
 import java.util.concurrent.ConcurrentLinkedQueue
 
@@ -364,8 +365,8 @@ object VoiceAnnouncementManager {
             val n = v.name.lowercase()
             if (baseCode == "bn") {
               if (n.contains("female") || n.contains("woman") || n.contains("girl") ||
-                Regex("(^|[-_])x-bnf([_-]|$)").containsMatchIn(n) ||
-                Regex("wavenet-[ac]|neural2-[ac]|standard-[ac]").containsMatchIn(n) ||
+                Regex("(^|[-_])x-(bnf|ban|bnc|bne|bng)([_-]|$)").containsMatchIn(n) ||
+                Regex("wavenet-[ace]|neural2-[ac]|standard-[ac]").containsMatchIn(n) ||
                 n.contains("-fem") || n.contains("_fem") ||
                 Regex("\\b(tanishaa|nabanita|ananya|priya|sangeeta|aditi|kavya|lekha)\\b").containsMatchIn(n)
               ) return true
@@ -388,20 +389,29 @@ object VoiceAnnouncementManager {
             }
           }
 
-          if (matchingLocaleVoices.isNotEmpty()) {
-            val femaleVoices = matchingLocaleVoices.filter { isExplicitlyFemale(it) }
-            val selectedVoice = if (femaleVoices.isNotEmpty()) {
-              femaleVoices.sortedWith(
-                compareByDescending<Voice> { !it.isNetworkConnectionRequired && !it.name.contains("network") }
+          if (matchingLocaleVoices.isNotEmpty() || langVoices.isNotEmpty()) {
+            val localeFemaleVoices = matchingLocaleVoices.filter { isExplicitlyFemale(it) }
+            val allFemaleVoices = if (localeFemaleVoices.isNotEmpty()) {
+              localeFemaleVoices
+            } else {
+              langVoices.filter { isExplicitlyFemale(it) }
+            }
+            val selectedVoice = if (allFemaleVoices.isNotEmpty()) {
+              allFemaleVoices.sortedWith(
+                compareByDescending<Voice> { it.locale.country.equals("IN", ignoreCase = true) }
+                  .thenByDescending { !it.isNetworkConnectionRequired && !it.name.contains("network") }
                   .thenByDescending { it.quality }
-              ).firstOrNull() ?: femaleVoices.firstOrNull()
+              ).firstOrNull() ?: allFemaleVoices.firstOrNull()
             } else {
               matchingLocaleVoices.filter { !isExplicitlyMale(it) }
                 .sortedWith(
-                  compareByDescending<Voice> { !it.isNetworkConnectionRequired && !it.name.contains("network") }
+                  compareByDescending<Voice> { !it.name.lowercase().endsWith("-language") }
+                    .thenByDescending { !it.isNetworkConnectionRequired && !it.name.contains("network") }
                     .thenByDescending { it.quality }
                 )
-                .firstOrNull() ?: matchingLocaleVoices.firstOrNull()
+                .firstOrNull()
+                ?: langVoices.filter { !isExplicitlyMale(it) }.firstOrNull()
+                ?: matchingLocaleVoices.firstOrNull()
             }
 
             if (selectedVoice != null) {
@@ -413,14 +423,14 @@ object VoiceAnnouncementManager {
         }
       }
 
-      // কোমল ও স্পষ্ট স্বাভাবিক নারী কণ্ঠ (মহিলা ভয়েস নিশ্চিত না হলে পিচ কিছুটা উঁচু ও গতি স্নিগ্ধ রাখা)
+      // কোমল ও স্পষ্ট স্বাভাবিক নারী কণ্ঠ (অফলাইনে মহিলা ভয়েস নিশ্চিত না হলে পিচ উঁচু ও স্নিগ্ধ রাখা)
       val targetPitch = when {
         isFemaleSelected -> 1.04f
-        isMaleSelected -> 1.26f
-        else -> 1.15f
+        isMaleSelected -> 1.38f
+        else -> 1.28f
       }
       tts.setPitch(targetPitch)
-      tts.setSpeechRate(0.89f)
+      tts.setSpeechRate(0.90f)
     } catch (_: Exception) {}
 
     return VoicePickResult(
@@ -594,18 +604,21 @@ object VoiceAnnouncementManager {
     }
 
     // বাংলা ও সকল ভাষায় নিশ্চিত কোমল নারী কণ্ঠের জন্য:
-    // অনলাইন সংযোগ থাকলে বাংলা-সহ যেকোনো ভাষায় (যখন অফলাইন নারী কণ্ঠ নিশ্চিত নয়) সরাসরি গুগলের অনলাইন নারী কণ্ঠ ব্যবহার করুন।
+    // ক্যাশে থাকলে অফলাইনেও, আর অনলাইন সংযোগ থাকলে বাংলা-সহ যেকোনো ভাষায় (যখন অফলাইন নারী কণ্ঠ নিশ্চিত নয়) সরাসরি গুগলের নারী কণ্ঠের MP3 ব্যবহার করুন।
     val baseLangCode = curLang.trim().lowercase().substringBefore("-")
-    val shouldPreferOnlineFemale = isNetworkAvailable() && (
-      baseLangCode == "bn" ||
-        !isTtsInitialized ||
-        textToSpeech == null ||
-        !nativePick.langSupported ||
-        !nativePick.hasMatchingVoice ||
-        !nativePick.isFemaleVoice
+    val hasCachedAudio = hasAllCachedTtsChunks(preparedText, curLang)
+    val shouldUseGoogleFemaleVoice = hasCachedAudio || (
+      isNetworkAvailable() && (
+        baseLangCode == "bn" ||
+          !isTtsInitialized ||
+          textToSpeech == null ||
+          !nativePick.langSupported ||
+          !nativePick.hasMatchingVoice ||
+          !nativePick.isFemaleVoice
+        )
       )
 
-    if (shouldPreferOnlineFemale) {
+    if (shouldUseGoogleFemaleVoice) {
       playGoogleOnlineFemaleVoice(preparedText, curLang) { success ->
         if (!success) {
           if (isTtsInitialized && textToSpeech != null) {
@@ -682,38 +695,102 @@ object VoiceAnnouncementManager {
     }
   }
 
-  private fun downloadGoogleTtsAudio(ctx: Context, chunkText: String, targetLang: String): File? {
-    var connection: HttpURLConnection? = null
-    return try {
-      val encodedText = URLEncoder.encode(chunkText, "UTF-8")
-      val encodedLang = URLEncoder.encode(targetLang, "UTF-8")
-      val urlStr = "https://translate.google.com/translate_tts?ie=UTF-8&q=$encodedText&tl=$encodedLang&client=tw-ob"
-      connection = (URL(urlStr).openConnection() as HttpURLConnection).apply {
-        requestMethod = "GET"
-        connectTimeout = 4500
-        readTimeout = 4500
-        setRequestProperty(
-          "User-Agent",
-          "Mozilla/5.0 (Linux; Android 13; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
-        )
-        setRequestProperty("Referer", "https://translate.google.com/")
-      }
-      if (connection.responseCode != 200) return null
-      val cacheFile = File(ctx.cacheDir, "tts_voice_${System.currentTimeMillis()}_${chunkText.hashCode()}.mp3")
-      connection.inputStream.use { input ->
-        cacheFile.outputStream().use { output ->
-          input.copyTo(output)
-        }
-      }
-      if (cacheFile.exists() && cacheFile.length() > 300) cacheFile else {
-        try { cacheFile.delete() } catch (_: Exception) {}
-        null
-      }
-    } catch (_: Exception) {
-      null
-    } finally {
-      try { connection?.disconnect() } catch (_: Exception) {}
+  private fun getTtsCacheDir(ctx: Context): File {
+    val dir = File(ctx.filesDir, "tts_female_cache")
+    if (!dir.exists()) {
+      try { dir.mkdirs() } catch (_: Exception) {}
     }
+    return dir
+  }
+
+  private fun getCachedTtsFile(ctx: Context, targetLang: String, chunkText: String): File {
+    val safeLang = targetLang.replace(Regex("[^a-zA-Z0-9_-]"), "_")
+    val key = "$safeLang|$chunkText"
+    val digest = MessageDigest.getInstance("SHA-256").digest(key.toByteArray(Charsets.UTF_8))
+    val hex = digest.joinToString("") { "%02x".format(it) }.take(28)
+    return File(getTtsCacheDir(ctx), "tts_${safeLang}_$hex.mp3")
+  }
+
+  private fun hasAllCachedTtsChunks(text: String, langCode: String): Boolean {
+    val ctx = appContext ?: return false
+    val targetLang = resolveGoogleTtsLangCode(langCode)
+    val chunks = splitTextForTtsChunks(text, 180)
+    if (chunks.isEmpty()) return false
+    return chunks.all { ch ->
+      val f = getCachedTtsFile(ctx, targetLang, ch)
+      f.exists() && f.length() > 300
+    }
+  }
+
+  private fun pruneTtsCache(dir: File, maxFiles: Int = 120) {
+    try {
+      val files = dir.listFiles { f -> f.isFile && f.name.endsWith(".mp3") } ?: return
+      if (files.size <= maxFiles) return
+      files.sortBy { it.lastModified() }
+      val removeCount = files.size - maxFiles
+      for (i in 0 until removeCount) {
+        try { files[i].delete() } catch (_: Exception) {}
+      }
+    } catch (_: Exception) {}
+  }
+
+  private fun downloadGoogleTtsAudio(ctx: Context, chunkText: String, targetLang: String): File? {
+    val cachedFile = getCachedTtsFile(ctx, targetLang, chunkText)
+    if (cachedFile.exists() && cachedFile.length() > 300) {
+      cachedFile.setLastModified(System.currentTimeMillis())
+      return cachedFile
+    }
+
+    val encodedText = URLEncoder.encode(chunkText, "UTF-8")
+    val encodedLang = URLEncoder.encode(targetLang, "UTF-8")
+    val candidateUrls = listOf(
+      "https://translate.google.com/translate_tts?ie=UTF-8&q=$encodedText&tl=$encodedLang&client=tw-ob" to "https://translate.google.com/",
+      "https://translate.googleapis.com/translate_tts?ie=UTF-8&q=$encodedText&tl=$encodedLang&client=gtx" to "https://translate.google.com/",
+      "https://clients5.google.com/translate_tts?ie=UTF-8&q=$encodedText&tl=$encodedLang&client=tw-ob" to null
+    )
+
+    for ((urlStr, refHeader) in candidateUrls) {
+      var connection: HttpURLConnection? = null
+      try {
+        connection = (URL(urlStr).openConnection() as HttpURLConnection).apply {
+          requestMethod = "GET"
+          connectTimeout = 7000
+          readTimeout = 7000
+          instanceFollowRedirects = true
+          setRequestProperty(
+            "User-Agent",
+            "Mozilla/5.0 (Linux; Android 13; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36"
+          )
+          if (refHeader != null) {
+            setRequestProperty("Referer", refHeader)
+          }
+        }
+        val code = connection.responseCode
+        val contentType = (connection.contentType ?: "").lowercase()
+        if (code == 200 && !contentType.contains("text/html")) {
+          val tempFile = File(getTtsCacheDir(ctx), "${cachedFile.name}.tmp")
+          connection.inputStream.use { input ->
+            tempFile.outputStream().use { output ->
+              input.copyTo(output)
+            }
+          }
+          if (tempFile.exists() && tempFile.length() > 300) {
+            if (cachedFile.exists()) cachedFile.delete()
+            if (tempFile.renameTo(cachedFile)) {
+              pruneTtsCache(getTtsCacheDir(ctx))
+              return cachedFile
+            }
+            return tempFile
+          } else {
+            try { tempFile.delete() } catch (_: Exception) {}
+          }
+        }
+      } catch (_: Exception) {
+      } finally {
+        try { connection?.disconnect() } catch (_: Exception) {}
+      }
+    }
+    return null
   }
 
   private fun playGoogleOnlineFemaleVoice(text: String, langCode: String, onComplete: (Boolean) -> Unit) {
@@ -743,9 +820,6 @@ object VoiceAnnouncementManager {
               if (ok) {
                 playIndex(idx + 1)
               } else {
-                for (remIdx in idx + 1 until files.size) {
-                  try { files[remIdx].delete() } catch (_: Exception) {}
-                }
                 onComplete(idx > 0)
               }
             }
@@ -767,8 +841,10 @@ object VoiceAnnouncementManager {
     }
 
     try {
-      audioPlayer?.stop()
-      audioPlayer?.release()
+      audioPlayer?.let { prev ->
+        try { prev.stop() } catch (_: Exception) {}
+        try { prev.release() } catch (_: Exception) {}
+      }
       audioPlayer = null
 
       val player = MediaPlayer()
@@ -782,26 +858,20 @@ object VoiceAnnouncementManager {
       player.setOnCompletionListener { mp ->
         try { mp.release() } catch (_: Exception) {}
         if (audioPlayer === mp) audioPlayer = null
-        try { file.delete() } catch (_: Exception) {}
         onDone(true)
       }
       player.setOnErrorListener { mp, _, _ ->
         try { mp.release() } catch (_: Exception) {}
         if (audioPlayer === mp) audioPlayer = null
-        try { file.delete() } catch (_: Exception) {}
+        try {
+          if (file.name.endsWith(".tmp")) file.delete()
+        } catch (_: Exception) {}
         onDone(false)
         true
       }
       player.prepare()
-      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-        try {
-          player.playbackParams = player.playbackParams.setSpeed(0.94f).setPitch(1.01f)
-        } catch (_: Exception) {}
-      }
-      if (!player.isPlaying) {
-        player.start()
-      }
       audioPlayer = player
+      player.start()
     } catch (_: Exception) {
       onDone(false)
     }
