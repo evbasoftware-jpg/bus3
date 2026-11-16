@@ -342,12 +342,15 @@ object VoiceAnnouncementManager {
               it.name.lowercase().contains("_in")
           }.ifEmpty { langVoices }
 
+          val baseCode = targetLocale.language.lowercase()
+
           fun isExplicitlyMale(v: Voice): Boolean {
             val n = v.name.lowercase()
             if (Regex("(^|[-_])x-[a-z]{2}[bdm]([-_]|$)").containsMatchIn(n) ||
+              (baseCode == "bn" && Regex("(^|[-_])x-bn[abdm]([-_]|$)|(^|[-_])x-bdb([_-]|$)").containsMatchIn(n)) ||
               Regex("wavenet-[bd]|neural2-[bd]|standard-[bd]").containsMatchIn(n) ||
               (n.contains("male") && !n.contains("female")) ||
-              Regex("\\b(man|boy|ravi|david|mark|daniel|alex|prabhat|hemant|madhur|rishi|otoya|tarik|maged)\\b").containsMatchIn(n) ||
+              Regex("\\b(man|boy|ravi|david|mark|daniel|alex|prabhat|hemant|madhur|rishi|otoya|tarik|maged|tanvir|pradeep|bashkar)\\b").containsMatchIn(n) ||
               n.contains("-m-") || n.contains("_m_") || n.endsWith("-m") || n.endsWith("_m")
             ) return true
             return v.features.any {
@@ -359,6 +362,18 @@ object VoiceAnnouncementManager {
           fun isExplicitlyFemale(v: Voice): Boolean {
             if (isExplicitlyMale(v)) return false
             val n = v.name.lowercase()
+            if (baseCode == "bn") {
+              if (n.contains("female") || n.contains("woman") || n.contains("girl") ||
+                Regex("(^|[-_])x-bnf([_-]|$)").containsMatchIn(n) ||
+                Regex("wavenet-[ac]|neural2-[ac]|standard-[ac]").containsMatchIn(n) ||
+                n.contains("-fem") || n.contains("_fem") ||
+                Regex("\\b(tanishaa|nabanita|ananya|priya|sangeeta|aditi|kavya|lekha)\\b").containsMatchIn(n)
+              ) return true
+              return v.features.any {
+                val fl = it.lowercase()
+                fl.contains("female") || fl.contains("gender=female")
+              }
+            }
             if (n.contains("female") || n.contains("woman") || n.contains("girl") ||
               Regex("(^|[-_])x-[a-z]{2}[acef]([-_]|$)").containsMatchIn(n) ||
               Regex("wavenet-[acef]|neural2-[acef]|standard-[acef]").containsMatchIn(n) ||
@@ -398,14 +413,14 @@ object VoiceAnnouncementManager {
         }
       }
 
-      // স্পষ্ট ও মিষ্টি স্বাভাবিক নারী কণ্ঠ (মহিলা ভয়েস নিশ্চিত না হলে পিচ সামান্য উঁচু রাখা)
+      // কোমল ও স্পষ্ট স্বাভাবিক নারী কণ্ঠ (মহিলা ভয়েস নিশ্চিত না হলে পিচ কিছুটা উঁচু ও গতি স্নিগ্ধ রাখা)
       val targetPitch = when {
-        isFemaleSelected -> 1.03f
-        isMaleSelected -> 1.22f
-        else -> 1.10f
+        isFemaleSelected -> 1.04f
+        isMaleSelected -> 1.26f
+        else -> 1.15f
       }
       tts.setPitch(targetPitch)
-      tts.setSpeechRate(0.92f)
+      tts.setSpeechRate(0.89f)
     } catch (_: Exception) {}
 
     return VoicePickResult(
@@ -578,11 +593,12 @@ object VoiceAnnouncementManager {
       VoicePickResult()
     }
 
-    // সকল ভাষায় নিশ্চিত নারী কণ্ঠের জন্য:
-    // যদি অনলাইন সংযোগ থাকে এবং নেটিভ TTS-এ ওই ভাষার নিশ্চিত নারী কণ্ঠ না থাকে (অথবা ভাষাটি অফলাইনে না থাকে),
-    // তবে সরাসরি গুগলের অনলাইন নারী কণ্ঠ (Google Female TTS) ব্যবহার করুন।
+    // বাংলা ও সকল ভাষায় নিশ্চিত কোমল নারী কণ্ঠের জন্য:
+    // অনলাইন সংযোগ থাকলে বাংলা-সহ যেকোনো ভাষায় (যখন অফলাইন নারী কণ্ঠ নিশ্চিত নয়) সরাসরি গুগলের অনলাইন নারী কণ্ঠ ব্যবহার করুন।
+    val baseLangCode = curLang.trim().lowercase().substringBefore("-")
     val shouldPreferOnlineFemale = isNetworkAvailable() && (
-      !isTtsInitialized ||
+      baseLangCode == "bn" ||
+        !isTtsInitialized ||
         textToSpeech == null ||
         !nativePick.langSupported ||
         !nativePick.hasMatchingVoice ||
@@ -777,7 +793,14 @@ object VoiceAnnouncementManager {
         true
       }
       player.prepare()
-      player.start()
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+        try {
+          player.playbackParams = player.playbackParams.setSpeed(0.94f).setPitch(1.01f)
+        } catch (_: Exception) {}
+      }
+      if (!player.isPlaying) {
+        player.start()
+      }
       audioPlayer = player
     } catch (_: Exception) {
       onDone(false)

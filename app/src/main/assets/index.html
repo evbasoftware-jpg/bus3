@@ -3628,9 +3628,14 @@
     if (domTranslationMemCache[lang]) return domTranslationMemCache[lang];
     let map = {};
     try {
-      let saved = JSON.parse(localStorage.getItem("bll_tr_cache_v3_" + lang) || "{}");
+      let saved = JSON.parse(localStorage.getItem("bll_tr_cache_v4_" + lang) || "{}");
       if (saved && typeof saved === "object") {
-        Object.assign(map, saved);
+        Object.keys(saved).forEach(k => {
+          let v = saved[k];
+          if (typeof v === "string" && v.trim() && !/=>\s*['"]|=&gt;|&#10;|INVALID TARGET LANGUAGE|MYMEMORY WARNING/i.test(v)) {
+            map[k] = v;
+          }
+        });
       }
     } catch (_) {}
     // সবসময় বিল্ট-ইন সঠিক অভিধানকে সর্বোচ্চ অগ্রাধিকার দিন
@@ -3650,23 +3655,44 @@
         let trimmed = {};
         keys.slice(-2000).forEach(k => { trimmed[k] = map[k]; });
         domTranslationMemCache[lang] = trimmed;
-        localStorage.setItem("bll_tr_cache_v3_" + lang, JSON.stringify(trimmed));
+        localStorage.setItem("bll_tr_cache_v4_" + lang, JSON.stringify(trimmed));
       } else {
-        localStorage.setItem("bll_tr_cache_v3_" + lang, JSON.stringify(map));
+        localStorage.setItem("bll_tr_cache_v4_" + lang, JSON.stringify(map));
       }
     } catch (_) {}
   }
 
   let googleGtxBlockedUntil = 0;
+  let googleAtBlockedUntil = 0;
 
   function normalizeUiKey(str) {
     return (str || "").replace(/\s+/g, " ").trim();
+  }
+
+  function decodeHtmlEntities(str) {
+    if (!str || typeof str !== "string") return "";
+    return str
+      .replace(/&#x([0-9a-f]+);/gi, (_, hex) => {
+        const cp = parseInt(hex, 16);
+        return (!isNaN(cp) && cp > 0) ? String.fromCodePoint(cp) : "";
+      })
+      .replace(/&#(\d+);/g, (_, dec) => {
+        const cp = parseInt(dec, 10);
+        return (!isNaN(cp) && cp > 0) ? String.fromCodePoint(cp) : "";
+      })
+      .replace(/&gt;/gi, ">")
+      .replace(/&lt;/gi, "<")
+      .replace(/&quot;/gi, '"')
+      .replace(/&apos;/gi, "'")
+      .replace(/&nbsp;/gi, " ")
+      .replace(/&amp;/gi, "&");
   }
 
   function toMyMemoryLangCode(code) {
     const c = (code || "").trim();
     if (!c) return "en";
     if (c === "iw") return "he";
+    if (c === "jw") return "jv";
     return c;
   }
 
@@ -3690,13 +3716,8 @@
     }
   }
 
-  // ১. Google Translate GTX GET / AndroidBridge
-  async function requestGoogleGtx(text, sourceLang, targetLang) {
-    let clean = (text || "").trim();
-    if (!clean || !targetLang || sourceLang === targetLang) return { ok: true, text: clean };
-    if (Date.now() < googleGtxBlockedUntil) return { ok: false, rateLimited: true, text: "" };
-
-    const baseUrl = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${encodeURIComponent(sourceLang)}&tl=${encodeURIComponent(targetLang)}&dt=t`;
+  async function requestGoogleByClient(clean, sourceLang, targetLang, clientName) {
+    const baseUrl = `https://translate.googleapis.com/translate_a/single?client=${encodeURIComponent(clientName)}&sl=${encodeURIComponent(sourceLang)}&tl=${encodeURIComponent(targetLang)}&dt=t`;
     const qParam = `q=${encodeURIComponent(clean)}`;
     const getUrl = `${baseUrl}&${qParam}`;
 
@@ -3710,7 +3731,6 @@
           }, 8500);
 
       if (resp.status === 429) {
-        googleGtxBlockedUntil = Date.now() + 45000;
         return { ok: false, rateLimited: true, text: "" };
       }
       if (resp.ok) {
@@ -3727,7 +3747,7 @@
         } else if (typeof window.AndroidBridge.postForm === "function") {
           raw = window.AndroidBridge.postForm(baseUrl, qParam);
         }
-        if (raw) {
+        if (raw && raw.trim().startsWith("[")) {
           const parsed = parseGtxResponseJson(JSON.parse(raw));
           if (parsed && parsed.trim()) return { ok: true, text: parsed.trim() };
         }
@@ -3737,22 +3757,57 @@
     return { ok: false, text: "" };
   }
 
-  // ২. MyMemory API (Browser + Android উভয়েই ৪৮০-অক্ষরের ব্যাচে ১০০% কার্যকর ফলব্যাক)
+  // ১. Google Translate (প্রথমে client=gtx, ৪২৯/ব্যর্থ হলে তাৎক্ষণিক client=at ব্যাকআপ)
+  async function requestGoogleGtx(text, sourceLang, targetLang) {
+    let clean = (text || "").trim();
+    if (!clean || !targetLang || sourceLang === targetLang) return { ok: true, text: clean };
+
+    if (Date.now() >= googleGtxBlockedUntil) {
+      const r1 = await requestGoogleByClient(clean, sourceLang, targetLang, "gtx");
+      if (r1.ok) return r1;
+      if (r1.rateLimited) googleGtxBlockedUntil = Date.now() + 30000;
+    }
+
+    if (Date.now() >= googleAtBlockedUntil) {
+      const r2 = await requestGoogleByClient(clean, sourceLang, targetLang, "at");
+      if (r2.ok) return r2;
+      if (r2.rateLimited) googleAtBlockedUntil = Date.now() + 30000;
+    }
+
+    return {
+      ok: false,
+      rateLimited: (Date.now() < googleGtxBlockedUntil && Date.now() < googleAtBlockedUntil),
+      text: ""
+    };
+  }
+
+  // ২. MyMemory API (HTML ডিকোডিং ও ভ্রান্ত/PHP উত্তর ফিল্টারসহ নির্ভরযোগ্য ফলব্যাক)
   async function requestMyMemory(text, sourceLang, targetLang) {
     let clean = (text || "").trim();
     if (!clean || clean.length > 485 || !targetLang) return { ok: false, text: "" };
     const srcCode = toMyMemoryLangCode(sourceLang === "auto" ? "en" : sourceLang);
     const tgtCode = toMyMemoryLangCode(targetLang);
     if (srcCode === tgtCode) return { ok: true, text: clean };
+    // যে ভাষাগুলো MyMemory-তে সমর্থিত নয় (jw/kri) সেগুলোতে অযথা কল এড়িয়ে যান
+    if (tgtCode === "jv" || tgtCode === "kri") return { ok: false, text: "" };
 
     const mmUrl = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(clean)}&langpair=${encodeURIComponent(srcCode + "|" + tgtCode)}`;
     const parseMmJson = (j) => {
       if (!j || (j.responseStatus && Number(j.responseStatus) !== 200)) return "";
-      const tr = j.responseData && j.responseData.translatedText;
-      if (tr && typeof tr === "string" && tr.trim() && !/MYMEMORY WARNING|INVALID TARGET LANGUAGE|PLEASE SELECT/i.test(tr)) {
-        return tr.trim();
+      let tr = j.responseData && j.responseData.translatedText;
+      if (!tr || typeof tr !== "string") return "";
+      tr = decodeHtmlEntities(tr).trim();
+      if (!tr) return "";
+      if (/MYMEMORY WARNING|INVALID TARGET LANGUAGE|INVALID SOURCE LANGUAGE|PLEASE SELECT|QUERY LENGTH LIMIT/i.test(tr)) {
+        return "";
       }
-      return "";
+      if (/=>\s*['"]|^\s*['"][^'"]+['"]\s*=>/i.test(tr)) {
+        return "";
+      }
+      if (targetLang !== "en" && targetLang !== sourceLang && clean.length >= 4 && /[a-z]{3,}/i.test(clean) && tr.toLowerCase() === clean.toLowerCase()) {
+        return "";
+      }
+      return tr;
     };
 
     try {
@@ -3788,6 +3843,18 @@
       if (mm.ok && mm.text) return mm.text;
     }
     return "";
+  }
+
+  function splitLeadingEmojiPrefix(s) {
+    const str = String(s || "");
+    const m = str.match(/^((?:[\u{1F300}-\u{1FAFF}\u2300-\u23FF\u25A0-\u27BF\u2B00-\u2BFF]+[\uFE0F\u200D]*\s*)+)/u);
+    if (m && m[0] && str.length > m[0].length) {
+      return {
+        prefix: m[0],
+        core: str.slice(m[0].length).replace(/\s+/g, " ").trim()
+      };
+    }
+    return { prefix: "", core: str.replace(/\s+/g, " ").trim() };
   }
 
   async function translateBatchTexts(items, targetLang, onChunkDone) {
@@ -3846,8 +3913,8 @@
       }
     });
 
-    const gtxSep = "\n###SEP###\n";
-    const gtxSplitRegex = /\s*[#＃]{2,4}\s*(?:SEP|sep)\s*[#＃]{2,4}\s*/i;
+    const googleSep = "\n\n";
+    const googleSplitRegex = /\r?\n\s*\r?\n/;
     const mmSep = "\n###\n";
     const mmSplitRegex = /\s*[#＃]{2,4}\s*/;
 
@@ -3863,7 +3930,7 @@
 
     function splitTranslatedParts(translated, origChunk, primaryRegex) {
       if (!translated) return null;
-      let parts = translated.split(primaryRegex);
+      let parts = translated.split(primaryRegex).map(p => p.trim()).filter(Boolean);
       if (parts.length === origChunk.length) return parts;
       let lineParts = translated.split(/\r?\n+/).map(p => p.trim()).filter(Boolean);
       if (lineParts.length === origChunk.length) return lineParts;
@@ -3871,12 +3938,13 @@
     }
 
     // MyMemory নিরাপদ ব্যাচ রানার (সর্বোচ্চ ৪২০ অক্ষর, বিভাজক না মিললে বাইসেক্ট)
-    async function runChunkMyMemory(subChunk, srcLang) {
-      if (!subChunk.length) return;
-      if (subChunk.length === 1) {
-        const mm = await requestMyMemory(subChunk[0], srcLang, targetLang);
+    async function runChunkMyMemory(entryChunk, srcLang) {
+      if (!entryChunk.length) return;
+      if (entryChunk.length === 1) {
+        const entry = entryChunk[0];
+        const mm = await requestMyMemory(entry.core, srcLang, targetLang);
         if (mm.ok && mm.text) {
-          recordTranslatedPair(subChunk[0], mm.text);
+          recordTranslatedPair(entry.raw, entry.prefix + mm.text);
           if (typeof onChunkDone === "function") onChunkDone(out);
         }
         return;
@@ -3885,36 +3953,36 @@
       let packs = [];
       let pack = [];
       let rawLen = 0;
-      for (const s of subChunk) {
-        if ((rawLen + s.length + mmSep.length > 420 || pack.length >= 15) && pack.length) {
+      for (const e of entryChunk) {
+        if ((rawLen + e.core.length + mmSep.length > 420 || pack.length >= 12) && pack.length) {
           packs.push(pack);
           pack = [];
           rawLen = 0;
         }
-        pack.push(s);
-        rawLen += s.length + mmSep.length;
+        pack.push(e);
+        rawLen += e.core.length + mmSep.length;
       }
       if (pack.length) packs.push(pack);
 
       for (const p of packs) {
         if (p.length === 1) {
-          const mm = await requestMyMemory(p[0], srcLang, targetLang);
+          const entry = p[0];
+          const mm = await requestMyMemory(entry.core, srcLang, targetLang);
           if (mm.ok && mm.text) {
-            recordTranslatedPair(p[0], mm.text);
+            recordTranslatedPair(entry.raw, entry.prefix + mm.text);
             if (typeof onChunkDone === "function") onChunkDone(out);
           }
           continue;
         }
-        const joined = p.join(mmSep);
+        const joined = p.map(e => e.core).join(mmSep);
         const mm = await requestMyMemory(joined, srcLang, targetLang);
         const parts = mm.ok ? splitTranslatedParts(mm.text, p, mmSplitRegex) : null;
         if (parts) {
-          p.forEach((orig, idx) => {
-            if (parts[idx] && parts[idx].trim()) recordTranslatedPair(orig, parts[idx].trim());
+          p.forEach((entry, idx) => {
+            if (parts[idx] && parts[idx].trim()) recordTranslatedPair(entry.raw, entry.prefix + parts[idx].trim());
           });
           if (typeof onChunkDone === "function") onChunkDone(out);
         } else {
-          // বাইসেক্ট: একসাথে ২০টি রিকোয়েস্ট পাঠিয়ে ৪২৯ না করে দুই ভাগে ভাগ করুন
           const mid = Math.ceil(p.length / 2);
           await runChunkMyMemory(p.slice(0, mid), srcLang);
           await runChunkMyMemory(p.slice(mid), srcLang);
@@ -3922,42 +3990,41 @@
       }
     }
 
-    // স্মার্ট চাঙ্ক অনুবাদক: প্রথমে Google GTX (৪২৯ বিহীন), ব্যর্থ/৪২৯ হলে সরাসরি MyMemory ব্যাচ
-    async function runChunkSmart(chunk, srcLang) {
-      if (!chunk.length) return;
-      if (chunk.length === 1) {
-        const v = await translateSingleSmart(chunk[0], srcLang, targetLang);
+    // স্মার্ট চাঙ্ক অনুবাদক: ডাবল-নিউলাইন বিভাজক ও ডুয়াল Google (gtx + at), ব্যর্থ হলে MyMemory ব্যাচ
+    async function runChunkSmart(entryChunk, srcLang) {
+      if (!entryChunk.length) return;
+      if (entryChunk.length === 1) {
+        const entry = entryChunk[0];
+        const v = await translateSingleSmart(entry.core, srcLang, targetLang);
         if (v && v.trim()) {
-          recordTranslatedPair(chunk[0], v);
+          recordTranslatedPair(entry.raw, entry.prefix + v.trim());
           if (typeof onChunkDone === "function") onChunkDone(out);
         }
         return;
       }
 
-      if (Date.now() >= googleGtxBlockedUntil) {
-        const joined = chunk.join(gtxSep);
+      if (Date.now() >= googleGtxBlockedUntil || Date.now() >= googleAtBlockedUntil) {
+        const joined = entryChunk.map(e => e.core).join(googleSep);
         const gtx = await requestGoogleGtx(joined, srcLang, targetLang);
         if (gtx.ok && gtx.text && gtx.text !== joined) {
-          const parts = splitTranslatedParts(gtx.text, chunk, gtxSplitRegex);
+          const parts = splitTranslatedParts(gtx.text, entryChunk, googleSplitRegex);
           if (parts) {
-            chunk.forEach((orig, idx) => {
-              if (parts[idx] && parts[idx].trim()) recordTranslatedPair(orig, parts[idx].trim());
+            entryChunk.forEach((entry, idx) => {
+              if (parts[idx] && parts[idx].trim()) recordTranslatedPair(entry.raw, entry.prefix + parts[idx].trim());
             });
             if (typeof onChunkDone === "function") onChunkDone(out);
             return;
           }
-          // GTX রেসপন্স পেলেও বিভাজক অমিল হলে দুই ভাগে বাইসেক্ট করে আবার চেষ্টা
-          if (chunk.length > 3) {
-            const mid = Math.ceil(chunk.length / 2);
-            await runChunkSmart(chunk.slice(0, mid), srcLang);
-            await runChunkSmart(chunk.slice(mid), srcLang);
+          if (entryChunk.length > 2) {
+            const mid = Math.ceil(entryChunk.length / 2);
+            await runChunkSmart(entryChunk.slice(0, mid), srcLang);
+            await runChunkSmart(entryChunk.slice(mid), srcLang);
             return;
           }
         }
       }
 
-      // Google GTX ৪২৯ বা ব্যর্থ হলে MyMemory ব্যাচ দিয়ে নির্ভুল অনুবাদ
-      await runChunkMyMemory(chunk, srcLang);
+      await runChunkMyMemory(entryChunk, srcLang);
     }
 
     async function runGroup(groupItems, srcLang) {
@@ -3965,29 +4032,28 @@
         groupItems.forEach(s => { recordTranslatedPair(s, s); });
         return;
       }
+      let entries = groupItems.map(s => Object.assign({ raw: s }, splitLeadingEmojiPrefix(s)));
       let chunks = [];
       let chunk = [];
       let encLen = 0;
 
-      for (let item of groupItems) {
-        let itemEncLen = encodeURIComponent(item + gtxSep).length;
-        if ((encLen + itemEncLen > 900 || chunk.length >= 14) && chunk.length) {
+      for (let entry of entries) {
+        let itemEncLen = encodeURIComponent(entry.core + googleSep).length;
+        if ((encLen + itemEncLen > 1400 || chunk.length >= 20) && chunk.length) {
           chunks.push(chunk);
           chunk = [];
           encLen = 0;
         }
-        chunk.push(item);
+        chunk.push(entry);
         encLen += itemEncLen;
       }
       if (chunk.length) chunks.push(chunk);
 
-      // নিয়ন্ত্রিত সমান্তরাল (concurrency = 2): ৪২৯ ছাড়াই সর্বোচ্চ গতিতে দৃশ্যমান UI অনুবাদ
-      const concurrency = 2;
-      for (let i = 0; i < chunks.length; i += concurrency) {
-        let batch = chunks.slice(i, i + concurrency);
-        await Promise.all(batch.map(c => runChunkSmart(c, srcLang)));
-        if (i + concurrency < chunks.length) {
-          await new Promise(r => setTimeout(r, 40));
+      // ক্রমান্বয়ে ও নিয়ন্ত্রিত বিরতিতে ব্যাচ অনুবাদ: ৪২৯ ব্লক ছাড়াই সব ১৩৩ ভাষায় দ্রুত ও নির্ভুল অনুবাদ
+      for (let i = 0; i < chunks.length; i++) {
+        await runChunkSmart(chunks[i], srcLang);
+        if (i + 1 < chunks.length) {
+          await new Promise(r => setTimeout(r, 90));
         }
       }
     }
@@ -4158,6 +4224,7 @@
           let newVal = leading + tr + trailing;
           if (n.nodeValue !== newVal) n.nodeValue = newVal;
         } else {
+          if (n.nodeValue !== orig) n.nodeValue = orig;
           missingSet.add(core);
         }
       });
@@ -4170,7 +4237,10 @@
           if (isTranslatableString(core)) {
             let trPh = cache[core] || cache[normalizeUiKey(core)];
             if (trPh) el.setAttribute("placeholder", trPh);
-            else missingSet.add(core);
+            else {
+              if (el.getAttribute("placeholder") !== st.placeholder) el.setAttribute("placeholder", st.placeholder);
+              missingSet.add(core);
+            }
           }
         }
         if (st.title) {
@@ -4178,7 +4248,10 @@
           if (isTranslatableString(core)) {
             let trTtl = cache[core] || cache[normalizeUiKey(core)];
             if (trTtl) el.setAttribute("title", trTtl);
-            else missingSet.add(core);
+            else {
+              if (el.getAttribute("title") !== st.title) el.setAttribute("title", st.title);
+              missingSet.add(core);
+            }
           }
         }
       });
@@ -5166,19 +5239,19 @@
 
     const fHints = [
       'female','woman','girl','wavenet-a','wavenet-c','wavenet-e','wavenet-f',
-      'neural2-a','neural2-c','neural2-e','neural2-f','x-bnf','x-bnc','x-bne',
+      'neural2-a','neural2-c','neural2-e','neural2-f','x-bnf',
       'x-hia','x-hic','x-hie','x-hif','x-ena','x-enc','x-ene','x-taf','x-tef',
       'x-mrf','x-guf','x-knf','x-mlf','x-paf','x-urf','x-nef','x-sif',
-      'swara','aditi','kavya','lekha','sangeeta','priya','ananya','shruti','maya',
+      'tanishaa','nabanita','swara','aditi','kavya','lekha','sangeeta','priya','ananya','shruti','maya',
       'kalpana','heera','neerja','veena','zira','samantha','victoria','karen',
       'tessa','moira','fiona','jenny','aria','sonia','libby','kyoko','yuna',
       'ting-ting','meijia','sin-ji','damayanti','kanya','linh','yelda','alice',
-      'anna','amelie','paulina','monica','laura','milena','katya','laila','carmit',
-      'google বাংলা','google हिन्दी'
+      'anna','amelie','paulina','monica','laura','milena','katya','laila','carmit'
     ];
     const mHints = [
       'male','man','boy','ravi','david','mark','daniel','alex','hemant','prabhat',
-      'madhur','rishi','otoya','tarik','maged','x-bnd','x-hid','x-end','x-m',
+      'madhur','rishi','otoya','tarik','maged','tanvir','pradeep','bashkar',
+      'x-bnm','x-bna','x-bnb','x-bnc','x-bnd','x-bdb','x-hid','x-end','x-m',
       'wavenet-b','wavenet-d','neural2-b','neural2-d'
     ];
     let best = null, bestScore = -9999;
@@ -5196,6 +5269,40 @@
   }
 
   let browserAudioPlayer = null;
+  function splitTtsChunksForBrowser(text, maxLen = 175) {
+    const clean = (text || "").trim();
+    if (!clean) return [];
+    if (clean.length <= maxLen) return [clean];
+    const sentences = clean.split(/(?<=[।.!?])\s+/);
+    const out = [];
+    let cur = "";
+    for (const s of sentences) {
+      const t = s.trim();
+      if (!t) continue;
+      if ((cur + (cur ? " " : "") + t).length <= maxLen) {
+        cur = cur ? (cur + " " + t) : t;
+      } else {
+        if (cur) out.push(cur);
+        if (t.length <= maxLen) {
+          cur = t;
+        } else {
+          const words = t.split(/\s+/);
+          cur = "";
+          for (const w of words) {
+            if ((cur + (cur ? " " : "") + w).length <= maxLen) {
+              cur = cur ? (cur + " " + w) : w;
+            } else {
+              if (cur) out.push(cur);
+              cur = w.slice(0, maxLen);
+            }
+          }
+        }
+      }
+    }
+    if (cur) out.push(cur);
+    return out.length ? out : [clean.slice(0, maxLen)];
+  }
+
   function playBrowserGoogleFemaleTts(text, langCode, onDone) {
     try {
       if (browserAudioPlayer) {
@@ -5203,18 +5310,41 @@
         browserAudioPlayer = null;
       }
       let tl = resolveGoogleTtsLang(langCode);
-      let chunk = (text || "").trim().slice(0, 190);
-      if (!chunk) { onDone(false); return; }
-      let audio = new Audio(`https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(chunk)}&tl=${encodeURIComponent(tl)}&client=tw-ob`);
-      audio.referrerPolicy = "no-referrer";
-      browserAudioPlayer = audio;
-      let done = false;
-      audio.onended = () => { if (!done) { done = true; onDone(true); } };
-      audio.onerror = () => { if (!done) { done = true; onDone(false); } };
-      let p = audio.play();
-      if (p && typeof p.catch === "function") {
-        p.catch(() => { if (!done) { done = true; onDone(false); } });
+      let chunks = splitTtsChunksForBrowser(text, 175);
+      if (!chunks.length) { onDone(false); return; }
+
+      let idx = 0;
+      let finished = false;
+      function playNextChunk() {
+        if (finished) return;
+        if (idx >= chunks.length) {
+          finished = true;
+          onDone(true);
+          return;
+        }
+        let chunk = chunks[idx++];
+        let audio = new Audio(`https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(chunk)}&tl=${encodeURIComponent(tl)}&client=tw-ob`);
+        audio.referrerPolicy = "no-referrer";
+        try { audio.playbackRate = 0.95; } catch (_) {}
+        browserAudioPlayer = audio;
+        audio.onended = () => { playNextChunk(); };
+        audio.onerror = () => {
+          if (!finished) {
+            finished = true;
+            onDone(idx > 1);
+          }
+        };
+        let p = audio.play();
+        if (p && typeof p.catch === "function") {
+          p.catch(() => {
+            if (!finished) {
+              finished = true;
+              onDone(idx > 1);
+            }
+          });
+        }
       }
+      playNextChunk();
     } catch (_) {
       onDone(false);
     }
@@ -5271,7 +5401,8 @@
     }, estimatedDuration);
 
     let pick = pickSweetFemaleVoice(item.lang);
-    let needOnlineFemale = !pick.matched || !pick.female;
+    let baseLang = (item.lang || "bn").split("-")[0].toLowerCase();
+    let needOnlineFemale = (baseLang === "bn") || !pick.matched || !pick.female;
 
     if (needOnlineFemale && navigator.onLine) {
       playBrowserGoogleFemaleTts(item.text, item.lang, (ok) => {
